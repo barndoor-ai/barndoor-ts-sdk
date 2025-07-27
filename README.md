@@ -250,6 +250,4 @@ const servers: ServerSummary[] = await sdk.listServers();
 3. Run tests: `npm test`
 4. Run safety checks: `npm run safety-check`
 
-## License
 
-MIT
