@@ -101,17 +101,22 @@ export class HTTPClient {
       requestOptions.body = JSON.stringify(json);
     }
 
-    // Add timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutConfig.read);
-    requestOptions.signal = controller.signal;
-
     let lastError: Error | undefined;
 
     // Retry loop
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      // Create fresh AbortController and timeout for each attempt
+      const controller = new AbortController();
+
+      // Set up overall request timeout (covers both connection and read)
+      const totalTimeout = this.timeoutConfig.connect + this.timeoutConfig.read;
+      const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
+
+      // Update signal for this attempt
+      const attemptOptions = { ...requestOptions, signal: controller.signal };
+
       try {
-        const response = await fetch(requestUrl, requestOptions);
+        const response = await fetch(requestUrl, attemptOptions);
         clearTimeout(timeoutId);
 
         // Handle HTTP errors
@@ -129,7 +134,8 @@ export class HTTPClient {
 
         // Handle different types of errors
         if (error instanceof Error && error.name === 'AbortError') {
-          lastError = new TimeoutError(`Request to ${requestUrl} timed out after ${this.timeoutConfig.read}ms`);
+          const totalTimeout = this.timeoutConfig.connect + this.timeoutConfig.read;
+          lastError = new TimeoutError(`Request to ${requestUrl} timed out after ${totalTimeout}ms`);
         } else if (error instanceof HTTPError) {
           // Don't retry HTTP errors (4xx, 5xx)
           throw error;

@@ -2,7 +2,7 @@
  * Tests for data models.
  */
 
-import { ServerSummary, ServerDetail, AgentToken } from '../src/models/index.js';
+import { ServerSummary, ServerDetail, AgentToken } from '../dist/index.esm.js';
 
 describe('ServerSummary', () => {
   const validServerData = {

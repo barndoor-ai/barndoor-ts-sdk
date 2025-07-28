@@ -53,12 +53,27 @@ function generateRandomString(length: number): string {
 }
 
 /**
+ * Cross-platform base64 encode function.
+ * @param buffer - Buffer to encode
+ * @returns Base64-encoded string
+ */
+function base64Encode(buffer: Uint8Array): string {
+  if (typeof globalThis !== 'undefined' && globalThis.btoa) {
+    return globalThis.btoa(String.fromCharCode(...buffer));
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(buffer).toString('base64');
+  } else {
+    throw new Error('No base64 encode function available');
+  }
+}
+
+/**
  * Base64URL encode a Uint8Array.
  * @param buffer - Buffer to encode
  * @returns Base64URL-encoded string
  */
 function base64URLEncode(buffer: Uint8Array): string {
-  const base64 = btoa(String.fromCharCode(...buffer));
+  const base64 = base64Encode(buffer);
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 

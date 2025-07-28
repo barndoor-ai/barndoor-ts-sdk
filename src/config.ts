@@ -216,6 +216,21 @@ interface JWTPayload {
 }
 
 /**
+ * Cross-platform base64 decode function.
+ * @param str - Base64 string to decode
+ * @returns Decoded string
+ */
+function base64Decode(str: string): string {
+  if (typeof globalThis !== 'undefined' && globalThis.atob) {
+    return globalThis.atob(str);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'base64').toString('utf-8');
+  } else {
+    throw new Error('No base64 decode function available');
+  }
+}
+
+/**
  * Extract organization ID from JWT token.
  * @param jwtToken - JWT token
  * @returns Organization ID
@@ -227,7 +242,7 @@ function extractOrganizationId(jwtToken: string): string {
     if (parts.length !== 3) {
       throw new Error('Invalid JWT format');
     }
-    const payload = JSON.parse(atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
+    const payload = JSON.parse(base64Decode(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
 
     let orgSlug: string | undefined;
     if (payload.user && typeof payload.user === 'object') {

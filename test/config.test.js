@@ -2,8 +2,7 @@
  * Tests for configuration management.
  */
 
-import { BarndoorConfig, getStaticConfig, getDynamicConfig } from '../src/config.js';
-import { ConfigurationError } from '../src/exceptions/index.js';
+import { BarndoorConfig, getStaticConfig, getDynamicConfig, ConfigurationError } from '../dist/index.esm.js';
 
 // Mock process.env for testing
 const originalEnv = process.env;
@@ -141,7 +140,7 @@ describe('Dynamic Configuration', () => {
     const tokenWithoutOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYwMDAwMzYwMH0.signature';
     
     expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow(ConfigurationError);
-    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow('Organization ID not found');
+    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow('organization_name / organization_slug not found in token');
   });
 });
 

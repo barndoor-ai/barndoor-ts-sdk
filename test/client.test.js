@@ -2,19 +2,19 @@
  * Tests for the main BarndoorSDK client.
  */
 
-import { BarndoorSDK } from '../src/client.js';
-import { ServerSummary, ServerDetail } from '../src/models/index.js';
-import { HTTPError, ConfigurationError, TokenError } from '../src/exceptions/index.js';
+import { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError, loadUserToken } from '../dist/index.esm.js';
 
-// Mock the auth module
-jest.mock('../src/auth/index.js', () => ({
-  loadUserToken: jest.fn()
-}));
+// Mock the loadUserToken function
+jest.mock('../dist/index.esm.js', () => {
+  const actual = jest.requireActual('../dist/index.esm.js');
+  return {
+    ...actual,
+    loadUserToken: jest.fn()
+  };
+});
 
 // Mock fetch
 global.fetch = jest.fn();
-
-const { loadUserToken } = require('../src/auth/index.js');
 
 beforeEach(() => {
   fetch.mockClear();

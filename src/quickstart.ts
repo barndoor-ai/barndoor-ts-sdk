@@ -215,8 +215,9 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
     const dynamicConfig = getDynamicConfig(sdk.token);
     url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
   } else {
-    // Production - use external MCP URL
-    url = buildExternalMcpUrl(serverSlug, sdk.token, 'prod');
+    // Production - use external MCP URL (same as dynamic config)
+    const dynamicConfig = getDynamicConfig(sdk.token);
+    url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
   }
   
   const params = {
@@ -266,15 +267,7 @@ export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, option
   return client;
 }
 
-/**
- * Build external MCP URL for production environments.
- * @private
- */
-function buildExternalMcpUrl(serverSlug: string, jwtToken: string, _env: string): string {
-  // Placeholder implementation – production environments may have custom logic
-  const config = getDynamicConfig(jwtToken);
-  return `${config.mcpBaseUrl}/mcp/${serverSlug}`;
-}
+
 
 /**
  * Generate a UUID v4 session ID.

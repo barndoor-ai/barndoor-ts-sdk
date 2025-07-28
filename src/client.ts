@@ -199,7 +199,10 @@ export class BarndoorSDK {
       });
 
       const isValid = response.ok;
-      this._tokenValidated = true;
+      // Only set _tokenValidated to true if the token is actually valid
+      if (isValid) {
+        this._tokenValidated = true;
+      }
       return isValid;
     } catch (error) {
       return false;
@@ -214,14 +217,14 @@ export class BarndoorSDK {
       return;
     }
 
-    // Skip validation in non-production environments
-    const env = (isNode ? process.env['BARNDOOR_ENV'] : '') ?? 'localdev';
-    if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
+    // Skip validation only in explicit test/CI environments
+    const env = (isNode ? process.env['BARNDOOR_ENV'] : '') ?? '';
+    if (['test', 'ci'].includes(env.toLowerCase())) {
       this._tokenValidated = true;
       return;
     }
 
-    // Validate token in production
+    // Validate token in all other environments (including staging, dev, prod)
     const isValid = await this.validateCachedToken();
     if (!isValid) {
       throw new TokenError('Token validation failed. Please re-authenticate.');
