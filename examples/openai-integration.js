@@ -16,7 +16,7 @@ import {
   loginInteractive,
   ensureServerConnected,
   makeMcpClient
-} from '../src/index.js';
+} from '../dist/index.esm.js';
 
 const SERVER_SLUG = 'salesforce';
 

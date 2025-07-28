@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "npm run build:types && rollup -c",
-    "build:types": "tsc --emitDeclarationOnly",
+    "build:types": "node node_modules/typescript/lib/tsc.js --emitDeclarationOnly",
     "dev": "rollup -c -w",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
@@ -23,7 +23,7 @@
     "lint:fix": "eslint src/ test/ examples/ --fix",
     "format": "prettier --write src/ test/ examples/",
     "format:check": "prettier --check src/ test/ examples/",
-    "type-check": "tsc --noEmit",
+    "type-check": "node node_modules/typescript/lib/tsc.js --noEmit",
     "type-coverage": "type-coverage --at-least 60 --strict",
     "safety-check": "../scripts/safety-check.sh"
   },
@@ -40,6 +40,7 @@
     "@babel/core": "^7.28.0",
     "@babel/preset-env": "^7.28.0",
     "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
     "@rollup/plugin-terser": "^0.4.0",
     "@rollup/plugin-typescript": "^12.1.4",

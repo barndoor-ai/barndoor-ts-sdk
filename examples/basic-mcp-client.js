@@ -6,11 +6,11 @@
  */
 
 import 'dotenv/config';
-import { 
-  loginInteractive, 
-  ensureServerConnected, 
-  makeMcpClient 
-} from '../src/index.js';
+import {
+  loginInteractive,
+  ensureServerConnected,
+  makeMcpClient
+} from '../dist/index.esm.js';
 
 const SERVER_SLUG = 'salesforce'; // or 'notion'
 
@@ -32,7 +32,7 @@ async function main() {
       if (error.statusCode === 401) {
         console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
         // Clear cached token and try again
-        const { clearCachedToken } = await import('../src/index.js');
+        const { clearCachedToken } = await import('../dist/index.esm.js');
         clearCachedToken();
         sdk = await loginInteractive();
         await sdk.listServers(); // Test again

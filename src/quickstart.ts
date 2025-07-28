@@ -69,7 +69,7 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
     clientId = config.clientId,
     clientSecret = config.clientSecret,
     audience = config.apiAudience,
-    apiBaseUrl = config.apiBaseUrl,
+    apiBaseUrl: _apiBaseUrl = config.apiBaseUrl,
     port = 52765
   } = options;
   
@@ -127,7 +127,7 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
   });
   
   // Wait for callback
-  const [code, state] = await waiter;
+  const [code, _state] = await waiter;
   
   // Exchange code for token
   const tokenData = await exchangeCodeForToken({
@@ -136,8 +136,8 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
     clientSecret,
     code,
     redirectUri
-  });
-  
+  }) as { access_token: string; [key: string]: unknown };
+
   // Save token and create SDK
   await saveUserToken(tokenData);
   // Use dynamic config with org ID substitution
@@ -194,7 +194,7 @@ export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: 
  */
 export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<[unknown, string]> {
   const {
-    proxyBaseUrl = 'http://proxy-ingress:8080',
+    proxyBaseUrl: _proxyBaseUrl = 'http://proxy-ingress:8080',
     transport = 'streamable-http'
   } = options;
   
@@ -207,7 +207,7 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
   }
   
   // 2. Decide proxy vs public based on environment
-  const env = (isNode ? process.env.BARNDOOR_ENV || process.env.MODE : '') || 'localdev';
+  const env = (isNode ? process.env['BARNDOOR_ENV'] || process.env['MODE'] : '') || 'localdev';
   
   let url;
   if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
@@ -246,6 +246,7 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
 export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<McpClient> {
   // 1. Build URL + headers via existing helper
   const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlug, options);
+  const params = mcpParams as { url: string; headers: Record<string, string> };
 
   // 2. Initialise MCP client
   const client = new McpClient({
@@ -254,18 +255,14 @@ export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, option
   });
 
   // 3. Create transport (handles initialize + session negotiation)
-  const transport = new StreamableHTTPClientTransport(new URL(mcpParams.url), {
+  const transport = new StreamableHTTPClientTransport(new URL(params.url), {
     requestInit: {
-      headers: mcpParams.headers
-    },
-    authProvider: {
-      // Minimal auth provider that supplies the same JWT
-      tokens: async () => ({ access_token: sdk.token })
+      headers: params.headers
     }
   });
 
   // 4. Connect (performs `initialize` and session negotiation)
-  await client.connect(transport);
+  await client.connect(transport as any);
   return client;
 }
 
@@ -273,7 +270,7 @@ export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, option
  * Build external MCP URL for production environments.
  * @private
  */
-function buildExternalMcpUrl(serverSlug, jwtToken, env) {
+function buildExternalMcpUrl(serverSlug: string, jwtToken: string, _env: string): string {
   // Placeholder implementation – production environments may have custom logic
   const config = getDynamicConfig(jwtToken);
   return `${config.mcpBaseUrl}/mcp/${serverSlug}`;

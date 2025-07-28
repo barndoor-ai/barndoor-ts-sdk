@@ -2,6 +2,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
 
 export default [
   // CommonJS build
@@ -20,6 +21,7 @@ export default [
       }),
       resolve({ preferBuiltins: true }),
       commonjs(),
+      json(),
       terser()
     ],
     external: ['cross-fetch', 'jose', 'fs', 'path', 'os', '@modelcontextprotocol/sdk']
@@ -39,6 +41,7 @@ export default [
       }),
       resolve({ preferBuiltins: true }),
       commonjs(),
+      json(),
       terser()
     ],
     external: ['cross-fetch', 'jose', 'fs', 'path', 'os', '@modelcontextprotocol/sdk']
