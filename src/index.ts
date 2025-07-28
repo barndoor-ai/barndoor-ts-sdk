@@ -29,7 +29,7 @@
  */
 
 // Main SDK class
-export { BarndoorSDK } from './client.js';
+export { BarndoorSDK } from './client';
 
 // Exception classes
 export {
@@ -44,14 +44,14 @@ export {
   OAuthError,
   ConfigurationError,
   TimeoutError
-} from './exceptions/index.js';
+} from './exceptions';
 
 // Data models
 export {
   ServerSummary,
   ServerDetail,
   AgentToken
-} from './models/index.js';
+} from './models';
 
 // Quick-start helpers
 export {
@@ -59,28 +59,46 @@ export {
   ensureServerConnected,
   makeMcpConnectionParams,
   makeMcpClient
-} from './quickstart.js';
+} from './quickstart';
 
 // Authentication utilities
 export {
-  buildAuthorizationUrl,
-  exchangeCodeForToken,
+  PKCEManager,
   startLocalCallbackServer,
-  validateState,
-  clearPKCEState,
   loadUserToken,
   saveUserToken,
-  clearCachedToken
-} from './auth/index.js';
+  clearCachedToken,
+  verifyJWTLocal,
+  JWTVerificationResult,
+  isTokenActive,
+  isTokenActiveWithRefresh,
+  validateToken,
+  TokenManager,
+  setTokenLogger
+} from './auth';
 
 // Configuration
 export {
   BarndoorConfig,
   getStaticConfig,
   getDynamicConfig,
+  checkTokenOrganization,
+  hasOrganizationInfo,
   isBrowser,
   isNode
-} from './config.js';
+} from './config';
+
+// Logging
+export {
+  setLogger,
+  getLogger,
+  createScopedLogger,
+  debug,
+  info,
+  warn,
+  error
+} from './logging';
+export type { Logger } from './logging';
 
 // Version
-export const version = '0.1.0';
+export { version } from './version';

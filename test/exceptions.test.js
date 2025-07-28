@@ -14,7 +14,7 @@ import {
   OAuthError,
   ConfigurationError,
   TimeoutError
-} from '../src/exceptions/index.js';
+} from '../dist/index.esm.js';
 
 describe('Exception Hierarchy', () => {
   test('exception inheritance is correct', () => {

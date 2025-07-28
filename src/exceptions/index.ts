@@ -1,6 +1,6 @@
 /**
  * Exception classes for the Barndoor SDK.
- * 
+ *
  * This module provides a complete hierarchy of error classes that mirror
  * the Python SDK exceptions exactly, ensuring API compatibility.
  */
@@ -9,7 +9,11 @@
  * Base exception for all Barndoor SDK errors.
  */
 export class BarndoorError extends Error {
-  constructor(message) {
+  /**
+   * Create a new BarndoorError.
+   * @param message - Error message
+   */
+  constructor(message: string) {
     super(message);
     this.name = this.constructor.name;
   }
@@ -19,7 +23,15 @@ export class BarndoorError extends Error {
  * Raised when authentication fails.
  */
 export class AuthenticationError extends BarndoorError {
-  constructor(message, errorCode = null) {
+  /** Optional error code for specific authentication failures */
+  public readonly errorCode: string | null;
+
+  /**
+   * Create a new AuthenticationError.
+   * @param message - Error message
+   * @param errorCode - Optional error code
+   */
+  constructor(message: string, errorCode: string | null = null) {
     super(message);
     this.errorCode = errorCode;
   }
@@ -29,14 +41,22 @@ export class AuthenticationError extends BarndoorError {
  * Raised when token operations fail.
  */
 export class TokenError extends AuthenticationError {
-  constructor(message, helpText = null) {
+  /** Optional help text for resolving the error */
+  public readonly helpText: string | null;
+
+  /**
+   * Create a new TokenError.
+   * @param message - Error message
+   * @param helpText - Optional help text
+   */
+  constructor(message: string, helpText: string | null = null) {
     let fullMessage = message;
     if (helpText) {
       fullMessage += ` ${helpText}`;
     } else {
       fullMessage += " Run 'barndoor-login' to authenticate.";
     }
-    
+
     super(fullMessage);
     this.helpText = helpText;
   }
@@ -56,10 +76,20 @@ export class TokenValidationError extends TokenError {}
  * Raised when unable to connect to the Barndoor API.
  */
 export class ConnectionError extends BarndoorError {
-  constructor(url, originalError) {
-    let userMessage;
+  /** The URL that failed to connect */
+  public readonly url: string;
+  /** The original error that caused the connection failure */
+  public readonly originalError: Error;
+
+  /**
+   * Create a new ConnectionError.
+   * @param url - The URL that failed to connect
+   * @param originalError - The original error that caused the failure
+   */
+  constructor(url: string, originalError: Error) {
+    let userMessage: string;
     const errorStr = originalError.toString().toLowerCase();
-    
+
     if (errorStr.includes('timeout')) {
       userMessage = `Connection to ${url} timed out. Please check your internet connection and try again.`;
     } else if (errorStr.includes('connection refused')) {
@@ -69,7 +99,7 @@ export class ConnectionError extends BarndoorError {
     } else {
       userMessage = `Failed to connect to ${url}. Please check your internet connection.`;
     }
-    
+
     super(userMessage);
     this.url = url;
     this.originalError = originalError;
@@ -80,16 +110,31 @@ export class ConnectionError extends BarndoorError {
  * Raised for HTTP error responses.
  */
 export class HTTPError extends BarndoorError {
-  constructor(statusCode, message, responseBody = null) {
+  /** HTTP status code */
+  public readonly statusCode: number;
+  /** Raw response body */
+  public readonly responseBody: string | null;
+
+  /**
+   * Create a new HTTPError.
+   * @param statusCode - HTTP status code
+   * @param message - Error message
+   * @param responseBody - Raw response body
+   */
+  constructor(statusCode: number, message: string, responseBody: string | null = null) {
     const userMessage = HTTPError._createUserFriendlyMessage(statusCode, message, responseBody);
     super(userMessage);
     this.statusCode = statusCode;
     this.responseBody = responseBody;
   }
-  
-  static _createUserFriendlyMessage(statusCode, message, responseBody) {
+
+  /**
+   * Create a user-friendly error message based on HTTP status code.
+   * @private
+   */
+  private static _createUserFriendlyMessage(statusCode: number, message: string, _responseBody: string | null): string {
     const baseMessage = `Request failed (HTTP ${statusCode})`;
-    
+
     if (statusCode === 400) {
       return `${baseMessage}: Invalid request. Please check your input parameters.`;
     } else if (statusCode === 401) {
@@ -112,14 +157,24 @@ export class HTTPError extends BarndoorError {
  * Raised when a requested server is not found.
  */
 export class ServerNotFoundError extends BarndoorError {
-  constructor(serverIdentifier, availableServers = null) {
+  /** The server identifier that was not found */
+  public readonly serverIdentifier: string;
+  /** List of available servers, if provided */
+  public readonly availableServers: string[] | null;
+
+  /**
+   * Create a new ServerNotFoundError.
+   * @param serverIdentifier - The server identifier that was not found
+   * @param availableServers - Optional list of available servers
+   */
+  constructor(serverIdentifier: string, availableServers: string[] | null = null) {
     let message = `Server '${serverIdentifier}' not found`;
     if (availableServers) {
       message += `. Available servers: ${availableServers.join(', ')}`;
     } else {
       message += ". Use listServers() to see available servers.";
     }
-    
+
     super(message);
     this.serverIdentifier = serverIdentifier;
     this.availableServers = availableServers;

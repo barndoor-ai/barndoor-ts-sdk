@@ -5,13 +5,13 @@
  * and that the API is compatible with the Python SDK.
  */
 
-import { BarndoorSDK } from '../src/client.js';
-import { 
-  BarndoorError, 
-  HTTPError, 
+import {
+  BarndoorSDK,
+  BarndoorError,
+  HTTPError,
   ConfigurationError,
-  TokenError 
-} from '../src/exceptions/index.js';
+  TokenError
+} from '../dist/index.esm.js';
 import { ServerSummary, ServerDetail } from '../src/models/index.js';
 import { BarndoorConfig } from '../src/config.js';
 

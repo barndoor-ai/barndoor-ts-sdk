@@ -1,65 +1,105 @@
 /**
  * Main Barndoor SDK client.
- * 
+ *
  * This module provides the primary BarndoorSDK class that mirrors the Python
  * SDK's client.py functionality with 100% API compatibility.
  */
 
-import { HTTPClient, TimeoutConfig } from './http/client.js';
-import { loadUserToken } from './auth/index.js';
-import { ServerSummary, ServerDetail } from './models/index.js';
+import { HTTPClient, TimeoutConfig } from './http/client';
+import { ServerSummary, ServerDetail } from './models';
 import {
-  BarndoorError,
   HTTPError,
-  ConnectionError,
   ConfigurationError,
   TokenError,
   ServerNotFoundError
-} from './exceptions/index.js';
-import { getStaticConfig, getDynamicConfig, isNode } from './config.js';
+} from './exceptions';
+import { getStaticConfig, isNode } from './config';
+import { createScopedLogger } from './logging';
 import { exec } from 'child_process';
 import os from 'os';
 
 /**
+ * Configuration options for BarndoorSDK constructor.
+ */
+export interface BarndoorSDKOptions {
+  /** User JWT token (optional - can be set later via authenticate()) */
+  token?: string;
+  /** Whether to validate token on initialization */
+  validateTokenOnInit?: boolean;
+  /** Request timeout in seconds */
+  timeout?: number;
+  /** Maximum number of retries */
+  maxRetries?: number;
+}
+
+/**
+ * Options for ensureServerConnected method.
+ */
+export interface EnsureServerConnectedOptions {
+  /** Maximum seconds to wait for connection */
+  pollSeconds?: number;
+}
+
+/**
+ * Response from server connection initiation.
+ */
+export interface ConnectionInitiationResponse {
+  /** OAuth authorization URL */
+  auth_url?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Response from connection status check.
+ */
+export interface ConnectionStatusResponse {
+  /** Current connection status */
+  status: string;
+}
+
+/**
  * Async client for interacting with the Barndoor Platform API.
- * 
+ *
  * This SDK provides methods to:
  * - Manage server connections and OAuth flows
  * - List available MCP servers
  * - Validate user tokens
- * 
+ *
  * The client handles authentication automatically by including the user's
  * JWT token in all requests.
  */
 export class BarndoorSDK {
+  /** Base URL of the Barndoor API */
+  public readonly base: string;
+  /** User JWT token */
+  private _token: string | null;
+  /** HTTP client instance */
+  private readonly _http: HTTPClient;
+  /** Whether token has been validated */
+  private _tokenValidated: boolean;
+  /** Whether the SDK has been closed */
+  private _closed: boolean;
+  /** Scoped logger for this SDK instance */
+  private readonly _logger = createScopedLogger('client');
+
   /**
-   * @param {string} apiBaseUrl - Base URL of the Barndoor API
-   * @param {Object} [options={}] - Configuration options
-   * @param {string} [options.token] - User JWT token
-   * @param {boolean} [options.validateTokenOnInit=true] - Whether to validate token on init
-   * @param {number} [options.timeout=30.0] - Request timeout in seconds
-   * @param {number} [options.maxRetries=3] - Maximum number of retries
+   * Create a new BarndoorSDK instance.
+   * @param apiBaseUrl - Base URL of the Barndoor API
+   * @param options - Configuration options (token is optional)
    */
-  constructor(apiBaseUrl, options = {}) {
+  constructor(apiBaseUrl: string, options: BarndoorSDKOptions = {}) {
     const {
       token: barndoorToken,
-      validateTokenOnInit = true,
       timeout = 30.0,
       maxRetries = 3
     } = options;
-    
+
     // Validate inputs
     this.base = this._validateUrl(apiBaseUrl, 'API base URL').replace(/\/$/, '');
-    
-    // Get token from parameter or storage
-    const token = barndoorToken || loadUserToken();
-    if (!token) {
-      throw new Error(
-        'Barndoor user token not provided and none found in store. Run `barndoor-login`.'
-      );
-    }
-    this.token = this._validateToken(token);
-    
+
+    // Token is now optional - can be set later via authenticate()
+    this._token = barndoorToken ? this._validateToken(barndoorToken) : null;
+
     // Validate configuration
     if (typeof timeout !== 'number' || timeout <= 0) {
       throw new ConfigurationError('timeout must be a positive number');
@@ -67,25 +107,50 @@ export class BarndoorSDK {
     if (!Number.isInteger(maxRetries) || maxRetries < 0) {
       throw new ConfigurationError('maxRetries must be a non-negative integer');
     }
-    
+
     // Initialize HTTP client
     const timeoutConfig = new TimeoutConfig(timeout, timeout / 3);
     this._http = new HTTPClient(timeoutConfig, maxRetries);
     this._tokenValidated = false;
     this._closed = false;
-    
-    console.log(`Initialized BarndoorSDK for ${this.base}`);
+
+    this._logger.info(`Initialized BarndoorSDK for ${this.base}`);
+  }
+
+  /**
+   * Get the current token.
+   */
+  public get token(): string {
+    if (!this._token) {
+      throw new Error('No token available. Call authenticate() first or provide token in constructor.');
+    }
+    return this._token;
+  }
+
+  /**
+   * Set authentication token for the SDK.
+   * @param token - JWT token to use for authentication
+   */
+  public async authenticate(token: string): Promise<void> {
+    this._token = this._validateToken(token);
+    this._tokenValidated = false; // Reset validation status
+
+    // Optionally validate the token immediately
+    await this.ensureValidToken();
+
+    // eslint-disable-next-line no-console
+    console.log('Authentication successful');
   }
   
   /**
    * Validate URL format.
    * @private
    */
-  _validateUrl(url, name) {
+  private _validateUrl(url: string, name: string): string {
     if (!url || typeof url !== 'string') {
       throw new ConfigurationError(`${name} must be a non-empty string`);
     }
-    
+
     try {
       new URL(url);
       return url;
@@ -93,30 +158,30 @@ export class BarndoorSDK {
       throw new ConfigurationError(`${name} must be a valid URL`);
     }
   }
-  
+
   /**
    * Validate token format.
    * @private
    */
-  _validateToken(token) {
+  private _validateToken(token: string): string {
     if (!token || typeof token !== 'string') {
       throw new TokenError('Token must be a non-empty string');
     }
-    
+
     // Basic JWT format validation
     const parts = token.split('.');
     if (parts.length !== 3) {
       throw new TokenError('Token must be a valid JWT');
     }
-    
+
     return token;
   }
-  
+
   /**
    * Ensure the SDK hasn't been closed.
    * @private
    */
-  _ensureNotClosed() {
+  private _ensureNotClosed(): void {
     if (this._closed) {
       throw new Error('SDK has been closed. Create a new instance or use as context manager.');
     }
@@ -126,26 +191,26 @@ export class BarndoorSDK {
    * Make authenticated request with automatic token validation.
    * @private
    */
-  async _req(method, path, options = {}) {
+  private async _req(method: string, path: string, options: Record<string, unknown> = {}): Promise<unknown> {
     this._ensureNotClosed();
     await this.ensureValidToken();
-    
-    const headers = options.headers || {};
+
+    const headers = (options['headers'] as Record<string, string>) ?? {};
     headers['Authorization'] = `Bearer ${this.token}`;
-    
+
     const url = `${this.base}${path}`;
     return await this._http.request(method, url, { ...options, headers });
   }
-  
+
   /**
    * Validate the cached token by making a test API call.
-   * @returns {Promise<boolean>} True if the token is valid
+   * @returns True if the token is valid
    */
-  async validateCachedToken() {
+  public async validateCachedToken(): Promise<boolean> {
     if (!this.token) {
       return false;
     }
-    
+
     try {
       // Use Auth0's userinfo endpoint for validation
       const config = getStaticConfig();
@@ -154,9 +219,12 @@ export class BarndoorSDK {
           'Authorization': `Bearer ${this.token}`
         }
       });
-      
+
       const isValid = response.ok;
-      this._tokenValidated = true;
+      // Only set _tokenValidated to true if the token is actually valid
+      if (isValid) {
+        this._tokenValidated = true;
+      }
       return isValid;
     } catch (error) {
       return false;
@@ -166,84 +234,86 @@ export class BarndoorSDK {
   /**
    * Ensure token is valid, validating if necessary.
    */
-  async ensureValidToken() {
+  public async ensureValidToken(): Promise<void> {
     if (this._tokenValidated) {
       return;
     }
-    
-    // Skip validation in non-production environments
-    const env = (isNode ? process.env.BARNDOOR_ENV : '') || 'localdev';
-    if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
+
+    // Skip validation only in explicit test/CI environments
+    const env = (isNode ? process.env['BARNDOOR_ENV'] : '') ?? '';
+    if (['test', 'ci'].includes(env.toLowerCase())) {
       this._tokenValidated = true;
       return;
     }
-    
-    // Validate token in production
+
+    // Validate token in all other environments (including staging, dev, prod)
     const isValid = await this.validateCachedToken();
     if (!isValid) {
       throw new TokenError('Token validation failed. Please re-authenticate.');
     }
-    
+
     this._tokenValidated = true;
   }
-  
+
   /**
    * List all MCP servers available to the caller's organization.
-   * @returns {Promise<ServerSummary[]>} Array of server summaries
+   * @returns Array of server summaries
    */
-  async listServers() {
-    console.log('Fetching server list');
+  public async listServers(): Promise<ServerSummary[]> {
+    this._logger.debug('Fetching server list');
     try {
-      const response = await this._req('GET', '/servers');
+      const response = await this._req('GET', '/servers') as unknown[];
       const servers = response.map(data => ServerSummary.fromApiResponse(data));
-      console.log(`Retrieved ${servers.length} servers`);
+      this._logger.info(`Retrieved ${servers.length} servers`);
       return servers;
     } catch (error) {
-      console.error('Failed to list servers:', error);
+      this._logger.error('Failed to list servers:', error);
       throw error;
     }
   }
   
   /**
    * Get detailed information about a specific server.
-   * @param {string} serverId - Server ID
-   * @returns {Promise<ServerDetail>} Server details
+   * @param serverId - Server ID
+   * @returns Server details
    */
-  async getServer(serverId) {
+  public async getServer(serverId: string): Promise<ServerDetail> {
     const validatedServerId = this._validateServerId(serverId);
-    
+
+    // eslint-disable-next-line no-console
     console.log(`Fetching server details for ${validatedServerId}`);
     const response = await this._req('GET', `/servers/${validatedServerId}`);
     return ServerDetail.fromApiResponse(response);
   }
-  
+
   /**
    * Initiate OAuth connection flow for a server.
-   * @param {string} serverId - Server ID
-   * @param {string} [returnUrl] - Optional return URL
-   * @returns {Promise<Object>} Connection initiation response
+   * @param serverId - Server ID
+   * @param returnUrl - Optional return URL
+   * @returns Connection initiation response
    */
-  async initiateConnection(serverId, returnUrl = null) {
+  public async initiateConnection(serverId: string, returnUrl?: string): Promise<ConnectionInitiationResponse> {
     const validatedServerId = this._validateServerId(serverId);
-    let validatedReturnUrl = null;
-    
+    let validatedReturnUrl: string | undefined;
+
     if (returnUrl) {
       validatedReturnUrl = this._validateUrl(returnUrl, 'Return URL');
     }
-    
+
+    // eslint-disable-next-line no-console
     console.log(`Initiating connection for server ${validatedServerId}`);
-    
+
     const params = validatedReturnUrl ? { return_url: validatedReturnUrl } : undefined;
-    
+
     try {
       const response = await this._req('POST', `/servers/${validatedServerId}/connect`, {
         params,
         json: {}
       });
-      return response;
-    } catch (error) {
-      if (error instanceof HTTPError && 
-          error.statusCode === 500 && 
+      return response as ConnectionInitiationResponse;
+    } catch (error: unknown) {
+      if (error instanceof HTTPError &&
+          error.statusCode === 500 &&
           error.responseBody?.includes('OAuth server configuration not found')) {
         throw new Error(
           'Server is missing OAuth configuration. ' +
@@ -256,59 +326,59 @@ export class BarndoorSDK {
   
   /**
    * Get the user's connection status for a specific server.
-   * @param {string} serverId - Server ID
-   * @returns {Promise<string>} Connection status
+   * @param serverId - Server ID
+   * @returns Connection status
    */
-  async getConnectionStatus(serverId) {
+  public async getConnectionStatus(serverId: string): Promise<string> {
     const validatedServerId = this._validateServerId(serverId);
-    
+
+    // eslint-disable-next-line no-console
     console.log(`Checking connection status for server ${validatedServerId}`);
-    const response = await this._req('GET', `/servers/${validatedServerId}/connection`);
+    const response = await this._req('GET', `/servers/${validatedServerId}/connection`) as ConnectionStatusResponse;
     return response.status;
   }
-  
+
   /**
    * Validate server ID format.
    * @private
    */
-  _validateServerId(serverId) {
+  private _validateServerId(serverId: string): string {
     if (!serverId || typeof serverId !== 'string') {
       throw new Error('Server ID must be a non-empty string');
     }
-    
+
     // Basic UUID format validation
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(serverId)) {
       throw new Error('Server ID must be a valid UUID');
     }
-    
+
     return serverId;
   }
-  
+
   /**
    * Close the SDK and clean up resources.
    */
-  async close() {
+  public async close(): Promise<void> {
     if (!this._closed) {
       await this._http.close();
       this._closed = true;
     }
   }
-  
+
   /**
    * Alias for close() to match Python SDK naming.
    */
-  async aclose() {
+  public async aclose(): Promise<void> {
     await this.close();
   }
 
   /**
    * Ensure a server is connected, initiating OAuth if needed.
-   * @param {string} serverIdentifier - Server slug or provider name
-   * @param {Object} [options={}] - Options
-   * @param {number} [options.pollSeconds=60] - Maximum seconds to wait
+   * @param serverIdentifier - Server slug or provider name
+   * @param options - Options
    */
-  async ensureServerConnected(serverIdentifier, options = {}) {
+  public async ensureServerConnected(serverIdentifier: string, options: EnsureServerConnectedOptions = {}): Promise<void> {
     const { pollSeconds = 60 } = options;
 
     if (!isNode) {
@@ -340,7 +410,7 @@ export class BarndoorSDK {
     // 3. Open browser
     const platform = os.platform();
 
-    let command;
+    let command: string;
     if (platform === 'darwin') {
       command = `open "${authUrl}"`;
     } else if (platform === 'win32') {
@@ -351,6 +421,7 @@ export class BarndoorSDK {
 
     exec(command, (error) => {
       if (error) {
+        // eslint-disable-next-line no-console
         console.warn('Failed to open browser:', error.message);
       }
     });
