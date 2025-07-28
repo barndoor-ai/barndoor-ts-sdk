@@ -1,6 +1,6 @@
 # Barndoor SDK Examples
 
-This directory contains working examples that demonstrate how to use the Barndoor SDK with MCP servers.
+This directory contains working examples that demonstrate how to use the Barndoor TypeScript SDK with MCP servers.
 
 ## Working Examples
 
@@ -68,7 +68,7 @@ Both examples use the same authentication pattern:
 
 Both examples follow the same proven pattern:
 
-```javascript
+```typescript
 // 1. Authenticate
 const sdk = await loginInteractive();
 
@@ -88,3 +88,5 @@ await sdk.close();
 ```
 
 This pattern uses the `@modelcontextprotocol/sdk` package internally and handles all the complex MCP protocol details for you.
+
+**Note:** While the SDK is written in TypeScript, the current examples are still in JavaScript (.js files) for broader compatibility. You can easily convert them to TypeScript by changing the file extensions to `.ts` and adding type annotations as needed.

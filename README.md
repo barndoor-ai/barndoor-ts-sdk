@@ -1,6 +1,8 @@
-# Barndoor JavaScript SDK
+# Barndoor TypeScript SDK
 
-A lightweight, **framework-agnostic** JavaScript client for the Barndoor Platform REST APIs and Model Context Protocol (MCP) servers.
+A lightweight, **framework-agnostic** TypeScript/JavaScript client for the Barndoor Platform REST APIs and Model Context Protocol (MCP) servers.
+
+The SDK supports *lazy authentication*—you can build an SDK instance first, then inject a JWT later with `authenticate()`.
 
 The SDK removes boiler-plate around:
 
@@ -18,13 +20,19 @@ npm install @barndoor/sdk
 
 ### Basic Usage
 
-```javascript
+```typescript
 import { BarndoorSDK } from '@barndoor/sdk';
 
-// Initialize with your API base URL and token
+// ① token known at construction time (unchanged)
 const sdk = new BarndoorSDK('https://your-org.mcp.barndoor.ai', {
-  token: 'your-jwt-token'
+  token: 'your-jwt'
 });
+```
+
+```typescript
+// ② deferred login (new)
+const sdk = new BarndoorSDK('https://your-org.mcp.barndoor.ai');
+await sdk.authenticate('your-jwt');
 
 // List available MCP servers
 const servers = await sdk.listServers();
@@ -42,7 +50,9 @@ await sdk.close();
 
 For development and prototyping, use the interactive login helper:
 
-```javascript
+`loginInteractive()` builds an SDK *without* requiring `token` in the ctor—it internally calls `sdk.authenticate()` for you.
+
+```typescript
 import { loginInteractive } from '@barndoor/sdk';
 
 // Automatically handles OAuth flow and token caching
@@ -52,27 +62,27 @@ const servers = await sdk.listServers();
 
 ### Complete Workflow
 
-```javascript
-import { 
-  loginInteractive, 
-  ensureServerConnected, 
-  makeMcpConnectionParams 
+```typescript
+import {
+  loginInteractive,
+  ensureServerConnected,
+  makeMcpConnectionParams
 } from '@barndoor/sdk';
 
 async function main() {
   // 1. Login (handles OAuth + caching)
   const sdk = await loginInteractive();
-  
+
   // 2. Ensure server is connected (launches OAuth if needed)
-  await ensureServerConnected(sdk, 'notion');
-  
+  await ensureServerConnected(sdk, 'notion'); // sdk.ensureServerConnected(...) is also available directly
+
   // 3. Get connection parameters for your AI framework
   const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
-  
+
   // 4. Use with any MCP-compatible framework
   console.log('MCP URL:', params.url);
   console.log('Headers:', params.headers);
-  
+
   await sdk.close();
 }
 ```
@@ -98,6 +108,8 @@ export BARNDOOR_API=http://localhost:8000
 export BARNDOOR_URL=http://localhost:8000
 ```
 
+If you run without a token at construction time the SDK will still read `AGENT_CLIENT_ID/SECRET` when `loginInteractive()` is invoked.
+
 ## API Reference
 
 ### BarndoorSDK
@@ -110,16 +122,32 @@ const sdk = new BarndoorSDK(apiBaseUrl, options);
 
 **Parameters:**
 - `apiBaseUrl` (string): Base URL of the Barndoor API
-- `options.token` (string): User JWT token
+- `options.token?` (string): Initial JWT (pass later via authenticate() if omitted)
 - `options.timeout` (number): Request timeout in seconds (default: 30)
 - `options.maxRetries` (number): Maximum retry attempts (default: 3)
 
 **Methods:**
 
+#### `authenticate(jwtToken)`
+Sets/validates token for the SDK instance.
+
+```typescript
+await sdk.authenticate(jwtToken);
+// Returns: Promise<void>
+```
+
+#### `ensureServerConnected(serverSlug, options?)`
+Ensure a server is connected, launching OAuth if needed – same behaviour as quick-start helper.
+
+```typescript
+await sdk.ensureServerConnected('notion', { pollSeconds: 2 });
+// Returns: Promise<void>
+```
+
 #### `listServers()`
 List all MCP servers available to your organization.
 
-```javascript
+```typescript
 const servers = await sdk.listServers();
 // Returns: ServerSummary[]
 ```
@@ -127,7 +155,7 @@ const servers = await sdk.listServers();
 #### `getServer(serverId)`
 Get detailed information about a specific server.
 
-```javascript
+```typescript
 const server = await sdk.getServer('server-uuid');
 // Returns: ServerDetail
 ```
@@ -135,7 +163,7 @@ const server = await sdk.getServer('server-uuid');
 #### `initiateConnection(serverId, returnUrl?)`
 Initiate OAuth connection flow for a server.
 
-```javascript
+```typescript
 const connection = await sdk.initiateConnection('server-uuid');
 // Returns: { connection_id, auth_url, state }
 ```
@@ -143,7 +171,7 @@ const connection = await sdk.initiateConnection('server-uuid');
 #### `getConnectionStatus(serverId)`
 Get connection status for a server.
 
-```javascript
+```typescript
 const status = await sdk.getConnectionStatus('server-uuid');
 // Returns: 'available' | 'pending' | 'connected'
 ```
@@ -153,7 +181,7 @@ const status = await sdk.getConnectionStatus('server-uuid');
 #### `loginInteractive(options?)`
 Perform interactive OAuth login and return initialized SDK.
 
-```javascript
+```typescript
 const sdk = await loginInteractive({
   authDomain: 'auth.barndoor.ai',
   clientId: 'your-client-id',
@@ -165,14 +193,14 @@ const sdk = await loginInteractive({
 #### `ensureServerConnected(sdk, serverSlug, options?)`
 Ensure a server is connected, launching OAuth if needed.
 
-```javascript
+```typescript
 await ensureServerConnected(sdk, 'notion', { timeout: 90 });
 ```
 
 #### `makeMcpConnectionParams(sdk, serverSlug, options?)`
 Generate MCP connection parameters for AI frameworks.
 
-```javascript
+```typescript
 const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
 // params: { url, transport, headers }
 ```
@@ -181,13 +209,13 @@ const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
 
 The SDK provides a comprehensive error hierarchy:
 
-```javascript
-import { 
+```typescript
+import {
   BarndoorError,
   HTTPError,
   ConnectionError,
   TokenError,
-  ConfigurationError 
+  ConfigurationError
 } from '@barndoor/sdk';
 
 try {
@@ -209,7 +237,7 @@ try {
 
 The SDK works in both Node.js and browser environments:
 
-```javascript
+```typescript
 // Browser usage
 import { BarndoorSDK } from '@barndoor/sdk';
 
@@ -218,6 +246,8 @@ const sdk = new BarndoorSDK('https://api.barndoor.ai', {
   token: 'your-token'
 });
 ```
+
+When running in the browser you can also create the SDK first and later call `await sdk.authenticate(token)` once your SPA receives a JWT.
 
 **Note:** Interactive login (`loginInteractive`) requires Node.js for the local callback server.
 
@@ -230,7 +260,7 @@ See the `examples/` directory for complete working examples:
 
 ## TypeScript Support
 
-The SDK includes TypeScript definitions:
+The SDK is written in TypeScript and includes full type definitions:
 
 ```typescript
 import { BarndoorSDK, ServerSummary } from '@barndoor/sdk';
@@ -246,7 +276,9 @@ const servers: ServerSummary[] = await sdk.listServers();
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Run tests: `npm test`
-4. Run safety checks: `npm run safety-check`
+3. Build the project: `npm run build`
+4. Run tests: `npm test`
+5. Run type checking: `npm run type-check`
+6. Run safety checks: `npm run safety-check`
 
 

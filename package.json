@@ -1,7 +1,7 @@
 {
   "name": "@barndoor/sdk",
   "version": "0.1.0",
-  "description": "JavaScript client for the Barndoor Platform API",
+  "description": "TypeScript/JavaScript client for the Barndoor Platform API",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
