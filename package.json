@@ -25,6 +25,8 @@
     "format:check": "prettier --check src/ test/ examples/",
     "type-check": "node node_modules/typescript/lib/tsc.js --noEmit",
     "type-coverage": "type-coverage --at-least 60 --strict",
+    "dump-all": "node scripts/dump-core-files.js",
+    "dump-typescript": "node scripts/dump-typescript-only.js",
     "safety-check": "../scripts/safety-check.sh"
   },
   "dependencies": {
