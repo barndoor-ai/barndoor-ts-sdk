@@ -225,9 +225,8 @@ const sdk = new BarndoorSDK('https://api.barndoor.ai', {
 
 See the `examples/` directory for complete working examples:
 
-- `sample-notion-agent.js` - Basic Notion integration
-- `sample-salesforce-agent.js` - Salesforce MCP demo  
-- `sample-pipeline-report.js` - Multi-server integration (Salesforce + Notion)
+- `openai-integration.js` - OpenAI + MCP function calling integration
+- `basic-mcp-client.js` - Direct MCP client without AI framework
 
 ## TypeScript Support
 
