@@ -6,11 +6,8 @@
  */
 
 export {
-  buildAuthorizationUrl,
-  exchangeCodeForToken,
-  startLocalCallbackServer,
-  validateState,
-  clearPKCEState
+  PKCEManager,
+  startLocalCallbackServer
 } from './pkce';
 
 export {
@@ -18,7 +15,13 @@ export {
   TokenManager,
   loadUserToken,
   saveUserToken,
-  clearCachedToken
+  clearCachedToken,
+  verifyJWTLocal,
+  JWTVerificationResult,
+  isTokenActive,
+  isTokenActiveWithRefresh,
+  validateToken,
+  setTokenLogger
 } from './store';
 
 // Re-export types

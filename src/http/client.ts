@@ -125,8 +125,19 @@ export class HTTPClient {
           throw new HTTPError(response.status, response.statusText, responseText);
         }
 
-        // Parse JSON response
-        const responseData = await response.json();
+        // Parse response based on Content-Type
+        const contentType = response.headers.get('content-type') || '';
+        let responseData: unknown;
+
+        if (contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else if (contentType.includes('text/')) {
+          responseData = await response.text();
+        } else {
+          // For binary data or unknown types, return as ArrayBuffer
+          responseData = await response.arrayBuffer();
+        }
+
         return responseData;
         
       } catch (error: unknown) {
@@ -137,8 +148,17 @@ export class HTTPClient {
           const totalTimeout = this.timeoutConfig.connect + this.timeoutConfig.read;
           lastError = new TimeoutError(`Request to ${requestUrl} timed out after ${totalTimeout}ms`);
         } else if (error instanceof HTTPError) {
-          // Don't retry HTTP errors (4xx, 5xx)
-          throw error;
+          // Distinguish retryable 5xx from non-retryable 4xx errors
+          if (error.statusCode >= 400 && error.statusCode < 500) {
+            // 4xx errors are client errors - don't retry
+            throw error;
+          } else if (error.statusCode >= 500 && error.statusCode < 600) {
+            // 5xx errors are server errors - retry these
+            lastError = error;
+          } else {
+            // Other HTTP errors - don't retry
+            throw error;
+          }
         } else if (error instanceof Error && error.name === 'TypeError' && error.message.includes('fetch')) {
           lastError = new ConnectionError(requestUrl, error);
         } else {
@@ -156,6 +176,10 @@ export class HTTPClient {
       }
     }
 
+    // Ensure we always have an error to throw
+    if (!lastError) {
+      lastError = new Error(`Request to ${requestUrl} failed after ${this.maxRetries + 1} attempts with no specific error`);
+    }
     throw lastError;
   }
   

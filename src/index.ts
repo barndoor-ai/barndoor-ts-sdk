@@ -63,14 +63,18 @@ export {
 
 // Authentication utilities
 export {
-  buildAuthorizationUrl,
-  exchangeCodeForToken,
+  PKCEManager,
   startLocalCallbackServer,
-  validateState,
-  clearPKCEState,
   loadUserToken,
   saveUserToken,
-  clearCachedToken
+  clearCachedToken,
+  verifyJWTLocal,
+  JWTVerificationResult,
+  isTokenActive,
+  isTokenActiveWithRefresh,
+  validateToken,
+  TokenManager,
+  setTokenLogger
 } from './auth';
 
 // Configuration
@@ -78,9 +82,23 @@ export {
   BarndoorConfig,
   getStaticConfig,
   getDynamicConfig,
+  checkTokenOrganization,
+  hasOrganizationInfo,
   isBrowser,
   isNode
 } from './config';
 
+// Logging
+export {
+  setLogger,
+  getLogger,
+  createScopedLogger,
+  debug,
+  info,
+  warn,
+  error
+} from './logging';
+export type { Logger } from './logging';
+
 // Version
-export const version = '0.1.0';
+export { version } from './version';

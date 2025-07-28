@@ -10,9 +10,15 @@ import { ConfigurationError } from './exceptions';
 
 /**
  * Environment detection utilities
+ *
+ * Improved detection that works correctly under bundlers where process gets shimmed.
+ * We check for window first since that's the most reliable browser indicator.
  */
-export const isBrowser: boolean = typeof window !== 'undefined';
-export const isNode: boolean = typeof process !== 'undefined' && Boolean(process.versions?.node);
+export const isBrowser: boolean = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+export const isNode: boolean = typeof window === 'undefined' &&
+  typeof process !== 'undefined' &&
+  process.versions != null &&
+  process.versions.node != null;
 
 /**
  * Browser window with optional ENV object for environment variables.
@@ -158,24 +164,49 @@ export class BarndoorConfig {
   /**
    * Get dynamic configuration with organization ID substituted.
    * @param jwtToken - JWT token to extract organization ID from
+   * @param options - Configuration options
    * @returns Dynamic configuration instance
    */
-  public static getDynamicConfig(jwtToken: string): BarndoorConfig {
+  public static getDynamicConfig(jwtToken: string, options: {
+    /** Whether to throw error for tokens without organization info */
+    requireOrganization?: boolean;
+    /** Fallback organization ID to use if none found in token */
+    fallbackOrganizationId?: string;
+  } = {}): BarndoorConfig {
+    const { requireOrganization = true, fallbackOrganizationId } = options;
     const config = new BarndoorConfig();
 
-    try {
-      // Extract organization ID from JWT token
-      const orgId = extractOrganizationId(jwtToken);
+    // Try to extract organization ID safely
+    const orgResult = extractOrganizationIdSafe(jwtToken);
 
-      // Substitute {organization_id} in URLs
-      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', orgId);
-      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', orgId);
-
+    if (orgResult.hasOrganization) {
+      // Organization found - substitute in URLs
+      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', orgResult.organizationId!);
+      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', orgResult.organizationId!);
       return config;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new ConfigurationError(`Failed to extract organization ID from token: ${errorMessage}`);
     }
+
+    // No organization found - handle based on options
+    if (fallbackOrganizationId) {
+      // Use fallback organization ID
+      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', fallbackOrganizationId);
+      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', fallbackOrganizationId);
+      return config;
+    }
+
+    if (requireOrganization) {
+      // Throw error with helpful message
+      const errorMessage = orgResult.error || 'No organization information found in token';
+      throw new ConfigurationError(
+        `Failed to extract organization ID from token: ${errorMessage}. ` +
+        'This token may be for a personal account or may be missing organization claims. ' +
+        'Consider using getStaticConfig() for organization-independent operations or ' +
+        'provide a fallbackOrganizationId in the options.'
+      );
+    }
+
+    // Return config without organization substitution (URLs will contain {organization_id} placeholder)
+    return config;
   }
 
   /**
@@ -231,37 +262,86 @@ function base64Decode(str: string): string {
 }
 
 /**
- * Extract organization ID from JWT token.
- * @param jwtToken - JWT token
- * @returns Organization ID
- * @throws Error if token is invalid or organization ID not found
+ * Result of organization ID extraction from JWT token.
  */
-function extractOrganizationId(jwtToken: string): string {
+interface OrganizationExtractionResult {
+  /** Organization ID if found */
+  organizationId?: string;
+  /** Whether organization ID was found */
+  hasOrganization: boolean;
+  /** Error message if extraction failed */
+  error?: string;
+}
+
+/**
+ * Extract organization ID from JWT token with graceful fallback.
+ * @param jwtToken - JWT token
+ * @returns Organization extraction result
+ */
+function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResult {
   try {
     const parts = jwtToken.split('.');
     if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
+      return {
+        hasOrganization: false,
+        error: 'Invalid JWT format - expected 3 parts separated by dots'
+      };
     }
-    const payload = JSON.parse(base64Decode(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
 
+    let payload: JWTPayload;
+    try {
+      payload = JSON.parse(base64Decode(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
+    } catch (parseError) {
+      return {
+        hasOrganization: false,
+        error: 'Failed to parse JWT payload - token may be corrupted'
+      };
+    }
+
+    // Try multiple possible locations for organization information
     let orgSlug: string | undefined;
+
+    // Check user object first (most common location)
     if (payload.user && typeof payload.user === 'object') {
       orgSlug = payload.user.organization_name ?? payload.user.organization_slug;
     }
+
+    // Check custom claims and standard locations
     if (!orgSlug) {
-      orgSlug = payload['https://barndoor.ai/organization_slug'] ?? payload.organization_slug ?? payload.org_slug;
+      const customClaim = payload['https://barndoor.ai/organization_slug'];
+      const orgSlugClaim = payload.organization_slug;
+      const orgSlugShort = payload.org_slug;
+      const orgIdClaim = payload['org_id'];
+      const organizationIdClaim = payload['organization_id'];
+
+      orgSlug = (typeof customClaim === 'string' ? customClaim : undefined) ??
+                (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??
+                (typeof orgSlugShort === 'string' ? orgSlugShort : undefined) ??
+                (typeof orgIdClaim === 'string' ? orgIdClaim : undefined) ??
+                (typeof organizationIdClaim === 'string' ? organizationIdClaim : undefined);
     }
 
-    if (!orgSlug) {
-      throw new Error('organization_name / organization_slug not found in token');
+    if (!orgSlug || typeof orgSlug !== 'string' || orgSlug.trim() === '') {
+      return {
+        hasOrganization: false,
+        error: 'No organization information found in token. This token may be for a personal account or may be missing organization claims.'
+      };
     }
 
-    return orgSlug;
+    return {
+      organizationId: orgSlug.trim(),
+      hasOrganization: true
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to decode JWT token: ${errorMessage}`);
+    return {
+      hasOrganization: false,
+      error: `Failed to decode JWT token: ${errorMessage}`
+    };
   }
 }
+
+
 
 /**
  * Get static configuration instance.
@@ -274,8 +354,30 @@ export function getStaticConfig(): BarndoorConfig {
 /**
  * Get dynamic configuration with organization ID substituted.
  * @param jwtToken - JWT token
+ * @param options - Configuration options
  * @returns Dynamic configuration instance
  */
-export function getDynamicConfig(jwtToken: string): BarndoorConfig {
-  return BarndoorConfig.getDynamicConfig(jwtToken);
+export function getDynamicConfig(jwtToken: string, options?: {
+  requireOrganization?: boolean;
+  fallbackOrganizationId?: string;
+}): BarndoorConfig {
+  return BarndoorConfig.getDynamicConfig(jwtToken, options);
+}
+
+/**
+ * Check if a JWT token contains organization information.
+ * @param jwtToken - JWT token to check
+ * @returns Object with organization info and any error details
+ */
+export function checkTokenOrganization(jwtToken: string): OrganizationExtractionResult {
+  return extractOrganizationIdSafe(jwtToken);
+}
+
+/**
+ * Check if a JWT token has organization information (simple boolean check).
+ * @param jwtToken - JWT token to check
+ * @returns True if token contains organization information
+ */
+export function hasOrganizationInfo(jwtToken: string): boolean {
+  return extractOrganizationIdSafe(jwtToken).hasOrganization;
 }

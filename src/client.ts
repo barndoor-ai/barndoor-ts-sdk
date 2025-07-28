@@ -14,6 +14,7 @@ import {
   ServerNotFoundError
 } from './exceptions';
 import { getStaticConfig, isNode } from './config';
+import { createScopedLogger } from './logging';
 import { exec } from 'child_process';
 import os from 'os';
 
@@ -21,8 +22,8 @@ import os from 'os';
  * Configuration options for BarndoorSDK constructor.
  */
 export interface BarndoorSDKOptions {
-  /** User JWT token (required) */
-  token: string;
+  /** User JWT token (optional - can be set later via authenticate()) */
+  token?: string;
   /** Whether to validate token on initialization */
   validateTokenOnInit?: boolean;
   /** Request timeout in seconds */
@@ -71,20 +72,22 @@ export class BarndoorSDK {
   /** Base URL of the Barndoor API */
   public readonly base: string;
   /** User JWT token */
-  public readonly token: string;
+  private _token: string | null;
   /** HTTP client instance */
   private readonly _http: HTTPClient;
   /** Whether token has been validated */
   private _tokenValidated: boolean;
   /** Whether the SDK has been closed */
   private _closed: boolean;
+  /** Scoped logger for this SDK instance */
+  private readonly _logger = createScopedLogger('client');
 
   /**
    * Create a new BarndoorSDK instance.
    * @param apiBaseUrl - Base URL of the Barndoor API
-   * @param options - Configuration options (token is required)
+   * @param options - Configuration options (token is optional)
    */
-  constructor(apiBaseUrl: string, options: BarndoorSDKOptions) {
+  constructor(apiBaseUrl: string, options: BarndoorSDKOptions = {}) {
     const {
       token: barndoorToken,
       timeout = 30.0,
@@ -94,13 +97,8 @@ export class BarndoorSDK {
     // Validate inputs
     this.base = this._validateUrl(apiBaseUrl, 'API base URL').replace(/\/$/, '');
 
-    // Get token from parameter - token must be provided explicitly
-    if (!barndoorToken) {
-      throw new Error(
-        'Barndoor user token must be provided. Use loginInteractive() or provide token explicitly.'
-      );
-    }
-    this.token = this._validateToken(barndoorToken);
+    // Token is now optional - can be set later via authenticate()
+    this._token = barndoorToken ? this._validateToken(barndoorToken) : null;
 
     // Validate configuration
     if (typeof timeout !== 'number' || timeout <= 0) {
@@ -116,8 +114,32 @@ export class BarndoorSDK {
     this._tokenValidated = false;
     this._closed = false;
 
+    this._logger.info(`Initialized BarndoorSDK for ${this.base}`);
+  }
+
+  /**
+   * Get the current token.
+   */
+  public get token(): string {
+    if (!this._token) {
+      throw new Error('No token available. Call authenticate() first or provide token in constructor.');
+    }
+    return this._token;
+  }
+
+  /**
+   * Set authentication token for the SDK.
+   * @param token - JWT token to use for authentication
+   */
+  public async authenticate(token: string): Promise<void> {
+    this._token = this._validateToken(token);
+    this._tokenValidated = false; // Reset validation status
+
+    // Optionally validate the token immediately
+    await this.ensureValidToken();
+
     // eslint-disable-next-line no-console
-    console.log(`Initialized BarndoorSDK for ${this.base}`);
+    console.log('Authentication successful');
   }
   
   /**
@@ -238,17 +260,14 @@ export class BarndoorSDK {
    * @returns Array of server summaries
    */
   public async listServers(): Promise<ServerSummary[]> {
-    // eslint-disable-next-line no-console
-    console.log('Fetching server list');
+    this._logger.debug('Fetching server list');
     try {
       const response = await this._req('GET', '/servers') as unknown[];
       const servers = response.map(data => ServerSummary.fromApiResponse(data));
-      // eslint-disable-next-line no-console
-      console.log(`Retrieved ${servers.length} servers`);
+      this._logger.info(`Retrieved ${servers.length} servers`);
       return servers;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to list servers:', error);
+      this._logger.error('Failed to list servers:', error);
       throw error;
     }
   }

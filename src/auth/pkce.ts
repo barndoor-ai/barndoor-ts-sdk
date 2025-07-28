@@ -8,6 +8,7 @@
 
 import { OAuthError } from '../exceptions';
 import { isBrowser, isNode } from '../config';
+import { createScopedLogger } from '../logging';
 import crypto from 'crypto';
 import http from 'http';
 import url from 'url';
@@ -26,9 +27,146 @@ export interface PKCEState {
   timestamp: number;
 }
 
-// Global state for PKCE flow
-let _codeVerifier: string | null = null;
-let _currentState: string | null = null;
+/**
+ * PKCE Manager class to handle state per instance instead of globally.
+ * This prevents race conditions in browser environments with multiple parallel login flows.
+ */
+export class PKCEManager {
+  private _codeVerifier: string | null = null;
+  private _currentState: string | null = null;
+  private readonly _logger = createScopedLogger('pkce');
+
+  /**
+   * Generate PKCE parameters and build authorization URL.
+   * @param params - Authorization parameters
+   * @returns Authorization URL
+   */
+  public async buildAuthorizationUrl({
+    domain,
+    clientId,
+    redirectUri,
+    audience,
+    scope = 'openid profile email'
+  }: AuthorizationUrlParams): Promise<string> {
+    // Generate PKCE parameters
+    this._codeVerifier = generateRandomString(32);
+    const codeChallenge = base64URLEncode(await sha256(this._codeVerifier));
+    this._currentState = generateRandomString(16);
+
+    // Build authorization URL
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope: scope,
+      audience: audience,
+      state: this._currentState,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    });
+
+    const authUrl = `https://${domain}/authorize?${params.toString()}`;
+    return authUrl;
+  }
+
+  /**
+   * Exchange authorization code for tokens using stored PKCE state.
+   * @param params - Token exchange parameters
+   * @returns Token response
+   */
+  public async exchangeCodeForToken({
+    domain,
+    clientId,
+    code,
+    redirectUri,
+    clientSecret
+  }: TokenExchangeParams): Promise<unknown> {
+    const payload: Record<string, string> = {
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      code: code,
+      redirect_uri: redirectUri
+    };
+
+    // Always add client_secret if provided (like Python SDK)
+    if (clientSecret) {
+      payload['client_secret'] = clientSecret;
+    }
+
+    // Add PKCE verifier if available
+    if (this._codeVerifier) {
+      payload['code_verifier'] = this._codeVerifier;
+    }
+
+    // Validate we have either client_secret or PKCE verifier
+    if (!clientSecret && !this._codeVerifier) {
+      throw new OAuthError('Either client_secret or PKCE verifier must be provided');
+    }
+
+    try {
+      const response = await fetch(`https://${domain}/oauth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as { error?: string; error_description?: string };
+        this._logger.error('Token endpoint response:', errorData);
+        throw new OAuthError(`Token exchange failed: ${errorData.error ?? errorData.error_description ?? response.statusText}`);
+      }
+
+      const tokenData = await response.json();
+
+      // Clear PKCE state after successful exchange
+      this.clearState();
+
+      return tokenData;
+    } catch (error: unknown) {
+      if (error instanceof OAuthError) {
+        throw error;
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new OAuthError(`Token exchange failed: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Validate state parameter to prevent CSRF attacks.
+   * @param receivedState - State received from OAuth callback
+   * @returns True if state is valid
+   */
+  public validateState(receivedState: string): boolean {
+    return Boolean(this._currentState && receivedState === this._currentState);
+  }
+
+  /**
+   * Clear PKCE state (for cleanup or error handling).
+   */
+  public clearState(): void {
+    this._codeVerifier = null;
+    this._currentState = null;
+  }
+
+  /**
+   * Get current PKCE state (for debugging/testing).
+   */
+  public getState(): PKCEState | null {
+    if (!this._codeVerifier || !this._currentState) {
+      return null;
+    }
+    return {
+      codeVerifier: this._codeVerifier,
+      codeChallenge: '', // We don't store this, would need to recalculate
+      state: this._currentState,
+      timestamp: Date.now()
+    };
+  }
+}
+
+
 
 /**
  * Generate a cryptographically secure random string.
@@ -113,38 +251,7 @@ export interface AuthorizationUrlParams {
   scope?: string;
 }
 
-/**
- * Build authorization URL for OAuth 2.0 with PKCE.
- * @param params - Authorization parameters
- * @returns Authorization URL
- */
-export async function buildAuthorizationUrl({
-  domain,
-  clientId,
-  redirectUri,
-  audience,
-  scope = 'openid profile email'
-}: AuthorizationUrlParams): Promise<string> {
-  // Generate PKCE parameters
-  _codeVerifier = generateRandomString(32);
-  const codeChallenge = base64URLEncode(await sha256(_codeVerifier));
-  _currentState = generateRandomString(16);
 
-  // Build authorization URL
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope: scope,
-    audience: audience,
-    state: _currentState,
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256'
-  });
-
-  const authUrl = `https://${domain}/authorize?${params.toString()}`;
-  return authUrl;
-}
 
 /**
  * Token exchange parameters.
@@ -162,71 +269,7 @@ export interface TokenExchangeParams {
   clientSecret?: string;
 }
 
-/**
- * Exchange authorization code for tokens.
- * @param params - Token exchange parameters
- * @returns Token response
- */
-export async function exchangeCodeForToken({
-  domain,
-  clientId,
-  code,
-  redirectUri,
-  clientSecret
-}: TokenExchangeParams): Promise<unknown> {
-  const payload: Record<string, string> = {
-    grant_type: 'authorization_code',
-    client_id: clientId,
-    code: code,
-    redirect_uri: redirectUri
-  };
 
-  // Always add client_secret if provided (like Python SDK)
-  if (clientSecret) {
-    payload['client_secret'] = clientSecret;
-  }
-
-  // Add PKCE verifier if available
-  if (_codeVerifier) {
-    payload['code_verifier'] = _codeVerifier;
-  }
-
-  // Validate we have either client_secret or PKCE verifier
-  if (!clientSecret && !_codeVerifier) {
-    throw new OAuthError('Either client_secret or PKCE verifier must be provided');
-  }
-  
-  try {
-    const response = await fetch(`https://${domain}/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({})) as { error?: string; error_description?: string };
-      // eslint-disable-next-line no-console
-      console.error('Token endpoint response:', errorData);
-      throw new OAuthError(`Token exchange failed: ${errorData.error ?? errorData.error_description ?? response.statusText}`);
-    }
-
-    const tokenData = await response.json();
-
-    // Clear PKCE state after successful exchange
-    _codeVerifier = null;
-    _currentState = null;
-
-    return tokenData;
-  } catch (error: unknown) {
-    if (error instanceof OAuthError) {
-      throw error;
-    }
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new OAuthError(`Token exchange failed: ${errorMessage}`);
-  }
-}
 
 /**
  * Start a local callback server for OAuth redirect (Node.js only).
@@ -305,19 +348,4 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   return [redirectUri, waiter];
 }
 
-/**
- * Validate state parameter to prevent CSRF attacks.
- * @param receivedState - State received from OAuth callback
- * @returns True if state is valid
- */
-export function validateState(receivedState: string): boolean {
-  return Boolean(_currentState && receivedState === _currentState);
-}
 
-/**
- * Clear PKCE state (for cleanup or error handling).
- */
-export function clearPKCEState(): void {
-  _codeVerifier = null;
-  _currentState = null;
-}

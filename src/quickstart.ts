@@ -8,18 +8,21 @@
 
 import { BarndoorSDK } from './client';
 import {
-  buildAuthorizationUrl,
-  exchangeCodeForToken,
+  PKCEManager,
   startLocalCallbackServer
 } from './auth';
 import { loadUserToken, saveUserToken } from './auth';
-import { getStaticConfig, getDynamicConfig, isNode } from './config';
+import { getStaticConfig, getDynamicConfig, hasOrganizationInfo, isNode } from './config';
 import { ServerNotFoundError } from './exceptions';
+import { createScopedLogger } from './logging';
 import { exec } from 'child_process';
 import os from 'os';
 import crypto from 'crypto';
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+// Create scoped logger for quickstart functions
+const logger = createScopedLogger('quickstart');
 
 /**
  * Perform interactive login and return an initialized SDK instance.
@@ -60,7 +63,7 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
     throw new Error('Interactive login is only available in Node.js environment');
   }
   
-  console.log('Starting interactive login flow');
+  logger.info('Starting interactive login flow');
   
   const config = getStaticConfig();
   
@@ -83,23 +86,32 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
   const cachedToken = await loadUserToken();
   if (cachedToken) {
     try {
-      // Use dynamic config with org ID substitution
-      const dynamicConfig = getDynamicConfig(cachedToken);
-      const sdk = new BarndoorSDK(dynamicConfig.apiBaseUrl, { token: cachedToken });
+      // Try to use dynamic config with org ID substitution
+      let sdkConfig: ReturnType<typeof getDynamicConfig>;
+      if (hasOrganizationInfo(cachedToken)) {
+        sdkConfig = getDynamicConfig(cachedToken);
+      } else {
+        logger.warn('Cached token has no organization information, using static config');
+        sdkConfig = getStaticConfig();
+      }
+
+      const sdk = new BarndoorSDK(sdkConfig.apiBaseUrl, { token: cachedToken });
       await sdk.validateCachedToken();
-      console.log('Using cached valid token');
+      logger.info('Using cached valid token');
       return sdk;
     } catch (error) {
-      console.log('Cached token invalid, starting OAuth flow');
+      logger.info('Cached token invalid, starting OAuth flow');
     }
   } else {
-    console.log('No cached token, starting OAuth flow');
+    logger.info('No cached token, starting OAuth flow');
   }
   
   // 2. Start interactive PKCE flow
   const [redirectUri, waiter] = startLocalCallbackServer(port);
-  
-  const authUrl = await buildAuthorizationUrl({
+
+  // Create PKCE manager for this login session
+  const pkceManager = new PKCEManager();
+  const authUrl = await pkceManager.buildAuthorizationUrl({
     domain: authDomain,
     clientId,
     redirectUri,
@@ -120,9 +132,9 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
   
   exec(command, (error) => {
     if (error) {
-      console.warn('Failed to open browser automatically. Please visit:', authUrl);
+      logger.warn('Failed to open browser automatically. Please visit:', authUrl);
     } else {
-      console.log('Please complete login in your browser…');
+      logger.info('Please complete login in your browser…');
     }
   });
   
@@ -130,7 +142,7 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
   const [code, _state] = await waiter;
   
   // Exchange code for token
-  const tokenData = await exchangeCodeForToken({
+  const tokenData = await pkceManager.exchangeCodeForToken({
     domain: authDomain,
     clientId,
     clientSecret,
@@ -140,18 +152,26 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
 
   // Save token and create SDK
   await saveUserToken(tokenData);
-  // Use dynamic config with org ID substitution
-  const dynamicConfig = getDynamicConfig(tokenData.access_token);
-  return new BarndoorSDK(dynamicConfig.apiBaseUrl, { token: tokenData.access_token });
+
+  // Try to use dynamic config with org ID substitution
+  let sdkConfig: ReturnType<typeof getDynamicConfig>;
+  if (hasOrganizationInfo(tokenData.access_token)) {
+    sdkConfig = getDynamicConfig(tokenData.access_token);
+  } else {
+    logger.warn('New token has no organization information, using static config');
+    sdkConfig = getStaticConfig();
+  }
+
+  return new BarndoorSDK(sdkConfig.apiBaseUrl, { token: tokenData.access_token });
 }
 
 /**
- * Ensure a server is connected, initiating OAuth if needed.
- * 
- * Checks if the specified server is already connected. If not,
- * initiates the OAuth flow, opens the browser, and polls until
- * the connection is established.
- * 
+ * Ensure a server is connected, with user-friendly logging.
+ *
+ * This is a convenience wrapper around sdk.ensureServerConnected() that adds
+ * helpful console output for interactive use. The actual connection logic
+ * is handled by the SDK method to avoid code duplication.
+ *
  * @param {BarndoorSDK} sdk - SDK instance
  * @param {string} serverIdentifier - Server slug or provider name
  * @param {Object} [options={}] - Options
@@ -159,24 +179,21 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
  */
 export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: string, options: { timeout?: number } = {}): Promise<void> {
   const { timeout = 90 } = options;
-  
-  console.log(`Ensuring ${serverIdentifier} server is connected`);
-  
-  const servers = await sdk.listServers();
-  const server = servers.find(s => s.slug === serverIdentifier);
-  
-  if (!server) {
-    console.error(`Server '${serverIdentifier}' not found`);
-    throw new ServerNotFoundError(serverIdentifier);
+
+  logger.info(`Ensuring ${serverIdentifier} server is connected`);
+
+  try {
+    // Use the SDK method directly - it handles all the logic including server lookup
+    await sdk.ensureServerConnected(serverIdentifier, { pollSeconds: timeout });
+    logger.info(`Server ${serverIdentifier} connected successfully`);
+  } catch (error) {
+    if (error instanceof ServerNotFoundError) {
+      logger.error(`Server '${serverIdentifier}' not found`);
+    } else {
+      logger.error(`Failed to connect to ${serverIdentifier}:`, error);
+    }
+    throw error;
   }
-  
-  if (server.connection_status === 'connected') {
-    console.log(`Server ${serverIdentifier} already connected`);
-    return;
-  }
-  
-  console.log(`Connecting to ${serverIdentifier}...`);
-  await sdk.ensureServerConnected(serverIdentifier, { pollSeconds: timeout });
 }
 
 /**
@@ -209,15 +226,27 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
   // 2. Decide proxy vs public based on environment
   const env = (isNode ? process.env['BARNDOOR_ENV'] || process.env['MODE'] : '') || 'localdev';
   
-  let url;
+  let url: string;
   if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
     // Use dynamic configuration for local/dev environments
-    const dynamicConfig = getDynamicConfig(sdk.token);
-    url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    if (hasOrganizationInfo(sdk.token)) {
+      const dynamicConfig = getDynamicConfig(sdk.token);
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    } else {
+      logger.warn('Token has no organization information, using static config for MCP connection');
+      const staticConfig = getStaticConfig();
+      url = `${staticConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    }
   } else {
     // Production - use external MCP URL (same as dynamic config)
-    const dynamicConfig = getDynamicConfig(sdk.token);
-    url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    if (hasOrganizationInfo(sdk.token)) {
+      const dynamicConfig = getDynamicConfig(sdk.token);
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    } else {
+      logger.warn('Token has no organization information, using static config for MCP connection');
+      const staticConfig = getStaticConfig();
+      url = `${staticConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+    }
   }
   
   const params = {
