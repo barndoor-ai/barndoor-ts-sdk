@@ -29,7 +29,7 @@
  */
 
 // Main SDK class
-export { BarndoorSDK } from './client.js';
+export { BarndoorSDK } from './client';
 
 // Exception classes
 export {
@@ -44,14 +44,14 @@ export {
   OAuthError,
   ConfigurationError,
   TimeoutError
-} from './exceptions/index.js';
+} from './exceptions';
 
 // Data models
 export {
   ServerSummary,
   ServerDetail,
   AgentToken
-} from './models/index.js';
+} from './models';
 
 // Quick-start helpers
 export {
@@ -59,7 +59,7 @@ export {
   ensureServerConnected,
   makeMcpConnectionParams,
   makeMcpClient
-} from './quickstart.js';
+} from './quickstart';
 
 // Authentication utilities
 export {
@@ -71,7 +71,7 @@ export {
   loadUserToken,
   saveUserToken,
   clearCachedToken
-} from './auth/index.js';
+} from './auth';
 
 // Configuration
 export {
@@ -80,7 +80,7 @@ export {
   getDynamicConfig,
   isBrowser,
   isNode
-} from './config.js';
+} from './config';
 
 // Version
 export const version = '0.1.0';
