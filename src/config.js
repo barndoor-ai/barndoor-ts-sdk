@@ -160,25 +160,25 @@ export class BarndoorConfig {
  */
 function extractOrganizationId(jwtToken) {
   try {
-    // Decode JWT payload (second part of the token)
     const parts = jwtToken.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid JWT format');
     }
-    
-    // Decode base64url payload
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    
-    // Extract organization ID from custom claims
-    const orgId = payload['https://barndoor.ai/organization_id'] || 
-                  payload.org_id || 
-                  payload.organization_id;
-    
-    if (!orgId) {
-      throw new Error('Organization ID not found in token');
+
+    let orgSlug;
+    if (payload.user && typeof payload.user === 'object') {
+      orgSlug = payload.user.organization_name || payload.user.organization_slug;
     }
-    
-    return orgId;
+    if (!orgSlug) {
+      orgSlug = payload['https://barndoor.ai/organization_slug'] || payload.organization_slug || payload.org_slug;
+    }
+
+    if (!orgSlug) {
+      throw new Error('organization_name / organization_slug not found in token');
+    }
+
+    return orgSlug;
   } catch (error) {
     throw new Error(`Failed to decode JWT token: ${error.message}`);
   }

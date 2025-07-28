@@ -30,6 +30,7 @@ import {
   ensureServerConnected, 
   makeMcpConnectionParams 
 } from '../src/index.js';
+import 'dotenv/config';
 
 // Slugs for the two target servers in your registry
 const SF_SLUG = 'salesforce';

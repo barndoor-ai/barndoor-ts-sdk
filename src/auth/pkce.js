@@ -8,6 +8,9 @@
 
 import { OAuthError } from '../exceptions/index.js';
 import { isBrowser, isNode } from '../config.js';
+import crypto from 'crypto';
+import http from 'http';
+import url from 'url';
 
 // Global state for PKCE flow
 let _codeVerifier = null;
@@ -24,7 +27,6 @@ function generateRandomString(length) {
   if (isBrowser && window.crypto && window.crypto.getRandomValues) {
     window.crypto.getRandomValues(array);
   } else if (isNode) {
-    const crypto = require('crypto');
     crypto.randomFillSync(array);
   } else {
     // Fallback for environments without crypto
@@ -59,7 +61,6 @@ async function sha256(str) {
     const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
     return new Uint8Array(hashBuffer);
   } else if (isNode) {
-    const crypto = require('crypto');
     const hash = crypto.createHash('sha256').update(str).digest();
     return new Uint8Array(hash);
   } else {
@@ -129,13 +130,19 @@ export async function exchangeCodeForToken({
     redirect_uri: redirectUri
   };
   
-  // Add PKCE verifier or client secret
+  // Always add client_secret if provided (like Python SDK)
+  if (clientSecret) {
+    payload.client_secret = clientSecret;
+  }
+  
+  // Add PKCE verifier if available
   if (_codeVerifier) {
     payload.code_verifier = _codeVerifier;
-  } else if (clientSecret) {
-    payload.client_secret = clientSecret;
-  } else {
-    throw new OAuthError('PKCE verifier missing - call buildAuthorizationUrl() first');
+  }
+  
+  // Validate we have either client_secret or PKCE verifier
+  if (!clientSecret && !_codeVerifier) {
+    throw new OAuthError('Either client_secret or PKCE verifier must be provided');
   }
   
   try {
@@ -149,7 +156,8 @@ export async function exchangeCodeForToken({
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new OAuthError(`Token exchange failed: ${errorData.error_description || response.statusText}`);
+      console.error('Token endpoint response:', errorData);
+      throw new OAuthError(`Token exchange failed: ${errorData.error || errorData.error_description || response.statusText}`);
     }
     
     const tokenData = await response.json();
@@ -177,16 +185,15 @@ export function startLocalCallbackServer(port = 52765) {
     throw new Error('Local callback server is only available in Node.js environment');
   }
   
-  const http = require('http');
-  const url = require('url');
+
   
-  const redirectUri = `http://localhost:${port}/callback`;
+  const redirectUri = `http://localhost:${port}/cb`;
   
   const waiter = new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const parsedUrl = url.parse(req.url, true);
       
-      if (parsedUrl.pathname === '/callback') {
+      if (parsedUrl.pathname === '/cb') {
         const { code, state, error, error_description } = parsedUrl.query;
         
         // Send response to browser

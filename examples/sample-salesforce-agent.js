@@ -28,6 +28,7 @@ import {
   ensureServerConnected, 
   makeMcpConnectionParams 
 } from '../src/index.js';
+import 'dotenv/config';
 
 const SERVER_SLUG = 'salesforce'; // change to the MCP server you want
 

@@ -15,6 +15,11 @@ import {
 import { loadUserToken, saveUserToken } from './auth/index.js';
 import { getStaticConfig, getDynamicConfig, isNode } from './config.js';
 import { ServerNotFoundError } from './exceptions/index.js';
+import { exec } from 'child_process';
+import os from 'os';
+import crypto from 'crypto';
+import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 /**
  * Perform interactive login and return an initialized SDK instance.
@@ -60,8 +65,9 @@ export async function loginInteractive(options = {}) {
   const cachedToken = await loadUserToken();
   if (cachedToken) {
     try {
-      // Try to create SDK with cached token
-      const sdk = new BarndoorSDK(apiBaseUrl, { token: cachedToken });
+      // Use dynamic config with org ID substitution
+      const dynamicConfig = getDynamicConfig(cachedToken);
+      const sdk = new BarndoorSDK(dynamicConfig.apiBaseUrl, { token: cachedToken });
       await sdk.validateCachedToken();
       console.log('Using cached valid token');
       return sdk;
@@ -83,8 +89,7 @@ export async function loginInteractive(options = {}) {
   });
   
   // Open browser
-  const { exec } = require('child_process');
-  const platform = require('os').platform();
+  const platform = os.platform();
   
   let command;
   if (platform === 'darwin') {
@@ -117,7 +122,9 @@ export async function loginInteractive(options = {}) {
   
   // Save token and create SDK
   await saveUserToken(tokenData);
-  return new BarndoorSDK(apiBaseUrl, { token: tokenData.access_token });
+  // Use dynamic config with org ID substitution
+  const dynamicConfig = getDynamicConfig(tokenData.access_token);
+  return new BarndoorSDK(dynamicConfig.apiBaseUrl, { token: tokenData.access_token });
 }
 
 /**
@@ -208,33 +215,67 @@ export async function makeMcpConnectionParams(sdk, serverSlug, options = {}) {
 }
 
 /**
+ * Create and connect an MCP client for the specified server.
+ *
+ * This helper uses the official `@modelcontextprotocol/sdk` package so callers
+ * don’t need to hand-craft JSON-RPC envelopes or manage transports manually.
+ *
+ * @param {BarndoorSDK} sdk – An initialized Barndoor SDK instance (must contain a valid JWT in `sdk.token`).
+ * @param {string} serverSlug – The server slug (e.g. "salesforce", "notion").
+ * @param {Object} [options] – Optional overrides passed to `makeMcpConnectionParams` (proxyBaseUrl, transport).
+ * @returns {Promise<McpClient>} A connected MCP client ready for `listTools`, `callTool`, etc.
+ */
+export async function makeMcpClient(sdk, serverSlug, options = {}) {
+  // 1. Build URL + headers via existing helper
+  const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlug, options);
+
+  // 2. Initialise MCP client
+  const client = new McpClient({
+    name: 'barndoor-js-sdk',
+    version: '0.1.0'
+  });
+
+  // 3. Create transport (handles initialize + session negotiation)
+  const transport = new StreamableHTTPClientTransport(new URL(mcpParams.url), {
+    requestInit: {
+      headers: mcpParams.headers
+    },
+    authProvider: {
+      // Minimal auth provider that supplies the same JWT
+      tokens: async () => ({ access_token: sdk.token })
+    }
+  });
+
+  // 4. Connect (performs `initialize` and session negotiation)
+  await client.connect(transport);
+  return client;
+}
+
+/**
  * Build external MCP URL for production environments.
  * @private
  */
 function buildExternalMcpUrl(serverSlug, jwtToken, env) {
-  // This would need to be implemented based on the actual URL structure
-  // For now, use a placeholder implementation
+  // Placeholder implementation – production environments may have custom logic
   const config = getDynamicConfig(jwtToken);
   return `${config.mcpBaseUrl}/mcp/${serverSlug}`;
 }
 
 /**
- * Generate a unique session ID.
+ * Generate a UUID v4 session ID.
  * @private
  */
 function generateSessionId() {
-  // Generate a UUID v4
-  if (isNode) {
-    const crypto = require('crypto');
+  if (isNode && crypto.randomUUID) {
     return crypto.randomUUID();
-  } else if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  } else {
-    // Fallback UUID generation
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
   }
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID generation
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 8);
+    return v.toString(16);
+  });
 }

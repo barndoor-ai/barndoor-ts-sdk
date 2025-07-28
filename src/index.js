@@ -57,7 +57,8 @@ export {
 export {
   loginInteractive,
   ensureServerConnected,
-  makeMcpConnectionParams
+  makeMcpConnectionParams,
+  makeMcpClient
 } from './quickstart.js';
 
 // Authentication utilities

@@ -16,7 +16,7 @@ export default [
       commonjs(),
       terser()
     ],
-    external: ['cross-fetch', 'jose', 'fs', 'path', 'os']
+    external: ['cross-fetch', 'jose', 'fs', 'path', 'os', '@modelcontextprotocol/sdk']
   },
   // ES Module build
   {
@@ -30,6 +30,6 @@ export default [
       commonjs(),
       terser()
     ],
-    external: ['cross-fetch', 'jose', 'fs', 'path', 'os']
+    external: ['cross-fetch', 'jose', 'fs', 'path', 'os', '@modelcontextprotocol/sdk']
   }
 ];

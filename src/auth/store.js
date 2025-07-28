@@ -7,6 +7,9 @@
 
 import { isBrowser, isNode } from '../config.js';
 import { TokenError, TokenExpiredError } from '../exceptions/index.js';
+import os from 'os';
+import path from 'path';
+import fs from 'fs/promises';
 
 /**
  * Abstract base class for token storage.
@@ -72,8 +75,6 @@ class NodeTokenStorage extends TokenStorage {
   
   _getTokenFilePath() {
     if (isNode) {
-      const os = require('os');
-      const path = require('path');
       return path.join(os.homedir(), '.barndoor', 'token.json');
     }
     throw new Error('NodeTokenStorage can only be used in Node.js environment');
@@ -85,7 +86,6 @@ class NodeTokenStorage extends TokenStorage {
     }
     
     try {
-      const fs = require('fs').promises;
       const tokenData = await fs.readFile(this.tokenFile, 'utf8');
       return JSON.parse(tokenData);
     } catch (error) {
@@ -103,9 +103,6 @@ class NodeTokenStorage extends TokenStorage {
     }
     
     try {
-      const fs = require('fs').promises;
-      const path = require('path');
-      
       // Ensure directory exists
       await fs.mkdir(path.dirname(this.tokenFile), { recursive: true });
       
@@ -123,7 +120,6 @@ class NodeTokenStorage extends TokenStorage {
     }
     
     try {
-      const fs = require('fs').promises;
       await fs.unlink(this.tokenFile);
     } catch (error) {
       if (error.code !== 'ENOENT') {

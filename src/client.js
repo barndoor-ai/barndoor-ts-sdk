@@ -17,6 +17,8 @@ import {
   ServerNotFoundError
 } from './exceptions/index.js';
 import { getStaticConfig, getDynamicConfig, isNode } from './config.js';
+import { exec } from 'child_process';
+import os from 'os';
 
 /**
  * Async client for interacting with the Barndoor Platform API.
@@ -336,8 +338,7 @@ export class BarndoorSDK {
     }
 
     // 3. Open browser
-    const { exec } = require('child_process');
-    const platform = require('os').platform();
+    const platform = os.platform();
 
     let command;
     if (platform === 'darwin') {

@@ -18,6 +18,7 @@
  *     node examples/sample-notion-agent.js
  */
 
+import 'dotenv/config';
 import { 
   loginInteractive, 
   ensureServerConnected, 
