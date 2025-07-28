@@ -6,24 +6,38 @@
  * and Node.js environments.
  */
 
-import { OAuthError } from '../exceptions/index.js';
-import { isBrowser, isNode } from '../config.js';
+import { OAuthError } from '../exceptions';
+import { isBrowser, isNode } from '../config';
 import crypto from 'crypto';
 import http from 'http';
 import url from 'url';
 
+/**
+ * PKCE state data structure.
+ */
+export interface PKCEState {
+  /** Code verifier for PKCE flow */
+  codeVerifier: string;
+  /** Code challenge derived from verifier */
+  codeChallenge: string;
+  /** OAuth state parameter */
+  state: string;
+  /** Timestamp when state was created */
+  timestamp: number;
+}
+
 // Global state for PKCE flow
-let _codeVerifier = null;
-let _currentState = null;
+let _codeVerifier: string | null = null;
+let _currentState: string | null = null;
 
 /**
  * Generate a cryptographically secure random string.
- * @param {number} length - Length of the random string
- * @returns {string} Base64URL-encoded random string
+ * @param length - Length of the random string
+ * @returns Base64URL-encoded random string
  */
-function generateRandomString(length) {
+function generateRandomString(length: number): string {
   const array = new Uint8Array(length);
-  
+
   if (isBrowser && window.crypto && window.crypto.getRandomValues) {
     window.crypto.getRandomValues(array);
   } else if (isNode) {
@@ -34,29 +48,29 @@ function generateRandomString(length) {
       array[i] = Math.floor(Math.random() * 256);
     }
   }
-  
+
   return base64URLEncode(array);
 }
 
 /**
  * Base64URL encode a Uint8Array.
- * @param {Uint8Array} buffer - Buffer to encode
- * @returns {string} Base64URL-encoded string
+ * @param buffer - Buffer to encode
+ * @returns Base64URL-encoded string
  */
-function base64URLEncode(buffer) {
+function base64URLEncode(buffer: Uint8Array): string {
   const base64 = btoa(String.fromCharCode(...buffer));
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 /**
  * Generate SHA256 hash of a string.
- * @param {string} str - String to hash
- * @returns {Promise<Uint8Array>} SHA256 hash
+ * @param str - String to hash
+ * @returns SHA256 hash
  */
-async function sha256(str) {
+async function sha256(str: string): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
-  
+
   if (isBrowser && window.crypto && window.crypto.subtle) {
     const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
     return new Uint8Array(hashBuffer);
@@ -69,14 +83,25 @@ async function sha256(str) {
 }
 
 /**
+ * Authorization URL parameters.
+ */
+export interface AuthorizationUrlParams {
+  /** Auth0 domain */
+  domain: string;
+  /** OAuth client ID */
+  clientId: string;
+  /** Redirect URI */
+  redirectUri: string;
+  /** API audience */
+  audience: string;
+  /** OAuth scopes */
+  scope?: string;
+}
+
+/**
  * Build authorization URL for OAuth 2.0 with PKCE.
- * @param {Object} params - Authorization parameters
- * @param {string} params.domain - Auth0 domain
- * @param {string} params.clientId - OAuth client ID
- * @param {string} params.redirectUri - Redirect URI
- * @param {string} params.audience - API audience
- * @param {string} [params.scope='openid profile email'] - OAuth scopes
- * @returns {Promise<string>} Authorization URL
+ * @param params - Authorization parameters
+ * @returns Authorization URL
  */
 export async function buildAuthorizationUrl({
   domain,
@@ -84,12 +109,12 @@ export async function buildAuthorizationUrl({
   redirectUri,
   audience,
   scope = 'openid profile email'
-}) {
+}: AuthorizationUrlParams): Promise<string> {
   // Generate PKCE parameters
   _codeVerifier = generateRandomString(32);
   const codeChallenge = base64URLEncode(await sha256(_codeVerifier));
   _currentState = generateRandomString(16);
-  
+
   // Build authorization URL
   const params = new URLSearchParams({
     response_type: 'code',
@@ -101,45 +126,56 @@ export async function buildAuthorizationUrl({
     code_challenge: codeChallenge,
     code_challenge_method: 'S256'
   });
-  
+
   const authUrl = `https://${domain}/authorize?${params.toString()}`;
   return authUrl;
 }
 
 /**
+ * Token exchange parameters.
+ */
+export interface TokenExchangeParams {
+  /** Auth0 domain */
+  domain: string;
+  /** OAuth client ID */
+  clientId: string;
+  /** Authorization code */
+  code: string;
+  /** Redirect URI */
+  redirectUri: string;
+  /** Client secret (for backend flows) */
+  clientSecret?: string;
+}
+
+/**
  * Exchange authorization code for tokens.
- * @param {Object} params - Token exchange parameters
- * @param {string} params.domain - Auth0 domain
- * @param {string} params.clientId - OAuth client ID
- * @param {string} params.code - Authorization code
- * @param {string} params.redirectUri - Redirect URI
- * @param {string} [params.clientSecret] - Client secret (for backend flows)
- * @returns {Promise<Object>} Token response
+ * @param params - Token exchange parameters
+ * @returns Token response
  */
 export async function exchangeCodeForToken({
   domain,
   clientId,
   code,
   redirectUri,
-  clientSecret = null
-}) {
-  const payload = {
+  clientSecret
+}: TokenExchangeParams): Promise<unknown> {
+  const payload: Record<string, string> = {
     grant_type: 'authorization_code',
     client_id: clientId,
     code: code,
     redirect_uri: redirectUri
   };
-  
+
   // Always add client_secret if provided (like Python SDK)
   if (clientSecret) {
-    payload.client_secret = clientSecret;
+    payload['client_secret'] = clientSecret;
   }
-  
+
   // Add PKCE verifier if available
   if (_codeVerifier) {
-    payload.code_verifier = _codeVerifier;
+    payload['code_verifier'] = _codeVerifier;
   }
-  
+
   // Validate we have either client_secret or PKCE verifier
   if (!clientSecret && !_codeVerifier) {
     throw new OAuthError('Either client_secret or PKCE verifier must be provided');
@@ -155,44 +191,44 @@ export async function exchangeCodeForToken({
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await response.json().catch(() => ({})) as { error?: string; error_description?: string };
+      // eslint-disable-next-line no-console
       console.error('Token endpoint response:', errorData);
-      throw new OAuthError(`Token exchange failed: ${errorData.error || errorData.error_description || response.statusText}`);
+      throw new OAuthError(`Token exchange failed: ${errorData.error ?? errorData.error_description ?? response.statusText}`);
     }
-    
+
     const tokenData = await response.json();
-    
+
     // Clear PKCE state after successful exchange
     _codeVerifier = null;
     _currentState = null;
-    
+
     return tokenData;
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof OAuthError) {
       throw error;
     }
-    throw new OAuthError(`Token exchange failed: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new OAuthError(`Token exchange failed: ${errorMessage}`);
   }
 }
 
 /**
  * Start a local callback server for OAuth redirect (Node.js only).
- * @param {number} [port=52765] - Port to listen on
- * @returns {Promise<[string, Promise<[string, string]>]>} [redirectUri, waiter]
+ * @param port - Port to listen on
+ * @returns [redirectUri, waiter] tuple
  */
-export function startLocalCallbackServer(port = 52765) {
+export function startLocalCallbackServer(port = 52765): [string, Promise<[string, string]>] {
   if (!isNode) {
     throw new Error('Local callback server is only available in Node.js environment');
   }
-  
 
-  
   const redirectUri = `http://localhost:${port}/cb`;
-  
-  const waiter = new Promise((resolve, reject) => {
+
+  const waiter = new Promise<[string, string]>((resolve, reject) => {
     const server = http.createServer((req, res) => {
-      const parsedUrl = url.parse(req.url, true);
-      
+      const parsedUrl = url.parse(req.url ?? '', true);
+
       if (parsedUrl.pathname === '/cb') {
         const { code, state, error, error_description } = parsedUrl.query;
         
@@ -221,7 +257,7 @@ export function startLocalCallbackServer(port = 52765) {
             </html>
           `);
           server.close();
-          resolve([code, state]);
+          resolve([code as string, state as string]);
         } else {
           res.end(`
             <html>
@@ -242,10 +278,11 @@ export function startLocalCallbackServer(port = 52765) {
     });
     
     server.listen(port, 'localhost', () => {
+      // eslint-disable-next-line no-console
       console.log(`OAuth callback server listening on ${redirectUri}`);
     });
-    
-    server.on('error', (error) => {
+
+    server.on('error', (error: Error) => {
       reject(new OAuthError(`Failed to start callback server: ${error.message}`));
     });
   });
@@ -255,17 +292,17 @@ export function startLocalCallbackServer(port = 52765) {
 
 /**
  * Validate state parameter to prevent CSRF attacks.
- * @param {string} receivedState - State received from OAuth callback
- * @returns {boolean} True if state is valid
+ * @param receivedState - State received from OAuth callback
+ * @returns True if state is valid
  */
-export function validateState(receivedState) {
-  return _currentState && receivedState === _currentState;
+export function validateState(receivedState: string): boolean {
+  return Boolean(_currentState && receivedState === _currentState);
 }
 
 /**
  * Clear PKCE state (for cleanup or error handling).
  */
-export function clearPKCEState() {
+export function clearPKCEState(): void {
   _codeVerifier = null;
   _currentState = null;
 }

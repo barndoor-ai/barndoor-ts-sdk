@@ -6,15 +6,15 @@
  * quickstart.py functionality.
  */
 
-import { BarndoorSDK } from './client.js';
-import { 
-  buildAuthorizationUrl, 
-  exchangeCodeForToken, 
-  startLocalCallbackServer 
-} from './auth/index.js';
-import { loadUserToken, saveUserToken } from './auth/index.js';
-import { getStaticConfig, getDynamicConfig, isNode } from './config.js';
-import { ServerNotFoundError } from './exceptions/index.js';
+import { BarndoorSDK } from './client';
+import {
+  buildAuthorizationUrl,
+  exchangeCodeForToken,
+  startLocalCallbackServer
+} from './auth';
+import { loadUserToken, saveUserToken } from './auth';
+import { getStaticConfig, getDynamicConfig, isNode } from './config';
+import { ServerNotFoundError } from './exceptions';
 import { exec } from 'child_process';
 import os from 'os';
 import crypto from 'crypto';
@@ -37,7 +37,25 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
  * @param {number} [options.port=52765] - Local port for OAuth callback
  * @returns {Promise<BarndoorSDK>} Initialized SDK instance
  */
-export async function loginInteractive(options = {}) {
+/**
+ * Login options interface.
+ */
+export interface LoginInteractiveOptions {
+  /** Auth0 domain */
+  authDomain?: string;
+  /** OAuth client ID */
+  clientId?: string;
+  /** OAuth client secret */
+  clientSecret?: string;
+  /** API audience identifier */
+  audience?: string;
+  /** Base URL of the Barndoor API */
+  apiBaseUrl?: string;
+  /** Local port for OAuth callback */
+  port?: number;
+}
+
+export async function loginInteractive(options: LoginInteractiveOptions = {}): Promise<BarndoorSDK> {
   if (!isNode) {
     throw new Error('Interactive login is only available in Node.js environment');
   }
@@ -139,7 +157,7 @@ export async function loginInteractive(options = {}) {
  * @param {Object} [options={}] - Options
  * @param {number} [options.timeout=90] - Maximum seconds to wait
  */
-export async function ensureServerConnected(sdk, serverIdentifier, options = {}) {
+export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: string, options: { timeout?: number } = {}): Promise<void> {
   const { timeout = 90 } = options;
   
   console.log(`Ensuring ${serverIdentifier} server is connected`);
@@ -174,7 +192,7 @@ export async function ensureServerConnected(sdk, serverIdentifier, options = {})
  * @param {string} [options.transport='streamable-http'] - Transport type
  * @returns {Promise<[Object, string]>} [params, publicUrl]
  */
-export async function makeMcpConnectionParams(sdk, serverSlug, options = {}) {
+export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<[unknown, string]> {
   const {
     proxyBaseUrl = 'http://proxy-ingress:8080',
     transport = 'streamable-http'
@@ -225,7 +243,7 @@ export async function makeMcpConnectionParams(sdk, serverSlug, options = {}) {
  * @param {Object} [options] – Optional overrides passed to `makeMcpConnectionParams` (proxyBaseUrl, transport).
  * @returns {Promise<McpClient>} A connected MCP client ready for `listTools`, `callTool`, etc.
  */
-export async function makeMcpClient(sdk, serverSlug, options = {}) {
+export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<McpClient> {
   // 1. Build URL + headers via existing helper
   const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlug, options);
 

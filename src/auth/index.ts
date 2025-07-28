@@ -11,7 +11,7 @@ export {
   startLocalCallbackServer,
   validateState,
   clearPKCEState
-} from './pkce.js';
+} from './pkce';
 
 export {
   getTokenStorage,
@@ -19,4 +19,8 @@ export {
   loadUserToken,
   saveUserToken,
   clearCachedToken
-} from './store.js';
+} from './store';
+
+// Re-export types
+export type { AuthorizationUrlParams, TokenExchangeParams, PKCEState } from './pkce';
+export type { TokenData } from './store';

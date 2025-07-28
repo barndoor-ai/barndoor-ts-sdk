@@ -6,7 +6,6 @@
  */
 
 import { HTTPClient, TimeoutConfig } from './http/client';
-import { loadUserToken } from './auth';
 import { ServerSummary, ServerDetail } from './models';
 import {
   HTTPError,
@@ -22,8 +21,8 @@ import os from 'os';
  * Configuration options for BarndoorSDK constructor.
  */
 export interface BarndoorSDKOptions {
-  /** User JWT token */
-  token?: string;
+  /** User JWT token (required) */
+  token: string;
   /** Whether to validate token on initialization */
   validateTokenOnInit?: boolean;
   /** Request timeout in seconds */
@@ -83,9 +82,9 @@ export class BarndoorSDK {
   /**
    * Create a new BarndoorSDK instance.
    * @param apiBaseUrl - Base URL of the Barndoor API
-   * @param options - Configuration options
+   * @param options - Configuration options (token is required)
    */
-  constructor(apiBaseUrl: string, options: BarndoorSDKOptions = {}) {
+  constructor(apiBaseUrl: string, options: BarndoorSDKOptions) {
     const {
       token: barndoorToken,
       timeout = 30.0,
@@ -95,14 +94,13 @@ export class BarndoorSDK {
     // Validate inputs
     this.base = this._validateUrl(apiBaseUrl, 'API base URL').replace(/\/$/, '');
 
-    // Get token from parameter or storage
-    const token = barndoorToken ?? loadUserToken();
-    if (!token) {
+    // Get token from parameter - token must be provided explicitly
+    if (!barndoorToken) {
       throw new Error(
-        'Barndoor user token not provided and none found in store. Run `barndoor-login`.'
+        'Barndoor user token must be provided. Use loginInteractive() or provide token explicitly.'
       );
     }
-    this.token = this._validateToken(token);
+    this.token = this._validateToken(barndoorToken);
 
     // Validate configuration
     if (typeof timeout !== 'number' || timeout <= 0) {
