@@ -25,10 +25,34 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // --- Main --------------------------------------------------------------------------
 (async () => {
-  // 1. Authenticate and get MCP params
-  const sdk = await loginInteractive();
-  await ensureServerConnected(sdk, SERVER_SLUG);
-  const mcpClient = await makeMcpClient(sdk, SERVER_SLUG);
+  let sdk;
+  let mcpClient;
+
+  try {
+    // 1. Authenticate and get MCP params (with retry on 401)
+    console.log('🔐 Authenticating with Barndoor...');
+    sdk = await loginInteractive();
+
+    // Test authentication by trying to list servers
+    try {
+      await sdk.listServers();
+      console.log('✅ Authentication successful!');
+    } catch (error) {
+      if (error.statusCode === 401) {
+        console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
+        // Clear cached token and try again
+        const { clearCachedToken } = await import('../src/index.js');
+        clearCachedToken();
+        sdk = await loginInteractive();
+        await sdk.listServers(); // Test again
+        console.log('✅ Re-authentication successful!');
+      } else {
+        throw error;
+      }
+    }
+
+    await ensureServerConnected(sdk, SERVER_SLUG);
+    mcpClient = await makeMcpClient(sdk, SERVER_SLUG);
 
   // ---------------------------------------------------------------------
   // List available servers
@@ -100,6 +124,16 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
   console.log('\n💬 Final answer:\n', chat.choices[0].message.content);
-  await sdk.close();
-  await mcpClient.close();
+
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    process.exit(1);
+  } finally {
+    // Always cleanup
+    if (sdk) await sdk.close();
+    if (mcpClient) await mcpClient.close();
+  }
 })();

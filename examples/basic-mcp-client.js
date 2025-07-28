@@ -19,11 +19,28 @@ async function main() {
     console.log('🚀 Starting Basic MCP Client Example...\n');
 
     // ---------------------------------------------------------------------
-    // 1. Initialize Barndoor SDK and MCP client
+    // 1. Initialize Barndoor SDK and MCP client (with retry on 401)
     // ---------------------------------------------------------------------
     console.log('🔐 Authenticating with Barndoor...');
-    const sdk = await loginInteractive();
-    console.log('✅ Authentication successful!');
+    let sdk = await loginInteractive();
+
+    // Test authentication by trying to list servers
+    try {
+      await sdk.listServers();
+      console.log('✅ Authentication successful!');
+    } catch (error) {
+      if (error.statusCode === 401) {
+        console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
+        // Clear cached token and try again
+        const { clearCachedToken } = await import('../src/index.js');
+        clearCachedToken();
+        sdk = await loginInteractive();
+        await sdk.listServers(); // Test again
+        console.log('✅ Re-authentication successful!');
+      } else {
+        throw error;
+      }
+    }
 
     console.log(`\n🔗 Ensuring ${SERVER_SLUG} server is connected...`);
     await ensureServerConnected(sdk, SERVER_SLUG);
