@@ -1,21 +1,41 @@
 /**
  * HTTP client with retry logic and error handling.
- * 
+ *
  * This module provides a robust HTTP client that mirrors the Python SDK's
  * HTTP client functionality, including automatic retries, timeout handling,
  * and proper error conversion.
  */
 
 import fetch from 'cross-fetch';
-import { HTTPError, ConnectionError, TimeoutError } from '../exceptions/index.js';
+import { HTTPError, ConnectionError, TimeoutError } from '../exceptions';
+
+/**
+ * HTTP request options interface.
+ */
+export interface HTTPRequestOptions {
+  /** Request headers */
+  headers?: Record<string, string>;
+  /** JSON body to send */
+  json?: unknown;
+  /** Query parameters */
+  params?: Record<string, string | number | boolean>;
+  /** Additional fetch options */
+  [key: string]: unknown;
+}
 
 /**
  * Timeout configuration for HTTP requests.
  */
 export class TimeoutConfig {
+  /** Read timeout in milliseconds */
+  public readonly read: number;
+  /** Connect timeout in milliseconds */
+  public readonly connect: number;
+
   /**
-   * @param {number} [read=30] - Read timeout in seconds
-   * @param {number} [connect=10] - Connect timeout in seconds
+   * Create a new TimeoutConfig.
+   * @param read - Read timeout in seconds
+   * @param connect - Connect timeout in seconds
    */
   constructor(read = 30, connect = 10) {
     this.read = read * 1000; // Convert to milliseconds
@@ -25,40 +45,48 @@ export class TimeoutConfig {
 
 /**
  * HTTP client with automatic retries and error handling.
- * 
+ *
  * Provides a consistent interface for making HTTP requests with proper
  * error handling, timeout management, and retry logic.
  */
 export class HTTPClient {
+  /** Timeout configuration */
+  private readonly timeoutConfig: TimeoutConfig;
+  /** Maximum number of retries */
+  private readonly maxRetries: number;
+  /** Whether the client has been closed */
+  public closed: boolean;
+
   /**
-   * @param {TimeoutConfig} [timeoutConfig] - Timeout configuration
-   * @param {number} [maxRetries=3] - Maximum number of retries
+   * Create a new HTTPClient.
+   * @param timeoutConfig - Timeout configuration
+   * @param maxRetries - Maximum number of retries
    */
   constructor(timeoutConfig = new TimeoutConfig(), maxRetries = 3) {
     this.timeoutConfig = timeoutConfig;
     this.maxRetries = maxRetries;
     this.closed = false;
   }
-  
+
   /**
    * Make an HTTP request with retry logic.
-   * @param {string} method - HTTP method
-   * @param {string} url - Request URL
-   * @param {Object} [options={}] - Request options
-   * @returns {Promise<Object>} Response data
+   * @param method - HTTP method
+   * @param url - Request URL
+   * @param options - Request options
+   * @returns Response data
    */
-  async request(method, url, options = {}) {
+  public async request(method: string, url: string, options: HTTPRequestOptions = {}): Promise<unknown> {
     if (this.closed) {
       throw new Error('HTTP client has been closed');
     }
-    
+
     const { headers = {}, json, params, ...fetchOptions } = options;
-    
+
     // Build URL with query parameters
     const requestUrl = this._buildUrl(url, params);
-    
+
     // Prepare request options
-    const requestOptions = {
+    const requestOptions: RequestInit = {
       method: method.toUpperCase(),
       headers: {
         'Content-Type': 'application/json',
@@ -67,61 +95,61 @@ export class HTTPClient {
       },
       ...fetchOptions
     };
-    
+
     // Add request body if provided
     if (json) {
       requestOptions.body = JSON.stringify(json);
     }
-    
+
     // Add timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutConfig.read);
     requestOptions.signal = controller.signal;
-    
-    let lastError;
-    
+
+    let lastError: Error | undefined;
+
     // Retry loop
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
         const response = await fetch(requestUrl, requestOptions);
         clearTimeout(timeoutId);
-        
+
         // Handle HTTP errors
         if (!response.ok) {
           const responseText = await response.text();
           throw new HTTPError(response.status, response.statusText, responseText);
         }
-        
+
         // Parse JSON response
         const responseData = await response.json();
         return responseData;
         
-      } catch (error) {
+      } catch (error: unknown) {
         clearTimeout(timeoutId);
-        
+
         // Handle different types of errors
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
           lastError = new TimeoutError(`Request to ${requestUrl} timed out after ${this.timeoutConfig.read}ms`);
         } else if (error instanceof HTTPError) {
           // Don't retry HTTP errors (4xx, 5xx)
           throw error;
-        } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        } else if (error instanceof Error && error.name === 'TypeError' && error.message.includes('fetch')) {
           lastError = new ConnectionError(requestUrl, error);
         } else {
-          lastError = error;
+          lastError = error instanceof Error ? error : new Error(String(error));
         }
-        
+
         // Don't retry on the last attempt
         if (attempt === this.maxRetries) {
           break;
         }
-        
+
         // Wait before retrying (exponential backoff)
         const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
         await this._sleep(delay);
       }
     }
-    
+
     throw lastError;
   }
   
@@ -129,40 +157,40 @@ export class HTTPClient {
    * Build URL with query parameters.
    * @private
    */
-  _buildUrl(baseUrl, params) {
+  private _buildUrl(baseUrl: string, params?: Record<string, string | number | boolean>): string {
     if (!params || Object.keys(params).length === 0) {
       return baseUrl;
     }
-    
+
     const url = new URL(baseUrl);
     Object.entries(params).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
-        url.searchParams.append(key, value);
+        url.searchParams.append(key, String(value));
       }
     });
-    
+
     return url.toString();
   }
-  
+
   /**
    * Sleep for the specified number of milliseconds.
    * @private
    */
-  _sleep(ms) {
+  private _sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
-  
+
   /**
    * Close the HTTP client and clean up resources.
    */
-  async close() {
+  public async close(): Promise<void> {
     this.closed = true;
   }
-  
+
   /**
    * Alias for close() to match Python SDK naming.
    */
-  async aclose() {
+  public async aclose(): Promise<void> {
     await this.close();
   }
 }
