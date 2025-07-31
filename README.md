@@ -83,8 +83,24 @@ async function main() {
   console.log('MCP URL:', params.url);
   console.log('Headers:', params.headers);
 
+  // 5. Disconnect when done (optional)
+  await sdk.disconnectServer('notion');
+
   await sdk.close();
 }
+```
+
+### Disconnecting from Servers
+
+To disconnect from a server and clean up OAuth credentials:
+
+```typescript
+// Disconnect using server ID or slug
+await sdk.disconnectServer('notion');
+// or
+await sdk.disconnectServer('123e4567-e89b-12d3-a456-426614174000');
+
+// The server will need to be reconnected before use
 ```
 
 ## Environment Configuration
@@ -175,6 +191,16 @@ Get connection status for a server.
 const status = await sdk.getConnectionStatus('server-uuid');
 // Returns: 'available' | 'pending' | 'connected'
 ```
+
+#### `disconnectServer(serverId)`
+Disconnect from a specific MCP server.
+
+```typescript
+await sdk.disconnectServer('server-uuid');
+// Returns: Promise<void>
+```
+
+This will remove the connection record and clean up any stored OAuth credentials. The user will need to reconnect to use this server again.
 
 ### Quick-start Helpers
 

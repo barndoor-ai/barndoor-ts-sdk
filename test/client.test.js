@@ -2,23 +2,33 @@
  * Tests for the main BarndoorSDK client.
  */
 
-import { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError, loadUserToken } from '../dist/index.esm.js';
-
-// Mock the loadUserToken function
-jest.mock('../dist/index.esm.js', () => {
-  const actual = jest.requireActual('../dist/index.esm.js');
-  return {
-    ...actual,
-    loadUserToken: jest.fn()
-  };
-});
+import { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError } from '../dist/index.esm.js';
 
 // Mock fetch
-global.fetch = jest.fn();
+const mockFetch = {
+  fn: () => {},
+  mockResolvedValueOnce: (value) => {
+    mockFetch.fn = () => Promise.resolve(value);
+    return mockFetch;
+  },
+  mockRejectedValueOnce: (error) => {
+    mockFetch.fn = () => Promise.reject(error);
+    return mockFetch;
+  },
+  mockClear: () => {
+    mockFetch.fn = () => {};
+    mockFetch.calls = [];
+  },
+  calls: []
+};
+
+global.fetch = (...args) => {
+  mockFetch.calls.push(args);
+  return mockFetch.fn(...args);
+};
 
 beforeEach(() => {
-  fetch.mockClear();
-  loadUserToken.mockClear();
+  mockFetch.mockClear();
 });
 
 describe('BarndoorSDK Constructor', () => {
@@ -126,7 +136,7 @@ describe('BarndoorSDK Methods', () => {
         }
       ];
 
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockServers)
       });
@@ -139,19 +149,18 @@ describe('BarndoorSDK Methods', () => {
       expect(servers[1]).toBeInstanceOf(ServerSummary);
       expect(servers[1].provider).toBeNull();
 
-      expect(fetch).toHaveBeenCalledWith(
-        'https://api.example.com/servers',
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            'Authorization': `Bearer ${validToken}`
-          })
+      expect(mockFetch.calls.length).toBe(1);
+      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/servers');
+      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          'Authorization': `Bearer ${validToken}`
         })
-      );
+      }));
     });
 
     test('handles empty server list', async () => {
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([])
       });
@@ -173,7 +182,7 @@ describe('BarndoorSDK Methods', () => {
         url: 'https://api.example.com/mcp'
       };
 
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockServer)
       });
@@ -211,7 +220,7 @@ describe('BarndoorSDK Methods', () => {
         state: 'random-state'
       };
 
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse)
       });
@@ -219,34 +228,32 @@ describe('BarndoorSDK Methods', () => {
       const result = await sdk.initiateConnection(serverId);
 
       expect(result).toEqual(mockResponse);
-      expect(fetch).toHaveBeenCalledWith(
-        `https://api.example.com/servers/${serverId}/connect`,
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({})
-        })
-      );
+      expect(mockFetch.calls.length).toBe(1);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connect`);
+      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({})
+      }));
     });
 
     test('initiates connection with return URL', async () => {
       const returnUrl = 'https://app.example.com/callback';
       const mockResponse = { auth_url: 'https://auth.example.com/...' };
 
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse)
       });
 
       await sdk.initiateConnection(serverId, returnUrl);
 
-      expect(fetch).toHaveBeenCalledWith(
-        `https://api.example.com/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`,
-        expect.any(Object)
-      );
+      expect(mockFetch.calls.length).toBe(1);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`);
+      expect(mockFetch.calls[0][1]).toEqual(expect.any(Object));
     });
 
     test('handles OAuth configuration error', async () => {
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -263,7 +270,7 @@ describe('BarndoorSDK Methods', () => {
       const serverId = '123e4567-e89b-12d3-a456-426614174000';
       const mockResponse = { status: 'connected' };
 
-      fetch.mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse)
       });
@@ -271,12 +278,49 @@ describe('BarndoorSDK Methods', () => {
       const status = await sdk.getConnectionStatus(serverId);
 
       expect(status).toBe('connected');
-      expect(fetch).toHaveBeenCalledWith(
-        `https://api.example.com/servers/${serverId}/connection`,
-        expect.objectContaining({
-          method: 'GET'
+      expect(mockFetch.calls.length).toBe(1);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
+      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
+        method: 'GET'
+      }));
+    });
+  });
+
+  describe('disconnectServer', () => {
+    const serverId = '123e4567-e89b-12d3-a456-426614174000';
+
+    test('successfully disconnects from server', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 204
+      });
+
+      await sdk.disconnectServer(serverId);
+
+      expect(mockFetch.calls.length).toBe(1);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
+      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
+        method: 'DELETE'
+      }));
+    });
+
+    test('throws error when connection not found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({
+          error: 'ConnectionNotFound',
+          message: 'Connection not found'
         })
-      );
+      });
+
+      await expect(sdk.disconnectServer(serverId))
+        .rejects.toThrow('Connection not found for server');
+    });
+
+    test('validates server ID format', async () => {
+      await expect(sdk.disconnectServer('invalid_server_id!'))
+        .rejects.toThrow('Server ID must be a valid UUID or slug');
     });
   });
 

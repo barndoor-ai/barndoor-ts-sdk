@@ -99,6 +99,7 @@ describe('API Compatibility', () => {
     expect(typeof sdk.getServer).toBe('function');          // get_server
     expect(typeof sdk.initiateConnection).toBe('function'); // initiate_connection
     expect(typeof sdk.getConnectionStatus).toBe('function'); // get_connection_status
+    expect(typeof sdk.disconnectServer).toBe('function');   // disconnect_server
     expect(typeof sdk.ensureServerConnected).toBe('function'); // ensure_server_connected
     expect(typeof sdk.validateCachedToken).toBe('function'); // validate_cached_token
     expect(typeof sdk.close).toBe('function');              // close
