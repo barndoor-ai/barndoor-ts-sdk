@@ -1,0 +1,681 @@
+openapi: 3.0.3
+info:
+  title: Barndoor Platform API
+  version: 1.0.0
+  description: |
+    REST API for the Barndoor Platform - manage MCP servers, OAuth connections, and proxy MCP requests.
+
+    ## Authentication
+
+    All endpoints require a JWT Bearer token obtained through Auth0 OAuth 2.0 flow with PKCE.
+    The SDK handles the OAuth flow automatically using interactive login.
+
+    ## MCP Integration
+
+    The `/mcp/{mcp_server_name}` endpoints provide streaming proxy access to third-party MCP servers
+    (Salesforce, Notion, Slack, etc.) with automatic authentication and session management.
+
+  contact:
+    name: Barndoor Support
+    url: https://barndoor.ai
+
+servers:
+  - url: https://{organization_id}.mcp.barndoor.ai
+    description: Production API
+    variables:
+      organization_id:
+        description: Your organization identifier
+        default: your-org
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained through Auth0 OAuth 2.0 flow with PKCE.
+
+        The token should be included in the Authorization header:
+        `Authorization: Bearer <your-jwt-token>`
+
+        Use the Barndoor SDK's `loginInteractive()` function to obtain tokens automatically.
+
+  schemas:
+    ServerSummary:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - connection_status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the server
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Human-readable name of the server
+          example: "Salesforce Production"
+        slug:
+          type: string
+          description: URL-friendly identifier used in API paths
+          pattern: "^[a-z0-9-]+$"
+          example: "salesforce"
+        provider:
+          type: string
+          nullable: true
+          description: Third-party provider name
+          example: "salesforce"
+        connection_status:
+          type: string
+          enum: [available, pending, connected, error]
+          description: |
+            Current connection status:
+            - `available`: Server is available but not connected
+            - `pending`: Connection is in progress or credentials missing
+            - `connected`: Server is connected and ready to use
+            - `error`: Connection failed or encountered an error
+          example: "connected"
+
+    ServerDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServerSummary"
+        - type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              nullable: true
+              description: MCP base URL from the server directory
+              example: "https://api.salesforce.com/mcp"
+
+    ConnectionInitiationResponse:
+      type: object
+      properties:
+        auth_url:
+          type: string
+          format: uri
+          description: OAuth authorization URL to redirect user to
+          example: "https://login.salesforce.com/services/oauth2/authorize?..."
+      additionalProperties: true
+
+    ConnectionStatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [available, pending, connected, error]
+          description: Current connection status
+          example: "connected"
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type identifier
+          example: "ServerNotFound"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Server with ID '123' not found"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+paths:
+  /servers:
+    get:
+      summary: List MCP servers
+      description: |
+        List all MCP servers available to the caller's organization.
+        Returns basic information about each server including connection status.
+      operationId: listServers
+      tags:
+        - Servers
+      responses:
+        "200":
+          description: List of available MCP servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerSummary"
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  name: "Salesforce Production"
+                  slug: "salesforce"
+                  provider: "salesforce"
+                  connection_status: "connected"
+                - id: "987fcdeb-51a2-43d1-9f12-123456789abc"
+                  name: "Notion Workspace"
+                  slug: "notion"
+                  provider: "notion"
+                  connection_status: "available"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /servers/{server_id}:
+    get:
+      summary: Get server details
+      description: |
+        Get detailed information about a specific MCP server.
+        Returns extended information including MCP URL if available.
+      operationId: getServer
+      parameters:
+        - name: server_id
+          in: path
+          required: true
+          description: Server UUID or slug
+          schema:
+            type: string
+          example: "salesforce"
+      responses:
+        "200":
+          description: Server details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetail"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /servers/{server_id}/connect:
+    post:
+      summary: Initiate OAuth connection
+      description: |
+        Initiate OAuth connection flow for a server. Returns an authorization URL
+        that the user should visit to complete the OAuth flow.
+
+        The server must have OAuth configuration set up by an admin.
+      operationId: initiateConnection
+      parameters:
+        - name: server_id
+          in: path
+          required: true
+          description: Server UUID or slug
+          schema:
+            type: string
+          example: "salesforce"
+        - name: return_url
+          in: query
+          required: false
+          description: Optional return URL after OAuth completion
+          schema:
+            type: string
+            format: uri
+          example: "https://myapp.com/oauth/callback"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              example: {}
+      responses:
+        "200":
+          description: Connection initiation successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionInitiationResponse"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server missing OAuth configuration or other error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "OAuthConfigurationError"
+                message: "Server is missing OAuth configuration. Ask an admin to configure credentials before initiating a connection."
+
+  /servers/{server_id}/connection:
+    get:
+      summary: Get connection status
+      description: |
+        Get the user's connection status for a specific server.
+        Used to poll connection status during OAuth flows.
+      operationId: getConnectionStatus
+      parameters:
+        - name: server_id
+          in: path
+          required: true
+          description: Server UUID or slug
+          schema:
+            type: string
+          example: "salesforce"
+      responses:
+        "200":
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStatusResponse"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete connection
+      description: |
+        Delete the current user's connection to this server.
+
+        This will remove the connection record and clean up any stored OAuth credentials.
+        The user will need to reconnect to use this server again.
+      operationId: deleteConnection
+      parameters:
+        - name: server_id
+          in: path
+          required: true
+          description: Server UUID or slug
+          schema:
+            type: string
+          example: "salesforce"
+      responses:
+        "204":
+          description: Connection deleted successfully
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /mcp/{mcp_server_name}:
+    get:
+      summary: MCP server proxy endpoint
+      description: |
+        Proxies MCP JSON-RPC requests to third-party servers with automatic authentication.
+
+        This endpoint supports both regular HTTP requests and Server-Sent Events (SSE) streaming
+        for real-time MCP protocol communication.
+
+        ## Usage
+
+        - **JSON-RPC**: Send MCP protocol requests as JSON
+        - **SSE Streaming**: Use `Accept: text/event-stream` for real-time communication
+        - **Session Management**: Include `x-mcp-session-id` header for session tracking
+
+        ## Authentication Flow
+
+        1. User must first connect to the server via `/servers/{server_id}/connect`
+        2. Complete OAuth flow for the third-party service
+        3. Use this endpoint to proxy MCP requests with automatic credential injection
+
+      operationId: proxyMcpRequest
+      parameters:
+        - name: mcp_server_name
+          in: path
+          required: true
+          description: MCP server name identifier
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
+          example: "salesforce"
+        - name: x-mcp-session-id
+          in: header
+          required: false
+          description: MCP session identifier for request tracking
+          schema:
+            type: string
+          example: "sess_1234567890abcdef"
+      requestBody:
+        required: false
+        description: MCP JSON-RPC request payload
+        content:
+          application/json:
+            schema:
+              type: object
+              description: MCP JSON-RPC 2.0 request
+              properties:
+                jsonrpc:
+                  type: string
+                  enum: ["2.0"]
+                  description: JSON-RPC version
+                method:
+                  type: string
+                  description: MCP method name
+                  example: "tools/list"
+                params:
+                  type: object
+                  description: Method parameters
+                  additionalProperties: true
+                id:
+                  oneOf:
+                    - type: string
+                    - type: number
+                  description: Request identifier
+              required:
+                - jsonrpc
+                - method
+              example:
+                jsonrpc: "2.0"
+                method: "tools/list"
+                params: {}
+                id: 1
+      responses:
+        "200":
+          description: MCP response or SSE stream
+          content:
+            application/json:
+              schema:
+                type: object
+                description: MCP JSON-RPC 2.0 response
+                properties:
+                  jsonrpc:
+                    type: string
+                    enum: ["2.0"]
+                  result:
+                    type: object
+                    description: Method result
+                    additionalProperties: true
+                  error:
+                    type: object
+                    description: Error object if method failed
+                    properties:
+                      code:
+                        type: integer
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        additionalProperties: true
+                  id:
+                    oneOf:
+                      - type: string
+                      - type: number
+                    description: Request identifier
+                required:
+                  - jsonrpc
+                  - id
+                example:
+                  jsonrpc: "2.0"
+                  result:
+                    tools:
+                      - name: "get_accounts"
+                        description: "Get Salesforce accounts"
+                        parameters:
+                          type: "object"
+                          properties:
+                            limit:
+                              type: "integer"
+                              description: "Maximum number of accounts"
+                  id: 1
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream for real-time MCP communication.
+
+                  Each event contains a JSON-RPC message with event metadata.
+
+                  Example events:
+                  ```
+                  data: {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+
+                  data: {"jsonrpc": "2.0", "result": {"tools": [...]}, "id": 1}
+                  ```
+              example: |
+                data: {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+
+                data: {"jsonrpc": "2.0", "result": {"tools": []}, "id": 1}
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - server not connected or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "ServerNotConnected"
+                message: "Server 'salesforce' is not connected. Please initiate connection first."
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Bad Gateway - upstream server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "UpstreamError"
+                message: "Failed to connect to Salesforce API"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /sse/{mcp_server_name}:
+    get:
+      summary: SSE server proxy endpoint
+      description: |
+        Server-Sent Events proxy endpoint for real-time streaming communication with third-party servers.
+
+        This endpoint provides dedicated SSE streaming capabilities separate from the MCP protocol,
+        allowing for custom event streaming and real-time data flows.
+
+        ## Usage
+
+        - **SSE Streaming**: Optimized for `text/event-stream` communication
+        - **Real-time Events**: Custom event types and data streaming
+        - **Session Management**: Include `x-mcp-session-id` header for session tracking
+
+        ## Authentication Flow
+
+        1. User must first connect to the server via `/servers/{server_id}/connect`
+        2. Complete OAuth flow for the third-party service
+        3. Use this endpoint for real-time event streaming with automatic credential injection
+
+      operationId: proxySSERequest
+      parameters:
+        - name: mcp_server_name
+          in: path
+          required: true
+          description: MCP server name identifier
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
+          example: "salesforce"
+        - name: x-mcp-session-id
+          in: header
+          required: false
+          description: MCP session identifier for request tracking
+          schema:
+            type: string
+          example: "sess_1234567890abcdef"
+      requestBody:
+        required: false
+        description: Optional request payload for SSE initialization
+        content:
+          application/json:
+            schema:
+              type: object
+              description: SSE initialization parameters
+              properties:
+                event_types:
+                  type: array
+                  items:
+                    type: string
+                  description: Types of events to subscribe to
+                  example: ["data_update", "status_change"]
+                filters:
+                  type: object
+                  description: Event filtering parameters
+                  additionalProperties: true
+                  example:
+                    object_type: "Account"
+                    limit: 100
+              example:
+                event_types: ["data_update", "status_change"]
+                filters:
+                  object_type: "Account"
+                  limit: 100
+      responses:
+        "200":
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream for real-time communication.
+
+                  Events follow the SSE format with optional event types and data payloads.
+
+                  Example events:
+                  ```
+                  event: connected
+                  data: {"status": "ready", "timestamp": "2024-01-01T00:00:00Z"}
+
+                  event: data_update
+                  data: {"type": "Account", "id": "123", "changes": {...}}
+
+                  event: error
+                  data: {"error": "rate_limit", "message": "Rate limit exceeded"}
+                  ```
+              example: |
+                event: connected
+                data: {"status": "ready", "timestamp": "2024-01-01T00:00:00Z"}
+
+                event: data_update
+                data: {"type": "Account", "id": "123", "name": "Acme Corp"}
+
+                event: status_change
+                data: {"status": "disconnected", "reason": "timeout"}
+            application/json:
+              schema:
+                type: object
+                description: Fallback JSON response if SSE not supported
+                properties:
+                  status:
+                    type: string
+                    example: "streaming_not_supported"
+                  message:
+                    type: string
+                    example: "Client does not support SSE, use /mcp endpoint instead"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - server not connected or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "ServerNotConnected"
+                message: "Server 'salesforce' is not connected. Please initiate connection first."
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Bad Gateway - upstream server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "UpstreamError"
+                message: "Failed to connect to Salesforce streaming API"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

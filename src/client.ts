@@ -339,6 +339,32 @@ export class BarndoorSDK {
   }
 
   /**
+   * Disconnect from a specific MCP server.
+   *
+   * This will remove the connection record and clean up any stored OAuth credentials.
+   * The user will need to reconnect to use this server again.
+   *
+   * @param serverId - Server ID or slug to disconnect from
+   */
+  public async disconnectServer(serverId: string): Promise<void> {
+    const validatedServerId = this._validateServerId(serverId);
+
+    // eslint-disable-next-line no-console
+    console.log(`Disconnecting from server ${validatedServerId}`);
+
+    try {
+      await this._req('DELETE', `/servers/${validatedServerId}/connection`);
+      // eslint-disable-next-line no-console
+      console.log(`Successfully disconnected from server ${validatedServerId}`);
+    } catch (error: unknown) {
+      if (error instanceof HTTPError && error.statusCode === 404) {
+        throw new Error(`Connection not found for server ${validatedServerId}. Server may not be connected.`);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Validate server ID format.
    * @private
    */
@@ -347,10 +373,12 @@ export class BarndoorSDK {
       throw new Error('Server ID must be a non-empty string');
     }
 
-    // Basic UUID format validation
+    // Accept both UUIDs and slugs (as per OpenAPI spec)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(serverId)) {
-      throw new Error('Server ID must be a valid UUID');
+    const slugRegex = /^[a-z0-9-]+$/;
+
+    if (!uuidRegex.test(serverId) && !slugRegex.test(serverId)) {
+      throw new Error('Server ID must be a valid UUID or slug (lowercase letters, numbers, and hyphens only)');
     }
 
     return serverId;
