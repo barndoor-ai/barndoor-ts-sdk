@@ -33,6 +33,26 @@ export interface BarndoorSDKOptions {
 }
 
 /**
+ * Pagination metadata for API responses.
+ */
+interface PaginationMetadata {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  previous_page: number | null;
+  next_page: number | null;
+}
+
+/**
+ * Paginated API response structure.
+ */
+interface PaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationMetadata;
+}
+
+/**
  * Options for ensureServerConnected method.
  */
 export interface EnsureServerConnectedOptions {
@@ -262,8 +282,8 @@ export class BarndoorSDK {
   public async listServers(): Promise<ServerSummary[]> {
     this._logger.debug('Fetching server list');
     try {
-      const response = await this._req('GET', '/servers') as unknown[];
-      const servers = response.map(data => ServerSummary.fromApiResponse(data));
+      const response = await this._req('GET', '/servers') as PaginatedResponse<unknown>;
+      const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
       this._logger.info(`Retrieved ${servers.length} servers`);
       return servers;
     } catch (error) {

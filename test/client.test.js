@@ -136,9 +136,21 @@ describe('BarndoorSDK Methods', () => {
         }
       ];
 
+      const mockPaginatedResponse = {
+        data: mockServers,
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 2,
+          pages: 1,
+          previous_page: null,
+          next_page: null
+        }
+      };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockServers)
+        json: () => Promise.resolve(mockPaginatedResponse)
       });
 
       const servers = await sdk.listServers();
@@ -160,9 +172,21 @@ describe('BarndoorSDK Methods', () => {
     });
 
     test('handles empty server list', async () => {
+      const mockEmptyResponse = {
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 0,
+          previous_page: null,
+          next_page: null
+        }
+      };
+
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([])
+        json: () => Promise.resolve(mockEmptyResponse)
       });
 
       const servers = await sdk.listServers();
