@@ -301,10 +301,12 @@ const servers: ServerSummary[] = await sdk.listServers();
 ## Contributing
 
 1. Clone the repository
-2. Install dependencies: `npm install`
-3. Build the project: `npm run build`
-4. Run tests: `npm test`
-5. Run type checking: `npm run type-check`
-6. Run safety checks: `npm run safety-check`
+2. Install node `nvm install 22 && nvm use 22`
+3. Install dependencies: `npm install`
+4. Build the project: `npm run build`
+5. Run tests: `npm test`
+6. Run linting: `npm lint`
+7. Run type checking: `npm run type-check`
+8. Run safety checks: `npm run safety-check`
 
 

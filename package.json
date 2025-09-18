@@ -1,8 +1,24 @@
 {
-  "name": "@barndoor/sdk",
+  "name": "@barndoor-ai/sdk",
   "version": "0.1.0",
   "description": "TypeScript/JavaScript client for the Barndoor Platform API",
+  "author": "Barndoor AI, Inc.",
+  "homepage": "https://barndoor.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/barndoor-ai/barndoor-ts-sdk"
+  },
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "barndoor",
+    "mcp",
+    "ai",
+    "sdk"
+  ],
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
@@ -17,6 +33,7 @@
     "build": "npm run build:types && rollup -c",
     "build:types": "node node_modules/typescript/lib/tsc.js --emitDeclarationOnly",
     "dev": "rollup -c -w",
+    "clean": "rm -rf dist node_modules",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
     "lint": "eslint src/ test/ examples/",
@@ -59,13 +76,6 @@
     "type-coverage": "^2.29.7",
     "typescript": "^5.8.3"
   },
-  "keywords": [
-    "barndoor",
-    "mcp",
-    "ai",
-    "sdk"
-  ],
-  "author": "Barndoor",
   "typeCoverage": {
     "atLeast": 60,
     "strict": true,
