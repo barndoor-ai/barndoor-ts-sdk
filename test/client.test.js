@@ -2,7 +2,8 @@
  * Tests for the main BarndoorSDK client.
  */
 
-import { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError } from '../dist/index.esm.js';
+import * as SDK from '../dist/index.esm.js';
+const { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError } = SDK;
 
 // Mock fetch
 const mockFetch = {
@@ -47,19 +48,14 @@ describe('BarndoorSDK Constructor', () => {
     expect(sdk.base).toBe('https://api.example.com');
   });
 
-  test('loads token from storage when not provided', () => {
-    loadUserToken.mockReturnValue(validToken);
-    
+  test('methods throw when token not provided', async () => {
     const sdk = new BarndoorSDK('https://api.example.com');
-    expect(sdk.token).toBe(validToken);
-    expect(loadUserToken).toHaveBeenCalled();
+    await expect(sdk.listServers()).rejects.toThrow('No token available');
   });
 
-  test('throws error when no token available', () => {
-    loadUserToken.mockReturnValue(null);
-    
-    expect(() => new BarndoorSDK('https://api.example.com'))
-      .toThrow('Barndoor user token not provided and none found in store');
+  test('throws when empty token is provided', () => {
+    expect(() => new BarndoorSDK('https://api.example.com', { token: '' }))
+      .toThrow(TokenError);
   });
 
   test('validates URL format', () => {
@@ -109,11 +105,14 @@ describe('BarndoorSDK Methods', () => {
 
   beforeEach(() => {
     // Mock environment to skip token validation
-    process.env.BARNDOOR_ENV = 'localdev';
+    process.env.BARNDOOR_ENV = 'test';
     sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (sdk && typeof sdk.close === 'function') {
+      await sdk.close();
+    }
     delete process.env.BARNDOOR_ENV;
   });
 
@@ -217,18 +216,14 @@ describe('BarndoorSDK Methods', () => {
       expect(server.id).toBe(serverId);
       expect(server.url).toBe(mockServer.url);
 
-      expect(fetch).toHaveBeenCalledWith(
-        `https://api.example.com/servers/${serverId}`,
-        expect.objectContaining({
-          method: 'GET'
-        })
-      );
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}`);
+      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({ method: 'GET' }));
     });
 
     test('validates server ID format', async () => {
-      await expect(sdk.getServer('invalid-uuid'))
-        .rejects.toThrow('Server ID must be a valid UUID');
-      
+      await expect(sdk.getServer('invalid_uuid!'))
+        .rejects.toThrow('Server ID must be a valid UUID or slug');
+
       await expect(sdk.getServer(''))
         .rejects.toThrow('Server ID must be a non-empty string');
     });
@@ -339,7 +334,7 @@ describe('BarndoorSDK Methods', () => {
       });
 
       await expect(sdk.disconnectServer(serverId))
-        .rejects.toThrow('Connection not found for server');
+        .rejects.toThrow(/Connection not found/i);
     });
 
     test('validates server ID format', async () => {

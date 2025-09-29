@@ -138,9 +138,9 @@ describe('Dynamic Configuration', () => {
 
   test('throws error for JWT without organization ID', () => {
     const tokenWithoutOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYwMDAwMzYwMH0.signature';
-    
+
     expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow(ConfigurationError);
-    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow('organization_name / organization_slug not found in token');
+    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow('No organization information found in token');
   });
 });
 

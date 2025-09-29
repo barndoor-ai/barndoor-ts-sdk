@@ -308,13 +308,15 @@ function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResu
 
     // Check custom claims and standard locations
     if (!orgSlug) {
-      const customClaim = payload['https://barndoor.ai/organization_slug'];
+      const customClaimSlug = payload['https://barndoor.ai/organization_slug'];
+      const customClaimId = payload['https://barndoor.ai/organization_id'];
       const orgSlugClaim = payload.organization_slug;
       const orgSlugShort = payload.org_slug;
       const orgIdClaim = payload['org_id'];
       const organizationIdClaim = payload['organization_id'];
 
-      orgSlug = (typeof customClaim === 'string' ? customClaim : undefined) ??
+      orgSlug = (typeof customClaimSlug === 'string' ? customClaimSlug : undefined) ??
+                (typeof customClaimId === 'string' ? customClaimId : undefined) ??
                 (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??
                 (typeof orgSlugShort === 'string' ? orgSlugShort : undefined) ??
                 (typeof orgIdClaim === 'string' ? orgIdClaim : undefined) ??

@@ -10,10 +10,11 @@ import {
   BarndoorError,
   HTTPError,
   ConfigurationError,
-  TokenError
+  TokenError,
+  ServerSummary,
+  ServerDetail,
+  BarndoorConfig
 } from '../dist/index.esm.js';
-import { ServerSummary, ServerDetail } from '../src/models/index.js';
-import { BarndoorConfig } from '../src/config.js';
 
 describe('SDK Integration Tests', () => {
   const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';

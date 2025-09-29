@@ -117,8 +117,9 @@ export class BarndoorSDK {
     // Validate inputs
     this.base = this._validateUrl(apiBaseUrl, 'API base URL').replace(/\/$/, '');
 
-    // Token is now optional - can be set later via authenticate()
-    this._token = barndoorToken ? this._validateToken(barndoorToken) : null;
+    // Token is optional - can be set later via authenticate(). If provided, validate even if empty string.
+    const hasTokenProp = Object.prototype.hasOwnProperty.call(options, 'token');
+    this._token = hasTokenProp ? this._validateToken(barndoorToken as unknown as string) : null;
 
     // Validate configuration
     if (typeof timeout !== 'number' || timeout <= 0) {

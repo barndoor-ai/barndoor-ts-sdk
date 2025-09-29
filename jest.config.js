@@ -2,8 +2,8 @@ export default {
   testEnvironment: 'node',
   transform: {},
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js'
+    'src/**/*.{ts,js}',
+    '!src/**/*.test.{ts,js}'
   ],
   coverageThreshold: {
     global: {
