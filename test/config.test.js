@@ -113,6 +113,7 @@ describe('BarndoorConfig', () => {
     expect(config.mcpBaseUrl).toBe('https://mcp.options.com');
   });
 
+
   test('validation passes for valid config', () => {
     const config = new BarndoorConfig();
     expect(() => config.validate()).not.toThrow();
