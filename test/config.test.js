@@ -19,7 +19,7 @@ afterAll(() => {
 describe('BarndoorConfig', () => {
   test('creates config with default values', () => {
     const config = new BarndoorConfig();
-    
+
     expect(config.authDomain).toBe('auth.barndoor.ai');
     expect(config.clientId).toBe('');
     expect(config.clientSecret).toBe('');
@@ -35,9 +35,9 @@ describe('BarndoorConfig', () => {
     process.env.AGENT_CLIENT_SECRET = 'test-client-secret';
     process.env.API_AUDIENCE = 'https://custom.api/';
     process.env.BARNDOOR_ENV = 'development';
-    
+
     const config = new BarndoorConfig();
-    
+
     expect(config.authDomain).toBe('custom.auth0.com');
     expect(config.clientId).toBe('test-client-id');
     expect(config.clientSecret).toBe('test-client-secret');
@@ -47,44 +47,67 @@ describe('BarndoorConfig', () => {
 
   test('constructor options override environment variables', () => {
     process.env.AUTH_DOMAIN = 'env.auth0.com';
-    
+
     const config = new BarndoorConfig({
       authDomain: 'override.auth0.com'
     });
-    
+
     expect(config.authDomain).toBe('override.auth0.com');
   });
 
   test('sets environment-specific defaults for localdev', () => {
     const config = new BarndoorConfig({ environment: 'localdev' });
-    
+
     expect(config.apiBaseUrl).toBe('http://localhost:8000');
     expect(config.mcpBaseUrl).toBe('http://localhost:8000');
   });
 
   test('sets environment-specific defaults for development', () => {
     const config = new BarndoorConfig({ environment: 'development' });
-    
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+
+    expect(config.apiBaseUrl).toBe('https://api.barndoordev.com');
     expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
   });
 
   test('sets environment-specific defaults for production', () => {
     const config = new BarndoorConfig({ environment: 'production' });
-    
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
+
+    expect(config.apiBaseUrl).toBe('https://api.barndoor.ai');
     expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
   });
 
   test('respects custom URLs even in specific environments', () => {
     process.env.BARNDOOR_API = 'https://custom.api.com';
     process.env.BARNDOOR_URL = 'https://custom.mcp.com';
-    
+
     const config = new BarndoorConfig({ environment: 'localdev' });
-    
+
     expect(config.apiBaseUrl).toBe('https://custom.api.com');
     expect(config.mcpBaseUrl).toBe('https://custom.mcp.com');
   });
+
+  test('MCP env var precedence prefers BARNDOOR_MCP over BARNDOOR_URL', () => {
+    process.env.BARNDOOR_MCP = 'https://mcp.preferred.com';
+    process.env.BARNDOOR_URL = 'https://mcp.legacy.com';
+
+    const config = new BarndoorConfig({ environment: 'development' });
+    expect(config.mcpBaseUrl).toBe('https://mcp.preferred.com');
+  });
+
+  test('options override API/MCP env vars', () => {
+    process.env.BARNDOOR_API = 'https://api.env.com';
+    process.env.BARNDOOR_MCP = 'https://mcp.env.com';
+
+    const config = new BarndoorConfig({
+      environment: 'production',
+      apiBaseUrl: 'https://api.options.com',
+      mcpBaseUrl: 'https://mcp.options.com',
+    });
+
+    expect(config.apiBaseUrl).toBe('https://api.options.com');
+    expect(config.mcpBaseUrl).toBe('https://mcp.options.com');
+  });
+
 
   test('validation passes for valid config', () => {
     const config = new BarndoorConfig();
@@ -107,7 +130,7 @@ describe('Static Configuration', () => {
   test('BarndoorConfig.getStaticConfig returns same as function', () => {
     const config1 = getStaticConfig();
     const config2 = BarndoorConfig.getStaticConfig();
-    
+
     expect(config1.authDomain).toBe(config2.authDomain);
     expect(config1.apiAudience).toBe(config2.apiAudience);
   });
@@ -118,15 +141,15 @@ describe('Dynamic Configuration', () => {
 
   test('getDynamicConfig substitutes organization ID', () => {
     const config = getDynamicConfig(mockJwtToken);
-    
-    expect(config.apiBaseUrl).toBe('https://test-org.mcp.barndoor.ai');
+
+    expect(config.apiBaseUrl).toBe('https://api.barndoor.ai');
     expect(config.mcpBaseUrl).toBe('https://test-org.mcp.barndoor.ai');
   });
 
   test('BarndoorConfig.getDynamicConfig works the same', () => {
     const config1 = getDynamicConfig(mockJwtToken);
     const config2 = BarndoorConfig.getDynamicConfig(mockJwtToken);
-    
+
     expect(config1.apiBaseUrl).toBe(config2.apiBaseUrl);
     expect(config1.mcpBaseUrl).toBe(config2.mcpBaseUrl);
   });
@@ -148,14 +171,14 @@ describe('Environment Detection', () => {
   test('environment priority: MODE > BARNDOOR_ENV > default', () => {
     process.env.MODE = 'test-mode';
     process.env.BARNDOOR_ENV = 'test-barndoor-env';
-    
+
     const config = new BarndoorConfig();
     expect(config.environment).toBe('test-mode');
-    
+
     delete process.env.MODE;
     const config2 = new BarndoorConfig();
     expect(config2.environment).toBe('test-barndoor-env');
-    
+
     delete process.env.BARNDOOR_ENV;
     const config3 = new BarndoorConfig();
     expect(config3.environment).toBe('production');
@@ -164,8 +187,8 @@ describe('Environment Detection', () => {
   test('case insensitive environment matching', () => {
     const localConfig = new BarndoorConfig({ environment: 'LOCALDEV' });
     expect(localConfig.apiBaseUrl).toBe('http://localhost:8000');
-    
+
     const devConfig = new BarndoorConfig({ environment: 'DEV' });
-    expect(devConfig.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+    expect(devConfig.apiBaseUrl).toBe('https://api.barndoordev.com');
   });
 });

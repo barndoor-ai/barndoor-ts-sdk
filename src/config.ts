@@ -134,21 +134,21 @@ export class BarndoorConfig {
                        (getEnvVar('BARNDOOR_API') ||
                        'http://localhost:8000');
       this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_URL') ||
+                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
                        'http://localhost:8000');
     } else if (env === 'development' || env === 'dev') {
       this.apiBaseUrl = options.apiBaseUrl ??
                        (getEnvVar('BARNDOOR_API') ||
-                       'https://{organization_id}.mcp.barndoordev.com');
+                       'https://api.barndoordev.com');
       this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_URL') ||
+                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
                        'https://{organization_id}.mcp.barndoordev.com');
     } else { // production
       this.apiBaseUrl = options.apiBaseUrl ??
                        (getEnvVar('BARNDOOR_API') ||
-                       'https://{organization_id}.mcp.barndoor.ai');
+                       'https://api.barndoor.ai');
       this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_URL') ||
+                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
                        'https://{organization_id}.mcp.barndoor.ai');
     }
   }
