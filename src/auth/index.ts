@@ -1,14 +1,11 @@
 /**
  * Authentication module exports.
- * 
+ *
  * This module provides a unified interface for authentication functionality,
  * including PKCE OAuth flows, token storage, and interactive login.
  */
 
-export {
-  PKCEManager,
-  startLocalCallbackServer
-} from './pkce';
+export { PKCEManager, startLocalCallbackServer } from './pkce';
 
 export {
   getTokenStorage,
@@ -21,7 +18,7 @@ export {
   isTokenActive,
   isTokenActiveWithRefresh,
   validateToken,
-  setTokenLogger
+  setTokenLogger,
 } from './store';
 
 // Re-export types

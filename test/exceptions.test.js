@@ -13,7 +13,7 @@ import {
   ServerNotFoundError,
   OAuthError,
   ConfigurationError,
-  TimeoutError
+  TimeoutError,
 } from '../dist/index.esm.js';
 
 describe('Exception Hierarchy', () => {
@@ -50,7 +50,7 @@ describe('Exception Hierarchy', () => {
     expect(errorWithHelp.helpText).toBe('Custom help text');
 
     const errorWithoutHelp = new TokenError('token invalid');
-    expect(errorWithoutHelp.message).toBe('token invalid Run \'barndoor-login\' to authenticate.');
+    expect(errorWithoutHelp.message).toBe("token invalid Run 'barndoor-login' to authenticate.");
     expect(errorWithoutHelp.helpText).toBeNull();
   });
 
@@ -59,10 +59,16 @@ describe('Exception Hierarchy', () => {
     expect(timeoutError.message).toContain('timed out');
     expect(timeoutError.url).toBe('https://api.example.com');
 
-    const refusedError = new ConnectionError('https://api.example.com', new Error('connection refused'));
+    const refusedError = new ConnectionError(
+      'https://api.example.com',
+      new Error('connection refused')
+    );
     expect(refusedError.message).toContain('Could not connect');
 
-    const dnsError = new ConnectionError('https://api.example.com', new Error('name resolution failed'));
+    const dnsError = new ConnectionError(
+      'https://api.example.com',
+      new Error('name resolution failed')
+    );
     expect(dnsError.message).toContain('Could not resolve hostname');
 
     const genericError = new ConnectionError('https://api.example.com', new Error('generic error'));
@@ -89,14 +95,14 @@ describe('Exception Hierarchy', () => {
     const serverError = new HTTPError(500, 'Internal Server Error');
     expect(serverError.message).toContain('Server error');
 
-    const unknownError = new HTTPError(418, 'I\'m a teapot');
-    expect(unknownError.message).toContain('I\'m a teapot');
+    const unknownError = new HTTPError(418, "I'm a teapot");
+    expect(unknownError.message).toContain("I'm a teapot");
   });
 
   test('ServerNotFoundError with available servers', () => {
     const availableServers = ['server1', 'server2', 'server3'];
     const error = new ServerNotFoundError('missing-server', availableServers);
-    
+
     expect(error.message).toContain('missing-server');
     expect(error.message).toContain('server1, server2, server3');
     expect(error.serverIdentifier).toBe('missing-server');
@@ -105,7 +111,7 @@ describe('Exception Hierarchy', () => {
 
   test('ServerNotFoundError without available servers', () => {
     const error = new ServerNotFoundError('missing-server');
-    
+
     expect(error.message).toContain('missing-server');
     expect(error.message).toContain('Use listServers()');
     expect(error.availableServers).toBeNull();

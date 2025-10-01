@@ -74,7 +74,11 @@ export class HTTPClient {
    * @param options - Request options
    * @returns Response data
    */
-  public async request(method: string, url: string, options: HTTPRequestOptions = {}): Promise<unknown> {
+  public async request(
+    method: string,
+    url: string,
+    options: HTTPRequestOptions = {}
+  ): Promise<unknown> {
     if (this.closed) {
       throw new Error('HTTP client has been closed');
     }
@@ -90,9 +94,9 @@ export class HTTPClient {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'barndoor-js-sdk/0.1.0',
-        ...headers
+        ...headers,
       },
-      ...fetchOptions
+      ...fetchOptions,
     };
 
     // Add request body if provided
@@ -148,9 +152,15 @@ export class HTTPClient {
         }
 
         let responseData: unknown;
-        if (contentType.includes('application/json') || (!contentType && typeof respAny.json === 'function')) {
+        if (
+          contentType.includes('application/json') ||
+          (!contentType && typeof respAny.json === 'function')
+        ) {
           responseData = await response.json();
-        } else if (contentType.includes('text/') || (!contentType && typeof respAny.text === 'function')) {
+        } else if (
+          contentType.includes('text/') ||
+          (!contentType && typeof respAny.text === 'function')
+        ) {
           responseData = await response.text();
         } else if (typeof respAny.arrayBuffer === 'function') {
           // For binary data or unknown types, return as ArrayBuffer
@@ -161,14 +171,15 @@ export class HTTPClient {
         }
 
         return responseData;
-        
       } catch (error: unknown) {
         clearTimeout(timeoutId);
 
         // Handle different types of errors
         if (error instanceof Error && error.name === 'AbortError') {
           const totalTimeout = this.timeoutConfig.connect + this.timeoutConfig.read;
-          lastError = new TimeoutError(`Request to ${requestUrl} timed out after ${totalTimeout}ms`);
+          lastError = new TimeoutError(
+            `Request to ${requestUrl} timed out after ${totalTimeout}ms`
+          );
         } else if (error instanceof HTTPError) {
           // Distinguish retryable 5xx from non-retryable 4xx errors
           if (error.statusCode >= 400 && error.statusCode < 500) {
@@ -177,7 +188,8 @@ export class HTTPClient {
           } else if (error.statusCode >= 500 && error.statusCode < 600) {
             // Retry 5xx errors only for idempotent methods (GET, HEAD, OPTIONS)
             const methodUpper = method.toUpperCase();
-            const isIdempotent = methodUpper === 'GET' || methodUpper === 'HEAD' || methodUpper === 'OPTIONS';
+            const isIdempotent =
+              methodUpper === 'GET' || methodUpper === 'HEAD' || methodUpper === 'OPTIONS';
             if (isIdempotent) {
               lastError = error;
             } else {
@@ -187,7 +199,11 @@ export class HTTPClient {
             // Other HTTP errors - don't retry
             throw error;
           }
-        } else if (error instanceof Error && error.name === 'TypeError' && error.message.includes('fetch')) {
+        } else if (
+          error instanceof Error &&
+          error.name === 'TypeError' &&
+          error.message.includes('fetch')
+        ) {
           lastError = new ConnectionError(requestUrl, error);
         } else {
           lastError = error instanceof Error ? error : new Error(String(error));
@@ -206,11 +222,13 @@ export class HTTPClient {
 
     // Ensure we always have an error to throw
     if (!lastError) {
-      lastError = new Error(`Request to ${requestUrl} failed after ${this.maxRetries + 1} attempts with no specific error`);
+      lastError = new Error(
+        `Request to ${requestUrl} failed after ${this.maxRetries + 1} attempts with no specific error`
+      );
     }
     throw lastError;
   }
-  
+
   /**
    * Build URL with query parameters.
    * @private

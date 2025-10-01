@@ -1,6 +1,6 @@
 /**
  * Version management for the Barndoor SDK.
- * 
+ *
  * This module provides a unified way to access the SDK version,
  * reading directly from package.json to avoid duplication.
  */
@@ -23,7 +23,7 @@ export function getVersion(): string {
       const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
       return packageJson.version;
     }
-    
+
     // In browser environments, fall back to a build-time constant
     // This will be replaced by the build process
     return '__SDK_VERSION__';

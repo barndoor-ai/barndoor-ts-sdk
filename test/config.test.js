@@ -2,7 +2,12 @@
  * Tests for configuration management.
  */
 
-import { BarndoorConfig, getStaticConfig, getDynamicConfig, ConfigurationError } from '../dist/index.esm.js';
+import {
+  BarndoorConfig,
+  getStaticConfig,
+  getDynamicConfig,
+  ConfigurationError,
+} from '../dist/index.esm.js';
 
 // Mock process.env for testing
 const originalEnv = process.env;
@@ -49,7 +54,7 @@ describe('BarndoorConfig', () => {
     process.env.AUTH_DOMAIN = 'env.auth0.com';
 
     const config = new BarndoorConfig({
-      authDomain: 'override.auth0.com'
+      authDomain: 'override.auth0.com',
     });
 
     expect(config.authDomain).toBe('override.auth0.com');
@@ -108,7 +113,6 @@ describe('BarndoorConfig', () => {
     expect(config.mcpBaseUrl).toBe('https://mcp.options.com');
   });
 
-
   test('validation passes for valid config', () => {
     const config = new BarndoorConfig();
     expect(() => config.validate()).not.toThrow();
@@ -137,7 +141,8 @@ describe('Static Configuration', () => {
 });
 
 describe('Dynamic Configuration', () => {
-  const mockJwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwczovL2Jhcm5kb29yLmFpL29yZ2FuaXphdGlvbl9pZCI6InRlc3Qtb3JnIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDM2MDB9.signature';
+  const mockJwtToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwczovL2Jhcm5kb29yLmFpL29yZ2FuaXphdGlvbl9pZCI6InRlc3Qtb3JnIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDM2MDB9.signature';
 
   test('getDynamicConfig substitutes organization ID', () => {
     const config = getDynamicConfig(mockJwtToken);
@@ -160,10 +165,13 @@ describe('Dynamic Configuration', () => {
   });
 
   test('throws error for JWT without organization ID', () => {
-    const tokenWithoutOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYwMDAwMzYwMH0.signature';
+    const tokenWithoutOrgId =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTYwMDAwMzYwMH0.signature';
 
     expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow(ConfigurationError);
-    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow('No organization information found in token');
+    expect(() => getDynamicConfig(tokenWithoutOrgId)).toThrow(
+      'No organization information found in token'
+    );
   });
 });
 

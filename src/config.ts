@@ -14,8 +14,10 @@ import { ConfigurationError } from './exceptions';
  * Improved detection that works correctly under bundlers where process gets shimmed.
  * We check for window first since that's the most reliable browser indicator.
  */
-export const isBrowser: boolean = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-export const isNode: boolean = typeof window === 'undefined' &&
+export const isBrowser: boolean =
+  typeof window !== 'undefined' && typeof window.document !== 'undefined';
+export const isNode: boolean =
+  typeof window === 'undefined' &&
   typeof process !== 'undefined' &&
   process.versions != null &&
   process.versions.node != null;
@@ -104,10 +106,8 @@ export class BarndoorConfig {
     this.apiAudience = options.apiAudience ?? (getEnvVar('API_AUDIENCE') || 'https://barndoor.ai/');
 
     // Environment settings
-    this.environment = options.environment ??
-                      (getEnvVar('MODE') ||
-                      getEnvVar('BARNDOOR_ENV') ||
-                      'production');
+    this.environment =
+      options.environment ?? (getEnvVar('MODE') || getEnvVar('BARNDOOR_ENV') || 'production');
 
     // Runtime settings
     this.promptForLogin = options.promptForLogin ?? false;
@@ -120,7 +120,7 @@ export class BarndoorConfig {
     // Set environment-specific defaults
     this._setEnvironmentDefaults(options);
   }
-  
+
   /**
    * Set environment-specific default URLs.
    * @private
@@ -130,29 +130,31 @@ export class BarndoorConfig {
 
     if (env === 'localdev' || env === 'local') {
       this.authDomain = this.authDomain || 'localhost:3001';
-      this.apiBaseUrl = options.apiBaseUrl ??
-                       (getEnvVar('BARNDOOR_API') ||
-                       'http://localhost:8000');
-      this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
-                       'http://localhost:8000');
+      this.apiBaseUrl =
+        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'http://localhost:8000');
+      this.mcpBaseUrl =
+        options.mcpBaseUrl ??
+        (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') || 'http://localhost:8000');
     } else if (env === 'development' || env === 'dev') {
-      this.apiBaseUrl = options.apiBaseUrl ??
-                       (getEnvVar('BARNDOOR_API') ||
-                       'https://api.barndoordev.com');
-      this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
-                       'https://{organization_id}.mcp.barndoordev.com');
-    } else { // production
-      this.apiBaseUrl = options.apiBaseUrl ??
-                       (getEnvVar('BARNDOOR_API') ||
-                       'https://api.barndoor.ai');
-      this.mcpBaseUrl = options.mcpBaseUrl ??
-                       (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') ||
-                       'https://{organization_id}.mcp.barndoor.ai');
+      this.apiBaseUrl =
+        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://api.barndoordev.com');
+      this.mcpBaseUrl =
+        options.mcpBaseUrl ??
+        (getEnvVar('BARNDOOR_MCP') ||
+          getEnvVar('BARNDOOR_URL') ||
+          'https://{organization_id}.mcp.barndoordev.com');
+    } else {
+      // production
+      this.apiBaseUrl =
+        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://api.barndoor.ai');
+      this.mcpBaseUrl =
+        options.mcpBaseUrl ??
+        (getEnvVar('BARNDOOR_MCP') ||
+          getEnvVar('BARNDOOR_URL') ||
+          'https://{organization_id}.mcp.barndoor.ai');
     }
   }
-  
+
   /**
    * Get static configuration (without organization ID substitution).
    * @returns Static configuration instance
@@ -167,12 +169,15 @@ export class BarndoorConfig {
    * @param options - Configuration options
    * @returns Dynamic configuration instance
    */
-  public static getDynamicConfig(jwtToken: string, options: {
-    /** Whether to throw error for tokens without organization info */
-    requireOrganization?: boolean;
-    /** Fallback organization ID to use if none found in token */
-    fallbackOrganizationId?: string;
-  } = {}): BarndoorConfig {
+  public static getDynamicConfig(
+    jwtToken: string,
+    options: {
+      /** Whether to throw error for tokens without organization info */
+      requireOrganization?: boolean;
+      /** Fallback organization ID to use if none found in token */
+      fallbackOrganizationId?: string;
+    } = {}
+  ): BarndoorConfig {
     const { requireOrganization = true, fallbackOrganizationId } = options;
     const config = new BarndoorConfig();
 
@@ -199,9 +204,9 @@ export class BarndoorConfig {
       const errorMessage = orgResult.error || 'No organization information found in token';
       throw new ConfigurationError(
         `Failed to extract organization ID from token: ${errorMessage}. ` +
-        'This token may be for a personal account or may be missing organization claims. ' +
-        'Consider using getStaticConfig() for organization-independent operations or ' +
-        'provide a fallbackOrganizationId in the options.'
+          'This token may be for a personal account or may be missing organization claims. ' +
+          'Consider using getStaticConfig() for organization-independent operations or ' +
+          'provide a fallbackOrganizationId in the options.'
       );
     }
 
@@ -284,17 +289,19 @@ function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResu
     if (parts.length !== 3) {
       return {
         hasOrganization: false,
-        error: 'Invalid JWT format - expected 3 parts separated by dots'
+        error: 'Invalid JWT format - expected 3 parts separated by dots',
       };
     }
 
     let payload: JWTPayload;
     try {
-      payload = JSON.parse(base64Decode(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
-    } catch (parseError) {
+      payload = JSON.parse(
+        base64Decode(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'))
+      ) as JWTPayload;
+    } catch (_parseError) {
       return {
         hasOrganization: false,
-        error: 'Failed to parse JWT payload - token may be corrupted'
+        error: 'Failed to parse JWT payload - token may be corrupted',
       };
     }
 
@@ -315,35 +322,35 @@ function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResu
       const orgIdClaim = payload['org_id'];
       const organizationIdClaim = payload['organization_id'];
 
-      orgSlug = (typeof customClaimSlug === 'string' ? customClaimSlug : undefined) ??
-                (typeof customClaimId === 'string' ? customClaimId : undefined) ??
-                (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??
-                (typeof orgSlugShort === 'string' ? orgSlugShort : undefined) ??
-                (typeof orgIdClaim === 'string' ? orgIdClaim : undefined) ??
-                (typeof organizationIdClaim === 'string' ? organizationIdClaim : undefined);
+      orgSlug =
+        (typeof customClaimSlug === 'string' ? customClaimSlug : undefined) ??
+        (typeof customClaimId === 'string' ? customClaimId : undefined) ??
+        (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??
+        (typeof orgSlugShort === 'string' ? orgSlugShort : undefined) ??
+        (typeof orgIdClaim === 'string' ? orgIdClaim : undefined) ??
+        (typeof organizationIdClaim === 'string' ? organizationIdClaim : undefined);
     }
 
     if (!orgSlug || typeof orgSlug !== 'string' || orgSlug.trim() === '') {
       return {
         hasOrganization: false,
-        error: 'No organization information found in token. This token may be for a personal account or may be missing organization claims.'
+        error:
+          'No organization information found in token. This token may be for a personal account or may be missing organization claims.',
       };
     }
 
     return {
       organizationId: orgSlug.trim(),
-      hasOrganization: true
+      hasOrganization: true,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       hasOrganization: false,
-      error: `Failed to decode JWT token: ${errorMessage}`
+      error: `Failed to decode JWT token: ${errorMessage}`,
     };
   }
 }
-
-
 
 /**
  * Get static configuration instance.
@@ -359,10 +366,13 @@ export function getStaticConfig(): BarndoorConfig {
  * @param options - Configuration options
  * @returns Dynamic configuration instance
  */
-export function getDynamicConfig(jwtToken: string, options?: {
-  requireOrganization?: boolean;
-  fallbackOrganizationId?: string;
-}): BarndoorConfig {
+export function getDynamicConfig(
+  jwtToken: string,
+  options?: {
+    requireOrganization?: boolean;
+    fallbackOrganizationId?: string;
+  }
+): BarndoorConfig {
   return BarndoorConfig.getDynamicConfig(jwtToken, options);
 }
 

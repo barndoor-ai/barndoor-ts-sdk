@@ -8,11 +8,11 @@ const { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError,
 // Mock fetch
 const mockFetch = {
   fn: () => {},
-  mockResolvedValueOnce: (value) => {
+  mockResolvedValueOnce: value => {
     mockFetch.fn = () => Promise.resolve(value);
     return mockFetch;
   },
-  mockRejectedValueOnce: (error) => {
+  mockRejectedValueOnce: error => {
     mockFetch.fn = () => Promise.reject(error);
     return mockFetch;
   },
@@ -20,7 +20,7 @@ const mockFetch = {
     mockFetch.fn = () => {};
     mockFetch.calls = [];
   },
-  calls: []
+  calls: [],
 };
 
 global.fetch = (...args) => {
@@ -33,11 +33,12 @@ beforeEach(() => {
 });
 
 describe('BarndoorSDK Constructor', () => {
-  const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+  const validToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
   test('creates SDK with valid parameters', () => {
     const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
-    
+
     expect(sdk.base).toBe('https://api.example.com');
     expect(sdk.token).toBe(validToken);
     expect(sdk._closed).toBe(false);
@@ -54,53 +55,63 @@ describe('BarndoorSDK Constructor', () => {
   });
 
   test('throws when empty token is provided', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { token: '' }))
-      .toThrow(TokenError);
+    expect(() => new BarndoorSDK('https://api.example.com', { token: '' })).toThrow(TokenError);
   });
 
   test('validates URL format', () => {
-    expect(() => new BarndoorSDK('invalid-url', { token: validToken }))
-      .toThrow(ConfigurationError);
-    
-    expect(() => new BarndoorSDK('', { token: validToken }))
-      .toThrow(ConfigurationError);
+    expect(() => new BarndoorSDK('invalid-url', { token: validToken })).toThrow(ConfigurationError);
+
+    expect(() => new BarndoorSDK('', { token: validToken })).toThrow(ConfigurationError);
   });
 
   test('validates token format', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { token: '' }))
-      .toThrow(TokenError);
-    
-    expect(() => new BarndoorSDK('https://api.example.com', { token: 'invalid-jwt' }))
-      .toThrow(TokenError);
+    expect(() => new BarndoorSDK('https://api.example.com', { token: '' })).toThrow(TokenError);
+
+    expect(() => new BarndoorSDK('https://api.example.com', { token: 'invalid-jwt' })).toThrow(
+      TokenError
+    );
   });
 
   test('validates timeout parameter', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { 
-      token: validToken, 
-      timeout: -1 
-    })).toThrow(ConfigurationError);
-    
-    expect(() => new BarndoorSDK('https://api.example.com', { 
-      token: validToken, 
-      timeout: 'invalid' 
-    })).toThrow(ConfigurationError);
+    expect(
+      () =>
+        new BarndoorSDK('https://api.example.com', {
+          token: validToken,
+          timeout: -1,
+        })
+    ).toThrow(ConfigurationError);
+
+    expect(
+      () =>
+        new BarndoorSDK('https://api.example.com', {
+          token: validToken,
+          timeout: 'invalid',
+        })
+    ).toThrow(ConfigurationError);
   });
 
   test('validates maxRetries parameter', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { 
-      token: validToken, 
-      maxRetries: -1 
-    })).toThrow(ConfigurationError);
-    
-    expect(() => new BarndoorSDK('https://api.example.com', { 
-      token: validToken, 
-      maxRetries: 1.5 
-    })).toThrow(ConfigurationError);
+    expect(
+      () =>
+        new BarndoorSDK('https://api.example.com', {
+          token: validToken,
+          maxRetries: -1,
+        })
+    ).toThrow(ConfigurationError);
+
+    expect(
+      () =>
+        new BarndoorSDK('https://api.example.com', {
+          token: validToken,
+          maxRetries: 1.5,
+        })
+    ).toThrow(ConfigurationError);
   });
 });
 
 describe('BarndoorSDK Methods', () => {
-  const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+  const validToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
   let sdk;
 
   beforeEach(() => {
@@ -124,15 +135,15 @@ describe('BarndoorSDK Methods', () => {
           name: 'Test Server 1',
           slug: 'test-server-1',
           provider: 'github',
-          connection_status: 'connected'
+          connection_status: 'connected',
         },
         {
           id: '123e4567-e89b-12d3-a456-426614174001',
           name: 'Test Server 2',
           slug: 'test-server-2',
           provider: null,
-          connection_status: 'available'
-        }
+          connection_status: 'available',
+        },
       ];
 
       const mockPaginatedResponse = {
@@ -143,13 +154,13 @@ describe('BarndoorSDK Methods', () => {
           total: 2,
           pages: 1,
           previous_page: null,
-          next_page: null
-        }
+          next_page: null,
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockPaginatedResponse)
+        json: () => Promise.resolve(mockPaginatedResponse),
       });
 
       const servers = await sdk.listServers();
@@ -162,12 +173,14 @@ describe('BarndoorSDK Methods', () => {
 
       expect(mockFetch.calls.length).toBe(1);
       expect(mockFetch.calls[0][0]).toBe('https://api.example.com/servers');
-      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
-        method: 'GET',
-        headers: expect.objectContaining({
-          'Authorization': `Bearer ${validToken}`
+      expect(mockFetch.calls[0][1]).toEqual(
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${validToken}`,
+          }),
         })
-      }));
+      );
     });
 
     test('handles empty server list', async () => {
@@ -179,13 +192,13 @@ describe('BarndoorSDK Methods', () => {
           total: 0,
           pages: 0,
           previous_page: null,
-          next_page: null
-        }
+          next_page: null,
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockEmptyResponse)
+        json: () => Promise.resolve(mockEmptyResponse),
       });
 
       const servers = await sdk.listServers();
@@ -202,12 +215,12 @@ describe('BarndoorSDK Methods', () => {
         slug: 'test-server',
         provider: 'github',
         connection_status: 'connected',
-        url: 'https://api.example.com/mcp'
+        url: 'https://api.example.com/mcp',
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockServer)
+        json: () => Promise.resolve(mockServer),
       });
 
       const server = await sdk.getServer(serverId);
@@ -221,11 +234,11 @@ describe('BarndoorSDK Methods', () => {
     });
 
     test('validates server ID format', async () => {
-      await expect(sdk.getServer('invalid_uuid!'))
-        .rejects.toThrow('Server ID must be a valid UUID or slug');
+      await expect(sdk.getServer('invalid_uuid!')).rejects.toThrow(
+        'Server ID must be a valid UUID or slug'
+      );
 
-      await expect(sdk.getServer(''))
-        .rejects.toThrow('Server ID must be a non-empty string');
+      await expect(sdk.getServer('')).rejects.toThrow('Server ID must be a non-empty string');
     });
   });
 
@@ -236,12 +249,12 @@ describe('BarndoorSDK Methods', () => {
       const mockResponse = {
         connection_id: 'conn-123',
         auth_url: 'https://auth.example.com/oauth/authorize?...',
-        state: 'random-state'
+        state: 'random-state',
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       });
 
       const result = await sdk.initiateConnection(serverId);
@@ -249,10 +262,12 @@ describe('BarndoorSDK Methods', () => {
       expect(result).toEqual(mockResponse);
       expect(mockFetch.calls.length).toBe(1);
       expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connect`);
-      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({})
-      }));
+      expect(mockFetch.calls[0][1]).toEqual(
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({}),
+        })
+      );
     });
 
     test('initiates connection with return URL', async () => {
@@ -261,13 +276,15 @@ describe('BarndoorSDK Methods', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       });
 
       await sdk.initiateConnection(serverId, returnUrl);
 
       expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`);
+      expect(mockFetch.calls[0][0]).toBe(
+        `https://api.example.com/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`
+      );
       expect(mockFetch.calls[0][1]).toEqual(expect.any(Object));
     });
 
@@ -276,11 +293,12 @@ describe('BarndoorSDK Methods', () => {
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: () => Promise.resolve('OAuth server configuration not found')
+        text: () => Promise.resolve('OAuth server configuration not found'),
       });
 
-      await expect(sdk.initiateConnection(serverId))
-        .rejects.toThrow('Server is missing OAuth configuration');
+      await expect(sdk.initiateConnection(serverId)).rejects.toThrow(
+        'Server is missing OAuth configuration'
+      );
     });
   });
 
@@ -291,7 +309,7 @@ describe('BarndoorSDK Methods', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       });
 
       const status = await sdk.getConnectionStatus(serverId);
@@ -299,9 +317,11 @@ describe('BarndoorSDK Methods', () => {
       expect(status).toBe('connected');
       expect(mockFetch.calls.length).toBe(1);
       expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
-      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
-        method: 'GET'
-      }));
+      expect(mockFetch.calls[0][1]).toEqual(
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
     });
   });
 
@@ -311,44 +331,46 @@ describe('BarndoorSDK Methods', () => {
     test('successfully disconnects from server', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        status: 204
+        status: 204,
       });
 
       await sdk.disconnectServer(serverId);
 
       expect(mockFetch.calls.length).toBe(1);
       expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
-      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({
-        method: 'DELETE'
-      }));
+      expect(mockFetch.calls[0][1]).toEqual(
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
     });
 
     test('throws error when connection not found', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({
-          error: 'ConnectionNotFound',
-          message: 'Connection not found'
-        })
+        json: () =>
+          Promise.resolve({
+            error: 'ConnectionNotFound',
+            message: 'Connection not found',
+          }),
       });
 
-      await expect(sdk.disconnectServer(serverId))
-        .rejects.toThrow(/Connection not found/i);
+      await expect(sdk.disconnectServer(serverId)).rejects.toThrow(/Connection not found/i);
     });
 
     test('validates server ID format', async () => {
-      await expect(sdk.disconnectServer('invalid_server_id!'))
-        .rejects.toThrow('Server ID must be a valid UUID or slug');
+      await expect(sdk.disconnectServer('invalid_server_id!')).rejects.toThrow(
+        'Server ID must be a valid UUID or slug'
+      );
     });
   });
 
   describe('cleanup', () => {
     test('close() prevents further requests', async () => {
       await sdk.close();
-      
-      await expect(sdk.listServers())
-        .rejects.toThrow('SDK has been closed');
+
+      await expect(sdk.listServers()).rejects.toThrow('SDK has been closed');
     });
 
     test('aclose() is alias for close()', async () => {

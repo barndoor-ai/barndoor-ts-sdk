@@ -136,7 +136,11 @@ export class HTTPError extends BarndoorError {
    * Create a user-friendly error message based on HTTP status code.
    * @private
    */
-  private static _createUserFriendlyMessage(statusCode: number, message: string, _responseBody: string | null): string {
+  private static _createUserFriendlyMessage(
+    statusCode: number,
+    message: string,
+    _responseBody: string | null
+  ): string {
     const baseMessage = `Request failed (HTTP ${statusCode})`;
 
     if (statusCode === 400) {
@@ -176,7 +180,7 @@ export class ServerNotFoundError extends BarndoorError {
     if (availableServers) {
       message += `. Available servers: ${availableServers.join(', ')}`;
     } else {
-      message += ". Use listServers() to see available servers.";
+      message += '. Use listServers() to see available servers.';
     }
 
     super(message);

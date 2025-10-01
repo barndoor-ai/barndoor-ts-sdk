@@ -1,16 +1,13 @@
 /**
  * Quick-start helpers for the Barndoor SDK.
- * 
+ *
  * This module provides convenience functions that remove boilerplate code
  * commonly needed in examples and prototypes, mirroring the Python SDK's
  * quickstart.py functionality.
  */
 
 import { BarndoorSDK } from './client';
-import {
-  PKCEManager,
-  startLocalCallbackServer
-} from './auth';
+import { PKCEManager, startLocalCallbackServer } from './auth';
 import { loadUserToken, saveUserToken } from './auth';
 import { getStaticConfig, getDynamicConfig, hasOrganizationInfo, isNode } from './config';
 import { ServerNotFoundError } from './exceptions';
@@ -26,11 +23,11 @@ const logger = createScopedLogger('quickstart');
 
 /**
  * Perform interactive login and return an initialized SDK instance.
- * 
+ *
  * Opens the system browser for OAuth authentication, waits for the
  * user to complete login, exchanges the authorization code for a JWT,
  * and returns a configured BarndoorSDK instance ready for use.
- * 
+ *
  * @param {Object} [options={}] - Login options
  * @param {string} [options.authDomain] - Auth0 domain
  * @param {string} [options.clientId] - OAuth client ID
@@ -58,30 +55,32 @@ export interface LoginInteractiveOptions {
   port?: number;
 }
 
-export async function loginInteractive(options: LoginInteractiveOptions = {}): Promise<BarndoorSDK> {
+export async function loginInteractive(
+  options: LoginInteractiveOptions = {}
+): Promise<BarndoorSDK> {
   if (!isNode) {
     throw new Error('Interactive login is only available in Node.js environment');
   }
-  
+
   logger.info('Starting interactive login flow');
-  
+
   const config = getStaticConfig();
-  
+
   const {
     authDomain = config.authDomain,
     clientId = config.clientId,
     clientSecret = config.clientSecret,
     audience = config.apiAudience,
     apiBaseUrl: _apiBaseUrl = config.apiBaseUrl,
-    port = 52765
+    port = 52765,
   } = options;
-  
+
   if (!clientId || !clientSecret) {
     throw new Error(
       'AGENT_CLIENT_ID / AGENT_CLIENT_SECRET not set – create a .env file or export in the shell'
     );
   }
-  
+
   // 1. Try cached token first
   const cachedToken = await loadUserToken();
   if (cachedToken) {
@@ -99,13 +98,13 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
       await sdk.validateCachedToken();
       logger.info('Using cached valid token');
       return sdk;
-    } catch (error) {
+    } catch (_error) {
       logger.info('Cached token invalid, starting OAuth flow');
     }
   } else {
     logger.info('No cached token, starting OAuth flow');
   }
-  
+
   // 2. Start interactive PKCE flow
   const [redirectUri, waiter] = startLocalCallbackServer(port);
 
@@ -115,12 +114,12 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
     domain: authDomain,
     clientId,
     redirectUri,
-    audience
+    audience,
   });
-  
+
   // Open browser
   const platform = os.platform();
-  
+
   let command;
   if (platform === 'darwin') {
     command = `open "${authUrl}"`;
@@ -129,26 +128,26 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
   } else {
     command = `xdg-open "${authUrl}"`;
   }
-  
-  exec(command, (error) => {
+
+  exec(command, error => {
     if (error) {
       logger.warn('Failed to open browser automatically. Please visit:', authUrl);
     } else {
       logger.info('Please complete login in your browser…');
     }
   });
-  
+
   // Wait for callback
   const [code, _state] = await waiter;
-  
+
   // Exchange code for token
-  const tokenData = await pkceManager.exchangeCodeForToken({
+  const tokenData = (await pkceManager.exchangeCodeForToken({
     domain: authDomain,
     clientId,
     clientSecret,
     code,
-    redirectUri
-  }) as { access_token: string; [key: string]: unknown };
+    redirectUri,
+  })) as { access_token: string; [key: string]: unknown };
 
   // Save token and create SDK
   await saveUserToken(tokenData);
@@ -177,7 +176,11 @@ export async function loginInteractive(options: LoginInteractiveOptions = {}): P
  * @param {Object} [options={}] - Options
  * @param {number} [options.timeout=90] - Maximum seconds to wait
  */
-export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: string, options: { timeout?: number } = {}): Promise<void> {
+export async function ensureServerConnected(
+  sdk: BarndoorSDK,
+  serverIdentifier: string,
+  options: { timeout?: number } = {}
+): Promise<void> {
   const { timeout = 90 } = options;
 
   logger.info(`Ensuring ${serverIdentifier} server is connected`);
@@ -198,10 +201,10 @@ export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: 
 
 /**
  * Create MCP connection parameters for a server.
- * 
+ *
  * Returns connection parameters that can be used with any MCP client
  * framework (CrewAI, LangChain, custom implementations).
- * 
+ *
  * @param {BarndoorSDK} sdk - SDK instance
  * @param {string} serverSlug - Server slug
  * @param {Object} [options={}] - Options
@@ -209,23 +212,27 @@ export async function ensureServerConnected(sdk: BarndoorSDK, serverIdentifier: 
  * @param {string} [options.transport='streamable-http'] - Transport type
  * @returns {Promise<[Object, string]>} [params, publicUrl]
  */
-export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<[unknown, string]> {
+export async function makeMcpConnectionParams(
+  sdk: BarndoorSDK,
+  serverSlug: string,
+  options: { proxyBaseUrl?: string; transport?: string } = {}
+): Promise<[unknown, string]> {
   const {
     proxyBaseUrl: _proxyBaseUrl = 'http://proxy-ingress:8080',
-    transport = 'streamable-http'
+    transport = 'streamable-http',
   } = options;
-  
+
   // 1. Ensure server exists
   const servers = await sdk.listServers();
   const serverSlugs = new Set(servers.map(s => s.slug));
-  
+
   if (!serverSlugs.has(serverSlug)) {
     throw new ServerNotFoundError(serverSlug, Array.from(serverSlugs));
   }
-  
+
   // 2. Decide proxy vs public based on environment
   const env = (isNode ? process.env['BARNDOOR_ENV'] || process.env['MODE'] : '') || 'localdev';
-  
+
   let url: string;
   if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
     // Use dynamic configuration for local/dev environments
@@ -248,17 +255,17 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
       url = `${staticConfig.mcpBaseUrl}/mcp/${serverSlug}`;
     }
   }
-  
+
   const params = {
-    url: url,
-    transport: transport,
+    url,
+    transport,
     headers: {
-      'Accept': 'application/json, text/event-stream',
-      'Authorization': `Bearer ${sdk.token}`,
-      'x-barndoor-session-id': generateSessionId()
-    }
+      Accept: 'application/json, text/event-stream',
+      Authorization: `Bearer ${sdk.token}`,
+      'x-barndoor-session-id': generateSessionId(),
+    },
   };
-  
+
   return [params, url];
 }
 
@@ -273,7 +280,11 @@ export async function makeMcpConnectionParams(sdk: BarndoorSDK, serverSlug: stri
  * @param {Object} [options] – Optional overrides passed to `makeMcpConnectionParams` (proxyBaseUrl, transport).
  * @returns {Promise<McpClient>} A connected MCP client ready for `listTools`, `callTool`, etc.
  */
-export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, options: { proxyBaseUrl?: string; transport?: string } = {}): Promise<McpClient> {
+export async function makeMcpClient(
+  sdk: BarndoorSDK,
+  serverSlug: string,
+  options: { proxyBaseUrl?: string; transport?: string } = {}
+): Promise<McpClient> {
   // 1. Build URL + headers via existing helper
   const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlug, options);
   const params = mcpParams as { url: string; headers: Record<string, string> };
@@ -281,22 +292,20 @@ export async function makeMcpClient(sdk: BarndoorSDK, serverSlug: string, option
   // 2. Initialise MCP client
   const client = new McpClient({
     name: 'barndoor-js-sdk',
-    version: '0.1.0'
+    version: '0.1.0',
   });
 
   // 3. Create transport (handles initialize + session negotiation)
   const transport = new StreamableHTTPClientTransport(new URL(params.url), {
     requestInit: {
-      headers: params.headers
-    }
+      headers: params.headers,
+    },
   });
 
   // 4. Connect (performs `initialize` and session negotiation)
   await client.connect(transport as any);
   return client;
 }
-
-
 
 /**
  * Generate a UUID v4 session ID.
@@ -311,8 +320,8 @@ function generateSessionId() {
   }
   // Fallback UUID generation
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 8);
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 8;
     return v.toString(16);
   });
 }
