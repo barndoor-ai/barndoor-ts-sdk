@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+
+# Skip JS test and example files from TypeScript-typed linting for now
+test/**
+examples/**
+

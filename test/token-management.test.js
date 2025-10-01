@@ -9,11 +9,17 @@ import { verifyJWTLocal, JWTVerificationResult, TokenManager } from '../dist/ind
 
 describe('Enhanced Token Management', () => {
   describe('JWT Verification', () => {
-    const validToken = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3Qta2V5In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTksImF1ZCI6Imh0dHBzOi8vYmFybmRvb3IuYWkvIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJhcm5kb29yLmFpLyJ9.test-signature';
-    const expiredToken = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3Qta2V5In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjIsImF1ZCI6Imh0dHBzOi8vYmFybmRvb3IuYWkvIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJhcm5kb29yLmFpLyJ9.test-signature';
+    const validToken =
+      'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3Qta2V5In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTksImF1ZCI6Imh0dHBzOi8vYmFybmRvb3IuYWkvIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJhcm5kb29yLmFpLyJ9.test-signature';
+    const expiredToken =
+      'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3Qta2V5In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjIsImF1ZCI6Imh0dHBzOi8vYmFybmRvb3IuYWkvIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJhcm5kb29yLmFpLyJ9.test-signature';
 
     test('verifyJWTLocal returns INVALID for malformed tokens', async () => {
-      const result = await verifyJWTLocal('invalid-token', 'auth.barndoor.ai', 'https://barndoor.ai/');
+      const result = await verifyJWTLocal(
+        'invalid-token',
+        'auth.barndoor.ai',
+        'https://barndoor.ai/'
+      );
       expect(result).toBe(JWTVerificationResult.INVALID);
     });
 
@@ -40,7 +46,9 @@ describe('Enhanced Token Management', () => {
 
   describe('Token Storage Integration', () => {
     test('Token storage functions are available', async () => {
-      const { loadUserToken, saveUserToken, clearCachedToken } = await import('../dist/index.esm.js');
+      const { loadUserToken, saveUserToken, clearCachedToken } = await import(
+        '../dist/index.esm.js'
+      );
 
       expect(typeof loadUserToken).toBe('function');
       expect(typeof saveUserToken).toBe('function');
@@ -64,7 +72,7 @@ describe('Enhanced Token Management', () => {
         debug: () => {},
         info: () => {},
         warn: () => {},
-        error: () => {}
+        error: () => {},
       };
 
       expect(() => setTokenLogger(mockLogger)).not.toThrow();

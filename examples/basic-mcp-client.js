@@ -1,16 +1,12 @@
 /**
  * Basic MCP Client Example
- * 
+ *
  * This script demonstrates how to use the Barndoor SDK to connect to MCP servers
  * and perform basic operations without any AI framework dependencies.
  */
 
 import 'dotenv/config';
-import {
-  loginInteractive,
-  ensureServerConnected,
-  makeMcpClient
-} from '../dist/index.esm.js';
+import { loginInteractive, ensureServerConnected, makeMcpClient } from '../dist/index.esm.js';
 
 const SERVER_SLUG = 'salesforce'; // or 'notion'
 
@@ -83,10 +79,13 @@ async function main() {
         const queryResponse = await mcpClient.callTool({
           name: 'query_records',
           arguments: {
-            query: 'SELECT Id, Name, Industry FROM Account LIMIT 5'
-          }
+            query: 'SELECT Id, Name, Industry FROM Account LIMIT 5',
+          },
         });
-        const records = queryResponse?.content?.[0]?.type === 'text' ? JSON.parse(queryResponse.content[0].text) : (queryResponse.records || []);
+        const records =
+          queryResponse?.content?.[0]?.type === 'text'
+            ? JSON.parse(queryResponse.content[0].text)
+            : queryResponse.records || [];
         console.log(`Found ${records.length} accounts`);
         records.forEach((record, i) => {
           console.log(`  ${i + 1}. ${record.Name} (${record.Industry || 'No industry'})`);
@@ -99,7 +98,7 @@ async function main() {
       try {
         const pagesResponse = await mcpClient.callTool({
           name: 'list_pages',
-          arguments: {}
+          arguments: {},
         });
         const pages = pagesResponse?.pages || [];
         console.log(`Found ${pages.length} pages`);
@@ -114,7 +113,6 @@ async function main() {
     await mcpClient.close();
     await sdk.close();
     console.log('\n✅ Basic MCP client example completed successfully!');
-
   } catch (error) {
     console.error('❌ Error:', error.message);
     if (error.stack) {

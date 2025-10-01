@@ -7,12 +7,7 @@
 
 import { HTTPClient, TimeoutConfig } from './http/client';
 import { ServerSummary, ServerDetail } from './models';
-import {
-  HTTPError,
-  ConfigurationError,
-  TokenError,
-  ServerNotFoundError
-} from './exceptions';
+import { HTTPError, ConfigurationError, TokenError, ServerNotFoundError } from './exceptions';
 import { getStaticConfig, isNode } from './config';
 import { createScopedLogger } from './logging';
 import { exec } from 'child_process';
@@ -108,17 +103,14 @@ export class BarndoorSDK {
    * @param options - Configuration options (token is optional)
    */
   constructor(apiBaseUrl: string, options: BarndoorSDKOptions = {}) {
-    const {
-      token: barndoorToken,
-      timeout = 30.0,
-      maxRetries = 3
-    } = options;
+    const { token: barndoorToken, timeout = 30.0, maxRetries = 3 } = options;
 
     // Validate inputs
     this.base = this._validateUrl(apiBaseUrl, 'API base URL').replace(/\/$/, '');
 
-    // Token is now optional - can be set later via authenticate()
-    this._token = barndoorToken ? this._validateToken(barndoorToken) : null;
+    // Token is optional - can be set later via authenticate(). If provided, validate even if empty string.
+    const hasTokenProp = Object.prototype.hasOwnProperty.call(options, 'token');
+    this._token = hasTokenProp ? this._validateToken(barndoorToken as unknown as string) : null;
 
     // Validate configuration
     if (typeof timeout !== 'number' || timeout <= 0) {
@@ -142,7 +134,9 @@ export class BarndoorSDK {
    */
   public get token(): string {
     if (!this._token) {
-      throw new Error('No token available. Call authenticate() first or provide token in constructor.');
+      throw new Error(
+        'No token available. Call authenticate() first or provide token in constructor.'
+      );
     }
     return this._token;
   }
@@ -161,7 +155,7 @@ export class BarndoorSDK {
     // eslint-disable-next-line no-console
     console.log('Authentication successful');
   }
-  
+
   /**
    * Validate URL format.
    * @private
@@ -174,7 +168,7 @@ export class BarndoorSDK {
     try {
       new URL(url);
       return url;
-    } catch (error) {
+    } catch (_error) {
       throw new ConfigurationError(`${name} must be a valid URL`);
     }
   }
@@ -206,12 +200,16 @@ export class BarndoorSDK {
       throw new Error('SDK has been closed. Create a new instance or use as context manager.');
     }
   }
-  
+
   /**
    * Make authenticated request with automatic token validation.
    * @private
    */
-  private async _req(method: string, path: string, options: Record<string, unknown> = {}): Promise<unknown> {
+  private async _req(
+    method: string,
+    path: string,
+    options: Record<string, unknown> = {}
+  ): Promise<unknown> {
     this._ensureNotClosed();
     await this.ensureValidToken();
 
@@ -236,8 +234,8 @@ export class BarndoorSDK {
       const config = getStaticConfig();
       const response = await fetch(`https://${config.authDomain}/userinfo`, {
         headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
+          Authorization: `Bearer ${this.token}`,
+        },
       });
 
       const isValid = response.ok;
@@ -246,11 +244,11 @@ export class BarndoorSDK {
         this._tokenValidated = true;
       }
       return isValid;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
-  
+
   /**
    * Ensure token is valid, validating if necessary.
    */
@@ -282,7 +280,7 @@ export class BarndoorSDK {
   public async listServers(): Promise<ServerSummary[]> {
     this._logger.debug('Fetching server list');
     try {
-      const response = await this._req('GET', '/servers') as PaginatedResponse<unknown>;
+      const response = (await this._req('GET', '/servers')) as PaginatedResponse<unknown>;
       const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
       this._logger.info(`Retrieved ${servers.length} servers`);
       return servers;
@@ -291,7 +289,7 @@ export class BarndoorSDK {
       throw error;
     }
   }
-  
+
   /**
    * Get detailed information about a specific server.
    * @param serverId - Server ID
@@ -312,7 +310,10 @@ export class BarndoorSDK {
    * @param returnUrl - Optional return URL
    * @returns Connection initiation response
    */
-  public async initiateConnection(serverId: string, returnUrl?: string): Promise<ConnectionInitiationResponse> {
+  public async initiateConnection(
+    serverId: string,
+    returnUrl?: string
+  ): Promise<ConnectionInitiationResponse> {
     const validatedServerId = this._validateServerId(serverId);
     let validatedReturnUrl: string | undefined;
 
@@ -328,22 +329,24 @@ export class BarndoorSDK {
     try {
       const response = await this._req('POST', `/servers/${validatedServerId}/connect`, {
         params,
-        json: {}
+        json: {},
       });
       return response as ConnectionInitiationResponse;
     } catch (error: unknown) {
-      if (error instanceof HTTPError &&
-          error.statusCode === 500 &&
-          error.responseBody?.includes('OAuth server configuration not found')) {
+      if (
+        error instanceof HTTPError &&
+        error.statusCode === 500 &&
+        error.responseBody?.includes('OAuth server configuration not found')
+      ) {
         throw new Error(
           'Server is missing OAuth configuration. ' +
-          'Ask an admin to configure credentials before initiating a connection.'
+            'Ask an admin to configure credentials before initiating a connection.'
         );
       }
       throw error;
     }
   }
-  
+
   /**
    * Get the user's connection status for a specific server.
    * @param serverId - Server ID
@@ -354,7 +357,10 @@ export class BarndoorSDK {
 
     // eslint-disable-next-line no-console
     console.log(`Checking connection status for server ${validatedServerId}`);
-    const response = await this._req('GET', `/servers/${validatedServerId}/connection`) as ConnectionStatusResponse;
+    const response = (await this._req(
+      'GET',
+      `/servers/${validatedServerId}/connection`
+    )) as ConnectionStatusResponse;
     return response.status;
   }
 
@@ -378,7 +384,9 @@ export class BarndoorSDK {
       console.log(`Successfully disconnected from server ${validatedServerId}`);
     } catch (error: unknown) {
       if (error instanceof HTTPError && error.statusCode === 404) {
-        throw new Error(`Connection not found for server ${validatedServerId}. Server may not be connected.`);
+        throw new Error(
+          `Connection not found for server ${validatedServerId}. Server may not be connected.`
+        );
       }
       throw error;
     }
@@ -398,7 +406,9 @@ export class BarndoorSDK {
     const slugRegex = /^[a-z0-9-]+$/;
 
     if (!uuidRegex.test(serverId) && !slugRegex.test(serverId)) {
-      throw new Error('Server ID must be a valid UUID or slug (lowercase letters, numbers, and hyphens only)');
+      throw new Error(
+        'Server ID must be a valid UUID or slug (lowercase letters, numbers, and hyphens only)'
+      );
     }
 
     return serverId;
@@ -426,7 +436,10 @@ export class BarndoorSDK {
    * @param serverIdentifier - Server slug or provider name
    * @param options - Options
    */
-  public async ensureServerConnected(serverIdentifier: string, options: EnsureServerConnectedOptions = {}): Promise<void> {
+  public async ensureServerConnected(
+    serverIdentifier: string,
+    options: EnsureServerConnectedOptions = {}
+  ): Promise<void> {
     const { pollSeconds = 60 } = options;
 
     if (!isNode) {
@@ -435,9 +448,10 @@ export class BarndoorSDK {
 
     // 1. Locate server
     const servers = await this.listServers();
-    const target = servers.find(s =>
-      s.slug === serverIdentifier ||
-      (s.provider && s.provider.toLowerCase() === serverIdentifier.toLowerCase())
+    const target = servers.find(
+      s =>
+        s.slug === serverIdentifier ||
+        (s.provider && s.provider.toLowerCase() === serverIdentifier.toLowerCase())
     );
 
     if (!target) {
@@ -467,7 +481,7 @@ export class BarndoorSDK {
       command = `xdg-open "${authUrl}"`;
     }
 
-    exec(command, (error) => {
+    exec(command, error => {
       if (error) {
         // eslint-disable-next-line no-console
         console.warn('Failed to open browser:', error.message);

@@ -10,7 +10,8 @@ import { BarndoorSDK } from '../dist/index.esm.js';
 
 describe('Token Validation Fixes', () => {
   describe('Environment-based validation behavior', () => {
-    const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const validToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     const originalEnv = process.env.BARNDOOR_ENV;
     const originalFetch = global.fetch;
 
@@ -43,10 +44,11 @@ describe('Token Validation Fixes', () => {
       process.env.BARNDOOR_ENV = 'development';
 
       // Mock fetch to simulate token validation failure
-      global.fetch = () => Promise.resolve({
-        ok: false,
-        status: 401
-      });
+      global.fetch = () =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+        });
 
       const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
 
@@ -58,10 +60,11 @@ describe('Token Validation Fixes', () => {
       process.env.BARNDOOR_ENV = 'production';
 
       // Mock fetch to simulate token validation failure
-      global.fetch = () => Promise.resolve({
-        ok: false,
-        status: 401
-      });
+      global.fetch = () =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+        });
 
       const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
 
@@ -73,10 +76,11 @@ describe('Token Validation Fixes', () => {
       process.env.BARNDOOR_ENV = 'production';
 
       // Test 1: Valid token should set _tokenValidated to true
-      global.fetch = () => Promise.resolve({
-        ok: true,
-        status: 200
-      });
+      global.fetch = () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+        });
 
       const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
 
@@ -86,10 +90,11 @@ describe('Token Validation Fixes', () => {
 
       // Test 2: Invalid token should NOT set _tokenValidated to true
       sdk._tokenValidated = false;
-      global.fetch = () => Promise.resolve({
-        ok: false,
-        status: 401
-      });
+      global.fetch = () =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+        });
 
       const isValidSecond = await sdk.validateCachedToken();
       expect(isValidSecond).toBe(false);

@@ -15,7 +15,8 @@ export class BarndoorError extends Error {
    */
   constructor(message: string) {
     super(message);
-    this.name = this.constructor.name;
+    // Avoid relying on constructor.name (can be minified in builds)
+    this.name = 'BarndoorError';
   }
 }
 
@@ -33,6 +34,7 @@ export class AuthenticationError extends BarndoorError {
    */
   constructor(message: string, errorCode: string | null = null) {
     super(message);
+    this.name = 'AuthenticationError';
     this.errorCode = errorCode;
   }
 }
@@ -58,6 +60,7 @@ export class TokenError extends AuthenticationError {
     }
 
     super(fullMessage);
+    this.name = 'TokenError';
     this.helpText = helpText;
   }
 }
@@ -124,6 +127,7 @@ export class HTTPError extends BarndoorError {
   constructor(statusCode: number, message: string, responseBody: string | null = null) {
     const userMessage = HTTPError._createUserFriendlyMessage(statusCode, message, responseBody);
     super(userMessage);
+    this.name = 'HTTPError';
     this.statusCode = statusCode;
     this.responseBody = responseBody;
   }
@@ -132,7 +136,11 @@ export class HTTPError extends BarndoorError {
    * Create a user-friendly error message based on HTTP status code.
    * @private
    */
-  private static _createUserFriendlyMessage(statusCode: number, message: string, _responseBody: string | null): string {
+  private static _createUserFriendlyMessage(
+    statusCode: number,
+    message: string,
+    _responseBody: string | null
+  ): string {
     const baseMessage = `Request failed (HTTP ${statusCode})`;
 
     if (statusCode === 400) {
@@ -172,7 +180,7 @@ export class ServerNotFoundError extends BarndoorError {
     if (availableServers) {
       message += `. Available servers: ${availableServers.join(', ')}`;
     } else {
-      message += ". Use listServers() to see available servers.";
+      message += '. Use listServers() to see available servers.';
     }
 
     super(message);

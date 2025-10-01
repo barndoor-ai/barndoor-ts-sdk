@@ -10,12 +10,12 @@ describe('ServerSummary', () => {
     name: 'Test Server',
     slug: 'test-server',
     provider: 'github',
-    connection_status: 'connected'
+    connection_status: 'connected',
   };
 
   test('creates ServerSummary with valid data', () => {
     const server = new ServerSummary(validServerData);
-    
+
     expect(server.id).toBe(validServerData.id);
     expect(server.name).toBe(validServerData.name);
     expect(server.slug).toBe(validServerData.slug);
@@ -26,19 +26,22 @@ describe('ServerSummary', () => {
   test('handles null provider', () => {
     const dataWithoutProvider = { ...validServerData };
     delete dataWithoutProvider.provider;
-    
+
     const server = new ServerSummary(dataWithoutProvider);
     expect(server.provider).toBeNull();
   });
 
   test('throws error for missing required fields', () => {
     expect(() => new ServerSummary({})).toThrow('ServerSummary missing required fields');
-    
-    expect(() => new ServerSummary({ 
-      name: 'Test', 
-      slug: 'test', 
-      connection_status: 'available' 
-    })).toThrow('ServerSummary missing required fields');
+
+    expect(
+      () =>
+        new ServerSummary({
+          name: 'Test',
+          slug: 'test',
+          connection_status: 'available',
+        })
+    ).toThrow('ServerSummary missing required fields');
   });
 
   test('fromApiResponse creates ServerSummary', () => {
@@ -55,12 +58,12 @@ describe('ServerDetail', () => {
     slug: 'test-server',
     provider: 'github',
     connection_status: 'connected',
-    url: 'https://api.example.com/mcp'
+    url: 'https://api.example.com/mcp',
   };
 
   test('creates ServerDetail with valid data', () => {
     const server = new ServerDetail(validDetailData);
-    
+
     expect(server.id).toBe(validDetailData.id);
     expect(server.name).toBe(validDetailData.name);
     expect(server.slug).toBe(validDetailData.slug);
@@ -77,7 +80,7 @@ describe('ServerDetail', () => {
   test('handles null url', () => {
     const dataWithoutUrl = { ...validDetailData };
     delete dataWithoutUrl.url;
-    
+
     const server = new ServerDetail(dataWithoutUrl);
     expect(server.url).toBeNull();
   });
@@ -92,29 +95,36 @@ describe('ServerDetail', () => {
 describe('AgentToken', () => {
   const validTokenData = {
     agent_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    expires_in: 3600
+    expires_in: 3600,
   };
 
   test('creates AgentToken with valid data', () => {
     const token = new AgentToken(validTokenData);
-    
+
     expect(token.agent_token).toBe(validTokenData.agent_token);
     expect(token.expires_in).toBe(validTokenData.expires_in);
   });
 
   test('throws error for missing agent_token', () => {
-    expect(() => new AgentToken({ expires_in: 3600 })).toThrow('AgentToken missing required fields');
+    expect(() => new AgentToken({ expires_in: 3600 })).toThrow(
+      'AgentToken missing required fields'
+    );
   });
 
   test('throws error for missing expires_in', () => {
-    expect(() => new AgentToken({ agent_token: 'token' })).toThrow('AgentToken missing required fields');
+    expect(() => new AgentToken({ agent_token: 'token' })).toThrow(
+      'AgentToken missing required fields'
+    );
   });
 
   test('throws error for invalid expires_in type', () => {
-    expect(() => new AgentToken({ 
-      agent_token: 'token', 
-      expires_in: 'not-a-number' 
-    })).toThrow('AgentToken missing required fields');
+    expect(
+      () =>
+        new AgentToken({
+          agent_token: 'token',
+          expires_in: 'not-a-number',
+        })
+    ).toThrow('AgentToken missing required fields');
   });
 
   test('fromApiResponse creates AgentToken', () => {
@@ -127,18 +137,24 @@ describe('AgentToken', () => {
 describe('Model Validation', () => {
   test('models validate required fields strictly', () => {
     // ServerSummary requires all core fields
-    expect(() => new ServerSummary({
-      id: 'test-id',
-      name: 'Test',
-      slug: 'test'
-      // missing connection_status
-    })).toThrow();
+    expect(
+      () =>
+        new ServerSummary({
+          id: 'test-id',
+          name: 'Test',
+          slug: 'test',
+          // missing connection_status
+        })
+    ).toThrow();
 
     // AgentToken requires both fields
-    expect(() => new AgentToken({
-      agent_token: 'token'
-      // missing expires_in
-    })).toThrow();
+    expect(
+      () =>
+        new AgentToken({
+          agent_token: 'token',
+          // missing expires_in
+        })
+    ).toThrow();
   });
 
   test('models handle optional fields correctly', () => {
@@ -146,7 +162,7 @@ describe('Model Validation', () => {
       id: 'test-id',
       name: 'Test',
       slug: 'test',
-      connection_status: 'available'
+      connection_status: 'available',
     });
     expect(serverWithoutProvider.provider).toBeNull();
 
@@ -154,7 +170,7 @@ describe('Model Validation', () => {
       id: 'test-id',
       name: 'Test',
       slug: 'test',
-      connection_status: 'available'
+      connection_status: 'available',
     });
     expect(detailWithoutUrl.url).toBeNull();
   });

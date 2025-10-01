@@ -1,6 +1,6 @@
 /**
  * Integration tests for the Barndoor SDK.
- * 
+ *
  * These tests verify that the main components work together correctly
  * and that the API is compatible with the Python SDK.
  */
@@ -10,13 +10,15 @@ import {
   BarndoorError,
   HTTPError,
   ConfigurationError,
-  TokenError
+  TokenError,
+  ServerSummary,
+  ServerDetail,
+  BarndoorConfig,
 } from '../dist/index.esm.js';
-import { ServerSummary, ServerDetail } from '../src/models/index.js';
-import { BarndoorConfig } from '../src/config.js';
 
 describe('SDK Integration Tests', () => {
-  const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+  const validToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
   test('SDK can be instantiated with valid parameters', () => {
     const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
@@ -26,11 +28,11 @@ describe('SDK Integration Tests', () => {
   });
 
   test('SDK throws appropriate errors for invalid parameters', () => {
-    expect(() => new BarndoorSDK('invalid-url', { token: validToken }))
-      .toThrow(ConfigurationError);
-    
-    expect(() => new BarndoorSDK('https://api.example.com', { token: 'invalid' }))
-      .toThrow(TokenError);
+    expect(() => new BarndoorSDK('invalid-url', { token: validToken })).toThrow(ConfigurationError);
+
+    expect(() => new BarndoorSDK('https://api.example.com', { token: 'invalid' })).toThrow(
+      TokenError
+    );
   });
 
   test('Exception hierarchy is correct', () => {
@@ -45,7 +47,7 @@ describe('SDK Integration Tests', () => {
       name: 'Test Server',
       slug: 'test-server',
       provider: 'github',
-      connection_status: 'connected'
+      connection_status: 'connected',
     };
 
     const server = ServerSummary.fromApiResponse(serverData);
@@ -90,20 +92,21 @@ describe('SDK Integration Tests', () => {
 
 describe('API Compatibility', () => {
   test('method names match Python SDK (camelCase conversion)', () => {
-    const sdk = new BarndoorSDK('https://api.example.com', { 
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    const sdk = new BarndoorSDK('https://api.example.com', {
+      token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
     });
 
     // Check that JavaScript methods exist (Python equivalents in comments)
-    expect(typeof sdk.listServers).toBe('function');        // list_servers
-    expect(typeof sdk.getServer).toBe('function');          // get_server
+    expect(typeof sdk.listServers).toBe('function'); // list_servers
+    expect(typeof sdk.getServer).toBe('function'); // get_server
     expect(typeof sdk.initiateConnection).toBe('function'); // initiate_connection
     expect(typeof sdk.getConnectionStatus).toBe('function'); // get_connection_status
-    expect(typeof sdk.disconnectServer).toBe('function');   // disconnect_server
+    expect(typeof sdk.disconnectServer).toBe('function'); // disconnect_server
     expect(typeof sdk.ensureServerConnected).toBe('function'); // ensure_server_connected
     expect(typeof sdk.validateCachedToken).toBe('function'); // validate_cached_token
-    expect(typeof sdk.close).toBe('function');              // close
-    expect(typeof sdk.aclose).toBe('function');             // aclose
+    expect(typeof sdk.close).toBe('function'); // close
+    expect(typeof sdk.aclose).toBe('function'); // aclose
   });
 
   test('error messages are user-friendly like Python SDK', () => {
@@ -122,11 +125,11 @@ describe('API Compatibility', () => {
       name: 'Test Server',
       slug: 'test-server',
       provider: 'github',
-      connection_status: 'connected'
+      connection_status: 'connected',
     };
 
     const server = new ServerSummary(serverData);
-    
+
     // Check that all Python SDK fields are present
     expect(server).toHaveProperty('id');
     expect(server).toHaveProperty('name');

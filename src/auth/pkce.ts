@@ -1,6 +1,6 @@
 /**
  * PKCE (Proof Key for Code Exchange) implementation for OAuth 2.0.
- * 
+ *
  * This module provides PKCE functionality that mirrors the Python SDK's
  * auth.py implementation, supporting secure OAuth flows in both browser
  * and Node.js environments.
@@ -46,7 +46,7 @@ export class PKCEManager {
     clientId,
     redirectUri,
     audience,
-    scope = 'openid profile email'
+    scope = 'openid profile email',
   }: AuthorizationUrlParams): Promise<string> {
     // Generate PKCE parameters
     this._codeVerifier = generateRandomString(32);
@@ -58,11 +58,11 @@ export class PKCEManager {
       response_type: 'code',
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: scope,
-      audience: audience,
+      scope,
+      audience,
       state: this._currentState,
       code_challenge: codeChallenge,
-      code_challenge_method: 'S256'
+      code_challenge_method: 'S256',
     });
 
     const authUrl = `https://${domain}/authorize?${params.toString()}`;
@@ -79,13 +79,13 @@ export class PKCEManager {
     clientId,
     code,
     redirectUri,
-    clientSecret
+    clientSecret,
   }: TokenExchangeParams): Promise<unknown> {
     const payload: Record<string, string> = {
       grant_type: 'authorization_code',
       client_id: clientId,
-      code: code,
-      redirect_uri: redirectUri
+      code,
+      redirect_uri: redirectUri,
     };
 
     // Always add client_secret if provided (like Python SDK)
@@ -107,15 +107,20 @@ export class PKCEManager {
       const response = await fetch(`https://${domain}/oauth/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as { error?: string; error_description?: string };
+        const errorData = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          error_description?: string;
+        };
         this._logger.error('Token endpoint response:', errorData);
-        throw new OAuthError(`Token exchange failed: ${errorData.error ?? errorData.error_description ?? response.statusText}`);
+        throw new OAuthError(
+          `Token exchange failed: ${errorData.error ?? errorData.error_description ?? response.statusText}`
+        );
       }
 
       const tokenData = await response.json();
@@ -161,12 +166,10 @@ export class PKCEManager {
       codeVerifier: this._codeVerifier,
       codeChallenge: '', // We don't store this, would need to recalculate
       state: this._currentState,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }
-
-
 
 /**
  * Generate a cryptographically secure random string.
@@ -251,8 +254,6 @@ export interface AuthorizationUrlParams {
   scope?: string;
 }
 
-
-
 /**
  * Token exchange parameters.
  */
@@ -268,8 +269,6 @@ export interface TokenExchangeParams {
   /** Client secret (for backend flows) */
   clientSecret?: string;
 }
-
-
 
 /**
  * Start a local callback server for OAuth redirect (Node.js only).
@@ -289,7 +288,7 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
 
       if (parsedUrl.pathname === '/cb') {
         const { code, state, error, error_description } = parsedUrl.query;
-        
+
         // Send response to browser
         res.writeHead(200, { 'Content-Type': 'text/html' });
         if (error) {
@@ -334,7 +333,7 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
         res.end('Not found');
       }
     });
-    
+
     server.listen(port, 'localhost', () => {
       // eslint-disable-next-line no-console
       console.log(`OAuth callback server listening on ${redirectUri}`);
@@ -344,8 +343,6 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
       reject(new OAuthError(`Failed to start callback server: ${error.message}`));
     });
   });
-  
+
   return [redirectUri, waiter];
 }
-
-

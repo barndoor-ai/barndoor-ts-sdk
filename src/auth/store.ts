@@ -53,7 +53,7 @@ function decodeJwtPayload(token: string): { exp?: number; [key: string]: unknown
 
     const payload = JSON.parse(base64UrlDecode(parts[1]!));
     return payload as { exp?: number; [key: string]: unknown };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -72,7 +72,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     promise,
     new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
-    })
+    }),
   ]);
 }
 
@@ -100,7 +100,7 @@ export interface TokenData {
 export enum JWTVerificationResult {
   VALID = 'valid',
   EXPIRED = 'expired',
-  INVALID = 'invalid'
+  INVALID = 'invalid',
 }
 
 // Singleton JWKS instances to avoid recreating on every call
@@ -125,7 +125,7 @@ class _FileLock {
   private lockAcquired: boolean = false;
 
   constructor(filePath: string) {
-    this.lockFile = filePath + '.lock';
+    this.lockFile = `${filePath}.lock`;
   }
 
   /**
@@ -246,7 +246,7 @@ class BrowserTokenStorage extends TokenStorage {
   public async loadToken(): Promise<TokenData | null> {
     try {
       const tokenData = localStorage.getItem(this.storageKey);
-      return tokenData ? JSON.parse(tokenData) as TokenData : null;
+      return tokenData ? (JSON.parse(tokenData) as TokenData) : null;
     } catch (error) {
       _logger.warn('Failed to load token from localStorage:', error);
       return null;
@@ -313,7 +313,7 @@ class NodeTokenStorage extends TokenStorage {
       await lock.release();
     }
   }
-  
+
   public async saveToken(tokenData: TokenData): Promise<void> {
     if (!isNode) {
       throw new Error('NodeTokenStorage can only be used in Node.js environment');
@@ -370,8 +370,6 @@ export function getTokenStorage(): TokenStorage {
   }
 }
 
-
-
 /**
  * Verify JWT locally using JWKS.
  * @param token - JWT token to verify
@@ -389,7 +387,7 @@ export async function verifyJWTLocal(
 
     await jwtVerify(token, JWKS, {
       issuer: `https://${authDomain}/`,
-      audience: audience,
+      audience,
     });
 
     _logger.debug('Token verified locally using JWKS');
@@ -414,7 +412,7 @@ class Mutex {
   private _waitQueue: Array<() => void> = [];
 
   async acquire(): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(resolve => {
       if (!this._locked) {
         this._locked = true;
         resolve();
@@ -461,7 +459,7 @@ export class TokenManager {
   constructor(_apiBaseUrl: string) {
     this.storage = getTokenStorage();
   }
-  
+
   /**
    * Get a valid token, refreshing if necessary.
    * @returns Valid access token
@@ -508,7 +506,7 @@ export class TokenManager {
 
     // Refresh if token expires within 5 minutes (300 seconds)
     const now = Math.floor(Date.now() / 1000);
-    return (payload.exp - now) < 300;
+    return payload.exp - now < 300;
   }
 
   /**
@@ -546,8 +544,6 @@ export class TokenManager {
 
     throw new TokenExpiredError('Token expired and no refresh token available');
   }
-  
-
 
   /**
    * Validate token remotely using Auth0's userinfo endpoint.
@@ -558,11 +554,11 @@ export class TokenManager {
       const cfg = getStaticConfig();
       const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         ...(typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
           ? { signal: AbortSignal.timeout(5000) }
-          : {})
+          : {}),
       });
 
       const response = await withTimeout(fetchPromise, 5000);
@@ -587,7 +583,9 @@ export class TokenManager {
 
     // Browser security: don't expose client_secret in browser environments
     if (isBrowser && cfg.clientSecret) {
-      throw new TokenError('Refresh flow requires a confidential client; run interactive login again.');
+      throw new TokenError(
+        'Refresh flow requires a confidential client; run interactive login again.'
+      );
     }
 
     const payload: Record<string, string> = {
@@ -610,7 +608,7 @@ export class TokenManager {
         body: JSON.stringify(payload),
         ...(typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
           ? { signal: AbortSignal.timeout(15000) }
-          : {})
+          : {}),
       });
 
       const response = await withTimeout(fetchPromise, 15000);
@@ -653,8 +651,12 @@ export class TokenManager {
           _logger.warn('Timeout during token refresh');
           throw new TokenError('Token refresh timed out. Please check your connection.');
         }
-        if (error.name === 'TypeError' && 'message' in error &&
-            typeof error.message === 'string' && error.message.includes('fetch')) {
+        if (
+          error.name === 'TypeError' &&
+          'message' in error &&
+          typeof error.message === 'string' &&
+          error.message.includes('fetch')
+        ) {
           _logger.warn(`Network error during token refresh: ${error.message}`);
           throw new TokenError('Network error during token refresh. Please check your connection.');
         }
@@ -678,7 +680,7 @@ export async function loadUserToken(): Promise<string | null> {
     const storage = getTokenStorage();
     const tokenData = await storage.loadToken();
     return tokenData?.access_token ?? null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -727,17 +729,17 @@ export async function isTokenActive(_apiBaseUrl?: string): Promise<boolean> {
     // Test the access token against Auth0
     const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
       headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
+        Authorization: `Bearer ${tokenData.access_token}`,
       },
       ...(typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
         ? { signal: AbortSignal.timeout(10000) }
-        : {})
+        : {}),
     });
 
     const response = await withTimeout(fetchPromise, 10000);
 
     return response.ok;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -764,7 +766,10 @@ export async function isTokenActiveWithRefresh(apiBaseUrl?: string): Promise<boo
  * @param apiBaseUrl - Base URL of the API (for compatibility, not used)
  * @returns Dictionary with 'valid' key indicating if token is valid
  */
-export async function validateToken(token: string, _apiBaseUrl?: string): Promise<{ valid: boolean }> {
+export async function validateToken(
+  token: string,
+  _apiBaseUrl?: string
+): Promise<{ valid: boolean }> {
   try {
     const cfg = getStaticConfig();
 
@@ -780,11 +785,11 @@ export async function validateToken(token: string, _apiBaseUrl?: string): Promis
       try {
         const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           ...(typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
             ? { signal: AbortSignal.timeout(5000) }
-            : {})
+            : {}),
         });
 
         const response = await withTimeout(fetchPromise, 5000);

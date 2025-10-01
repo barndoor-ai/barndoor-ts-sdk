@@ -1,6 +1,6 @@
 /**
  * Unified logging system for the Barndoor SDK.
- * 
+ *
  * This module provides a centralized logging interface that can be configured
  * by SDK consumers to integrate with their preferred logging systems.
  */
@@ -38,7 +38,7 @@ const defaultLogger: Logger = {
     if (typeof console !== 'undefined' && console.error) {
       console.error(message, ...args);
     }
-  }
+  },
 };
 
 // Global logger instance that can be configured
@@ -78,7 +78,7 @@ export function createScopedLogger(scope: string): Logger {
     },
     error: (message: string, ...args: unknown[]) => {
       _logger.error(`[${scope}] ${message}`, ...args);
-    }
+    },
   };
 }
 
