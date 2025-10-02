@@ -13,7 +13,7 @@ The SDK removes boiler-plate around:
 ## Installation
 
 ```bash
-npm install @barndoor/sdk
+npm install @barndoor-ai/sdk
 ```
 
 ## Quick Start
