@@ -2,7 +2,7 @@
   "name": "@barndoor-ai/sdk",
   "version": "0.1.0",
   "description": "TypeScript/JavaScript client for the Barndoor Platform API",
-  "author": "Barndoor AI, Inc.",
+  "author": "Barndoor AI, Inc. (https://barndoor.ai)",
   "homepage": "https://barndoor.ai",
   "repository": {
     "type": "git",

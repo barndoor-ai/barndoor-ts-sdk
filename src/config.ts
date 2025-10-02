@@ -185,9 +185,16 @@ export class BarndoorConfig {
     const orgResult = extractOrganizationIdSafe(jwtToken);
 
     if (orgResult.hasOrganization) {
-      // Organization found - substitute in URLs
-      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', orgResult.organizationId!);
-      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', orgResult.organizationId!);
+      // Organization found - validate and substitute in URLs
+      const raw = String(orgResult.organizationId ?? '')
+        .trim()
+        .toLowerCase();
+      const safe = /^[a-z0-9-]+$/.test(raw);
+      if (!safe) {
+        throw new ConfigurationError('Invalid organization ID format from token');
+      }
+      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', raw);
+      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', raw);
       return config;
     }
 

@@ -10,7 +10,7 @@ import { ServerSummary, ServerDetail } from './models';
 import { HTTPError, ConfigurationError, TokenError, ServerNotFoundError } from './exceptions';
 import { getStaticConfig, isNode } from './config';
 import { createScopedLogger } from './logging';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import os from 'os';
 
 /**
@@ -152,8 +152,7 @@ export class BarndoorSDK {
     // Optionally validate the token immediately
     await this.ensureValidToken();
 
-    // eslint-disable-next-line no-console
-    console.log('Authentication successful');
+    this._logger.info('Authentication successful');
   }
 
   /**
@@ -298,8 +297,7 @@ export class BarndoorSDK {
   public async getServer(serverId: string): Promise<ServerDetail> {
     const validatedServerId = this._validateServerId(serverId);
 
-    // eslint-disable-next-line no-console
-    console.log(`Fetching server details for ${validatedServerId}`);
+    this._logger.info(`Fetching server details for ${validatedServerId}`);
     const response = await this._req('GET', `/servers/${validatedServerId}`);
     return ServerDetail.fromApiResponse(response);
   }
@@ -321,8 +319,7 @@ export class BarndoorSDK {
       validatedReturnUrl = this._validateUrl(returnUrl, 'Return URL');
     }
 
-    // eslint-disable-next-line no-console
-    console.log(`Initiating connection for server ${validatedServerId}`);
+    this._logger.info(`Initiating connection for server ${validatedServerId}`);
 
     const params = validatedReturnUrl ? { return_url: validatedReturnUrl } : undefined;
 
@@ -355,8 +352,7 @@ export class BarndoorSDK {
   public async getConnectionStatus(serverId: string): Promise<string> {
     const validatedServerId = this._validateServerId(serverId);
 
-    // eslint-disable-next-line no-console
-    console.log(`Checking connection status for server ${validatedServerId}`);
+    this._logger.info(`Checking connection status for server ${validatedServerId}`);
     const response = (await this._req(
       'GET',
       `/servers/${validatedServerId}/connection`
@@ -375,13 +371,11 @@ export class BarndoorSDK {
   public async disconnectServer(serverId: string): Promise<void> {
     const validatedServerId = this._validateServerId(serverId);
 
-    // eslint-disable-next-line no-console
-    console.log(`Disconnecting from server ${validatedServerId}`);
+    this._logger.info(`Disconnecting from server ${validatedServerId}`);
 
     try {
       await this._req('DELETE', `/servers/${validatedServerId}/connection`);
-      // eslint-disable-next-line no-console
-      console.log(`Successfully disconnected from server ${validatedServerId}`);
+      this._logger.info(`Successfully disconnected from server ${validatedServerId}`);
     } catch (error: unknown) {
       if (error instanceof HTTPError && error.statusCode === 404) {
         throw new Error(
@@ -469,24 +463,40 @@ export class BarndoorSDK {
       throw new Error('Registry did not return auth_url');
     }
 
-    // 3. Open browser
+    // 3. Open browser (shell-free)
     const platform = os.platform();
 
-    let command: string;
-    if (platform === 'darwin') {
-      command = `open "${authUrl}"`;
-    } else if (platform === 'win32') {
-      command = `start "${authUrl}"`;
-    } else {
-      command = `xdg-open "${authUrl}"`;
+    // Validate URL scheme (require https, allow http only for localhost)
+    let parsed: URL;
+    try {
+      parsed = new URL(authUrl);
+    } catch {
+      throw new Error('Invalid auth_url returned by server');
+    }
+    if (
+      parsed.protocol !== 'https:' &&
+      !(
+        parsed.protocol === 'http:' &&
+        (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+      )
+    ) {
+      throw new Error('Auth URL must use HTTPS (http allowed only for localhost)');
     }
 
-    exec(command, error => {
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.warn('Failed to open browser:', error.message);
+    try {
+      if (platform === 'darwin') {
+        spawn('open', [authUrl], { detached: true, stdio: 'ignore' }).unref();
+      } else if (platform === 'win32') {
+        spawn('powershell', ['-NoProfile', 'Start-Process', authUrl], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+      } else {
+        spawn('xdg-open', [authUrl], { detached: true, stdio: 'ignore' }).unref();
       }
-    });
+    } catch (error) {
+      this._logger.warn('Failed to open browser', error);
+    }
 
     // 4. Poll until connected or timeout
     for (let i = 0; i < pollSeconds; i++) {

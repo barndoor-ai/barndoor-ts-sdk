@@ -12,7 +12,7 @@ import { loadUserToken, saveUserToken } from './auth';
 import { getStaticConfig, getDynamicConfig, hasOrganizationInfo, isNode } from './config';
 import { ServerNotFoundError } from './exceptions';
 import { createScopedLogger } from './logging';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import os from 'os';
 import crypto from 'crypto';
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
@@ -120,22 +120,38 @@ export async function loginInteractive(
   // Open browser
   const platform = os.platform();
 
-  let command;
-  if (platform === 'darwin') {
-    command = `open "${authUrl}"`;
-  } else if (platform === 'win32') {
-    command = `start "${authUrl}"`;
-  } else {
-    command = `xdg-open "${authUrl}"`;
+  // Validate URL and open without invoking a shell
+  let parsed: URL;
+  try {
+    parsed = new URL(authUrl);
+  } catch {
+    throw new Error('Invalid auth URL');
+  }
+  if (
+    parsed.protocol !== 'https:' &&
+    !(
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+    )
+  ) {
+    throw new Error('Auth URL must use HTTPS (http allowed only for localhost)');
   }
 
-  exec(command, error => {
-    if (error) {
-      logger.warn('Failed to open browser automatically. Please visit:', authUrl);
+  try {
+    if (platform === 'darwin') {
+      spawn('open', [authUrl], { detached: true, stdio: 'ignore' }).unref();
+    } else if (platform === 'win32') {
+      spawn('powershell', ['-NoProfile', 'Start-Process', authUrl], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref();
     } else {
-      logger.info('Please complete login in your browser…');
+      spawn('xdg-open', [authUrl], { detached: true, stdio: 'ignore' }).unref();
     }
-  });
+    logger.info('Please complete login in your browser…');
+  } catch (_error) {
+    logger.warn('Failed to open browser automatically. Please visit:', authUrl);
+  }
 
   // Wait for callback
   const [code, _state] = await waiter;
@@ -312,16 +328,31 @@ export async function makeMcpClient(
  * @private
  */
 function generateSessionId() {
-  if (isNode && crypto.randomUUID) {
+  if (isNode && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
+  if (typeof globalThis !== 'undefined' && (globalThis as any).crypto?.randomUUID) {
+    return (globalThis as any).crypto.randomUUID();
   }
-  // Fallback UUID generation
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 8;
-    return v.toString(16);
-  });
+  // Secure fallback: generate UUID from cryptographically strong random bytes
+  let bytes: Uint8Array;
+  if (isNode && typeof crypto.randomBytes === 'function') {
+    bytes = crypto.randomBytes(16);
+  } else if (typeof globalThis !== 'undefined' && (globalThis as any).crypto?.getRandomValues) {
+    bytes = new Uint8Array(16);
+    (globalThis as any).crypto.getRandomValues(bytes);
+  } else {
+    throw new Error('Secure random generator not available for UUID.');
+  }
+  // Set version (4) and variant (RFC 4122)
+  const arr: Uint8Array = bytes ?? new Uint8Array(0);
+  if (arr.length < 16) {
+    throw new Error('Secure random generator not available for UUID.');
+  }
+  const b6 = arr[6]!;
+  const b8 = arr[8]!;
+  arr[6] = (b6 & 0x0f) | 0x40;
+  arr[8] = (b8 & 0x3f) | 0x80;
+  const hex = Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}`;
 }
