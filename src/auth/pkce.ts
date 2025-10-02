@@ -184,10 +184,8 @@ function generateRandomString(length: number): string {
   } else if (isNode) {
     crypto.randomFillSync(array);
   } else {
-    // Fallback for environments without crypto
-    for (let i = 0; i < length; i++) {
-      array[i] = Math.floor(Math.random() * 256);
-    }
+    // Fail closed in environments without secure crypto
+    throw new Error('Secure random generator not available for PKCE.');
   }
 
   return base64URLEncode(array);
@@ -296,8 +294,8 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
             <html>
               <body>
                 <h1>Authentication Failed</h1>
-                <p>Error: ${error}</p>
-                <p>Description: ${error_description || 'Unknown error'}</p>
+                <p>Error: Authentication error occurred.</p>
+                <p>Description: Please return to the application for details.</p>
                 <p>You can close this window.</p>
               </body>
             </html>
