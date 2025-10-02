@@ -2,7 +2,7 @@
   "name": "@barndoor-ai/sdk",
   "version": "0.1.0",
   "description": "TypeScript/JavaScript client for the Barndoor Platform API",
-  "author": "Barndoor AI, Inc.",
+  "author": "Barndoor AI, Inc. (https://barndoor.ai)",
   "homepage": "https://barndoor.ai",
   "repository": {
     "type": "git",
@@ -75,18 +75,6 @@
     "type-coverage": "^2.29.7",
     "typescript": "^5.8.3"
   },
-<<<<<<< HEAD
-=======
-  "keywords": [
-    "barndoor",
-    "mcp",
-    "ai",
-    "sdk"
-  ],
-  "author": "Barndoor",
-  "authors": [{ "name": "Barndoor AI, Inc." }],
-  "license": "MIT",
->>>>>>> 073da37 (chore: add MIT LICENSE and metadata (authors, keywords, license))
   "typeCoverage": {
     "atLeast": 60,
     "strict": true,
