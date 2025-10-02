@@ -81,10 +81,7 @@
     "barndoor",
     "mcp",
     "ai",
-    "sdk",
-    "llm",
-    "automation",
-    "sales"
+    "sdk"
   ],
   "author": "Barndoor",
   "authors": [{ "name": "Barndoor AI, Inc." }],
