@@ -75,6 +75,21 @@
     "type-coverage": "^2.29.7",
     "typescript": "^5.8.3"
   },
+<<<<<<< HEAD
+=======
+  "keywords": [
+    "barndoor",
+    "mcp",
+    "ai",
+    "sdk",
+    "llm",
+    "automation",
+    "sales"
+  ],
+  "author": "Barndoor",
+  "authors": [{ "name": "Barndoor AI, Inc." }],
+  "license": "MIT",
+>>>>>>> 073da37 (chore: add MIT LICENSE and metadata (authors, keywords, license))
   "typeCoverage": {
     "atLeast": 60,
     "strict": true,
