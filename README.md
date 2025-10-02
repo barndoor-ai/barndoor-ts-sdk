@@ -305,8 +305,5 @@ const servers: ServerSummary[] = await sdk.listServers();
 3. Install dependencies: `npm install`
 4. Build the project: `npm run build`
 5. Run tests: `npm test`
-6. Run linting: `npm lint`
+6. Run linting: `npm run lint`
 7. Run type checking: `npm run type-check`
-8. Run safety checks: `npm run safety-check`
-
-
