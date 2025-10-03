@@ -21,7 +21,7 @@ npm install @barndoor-ai/sdk
 ### Basic Usage
 
 ```typescript
-import { BarndoorSDK } from '@barndoor/sdk';
+import { BarndoorSDK } from '@barndoor-ai/sdk';
 
 // ① token known at construction time (unchanged)
 const sdk = new BarndoorSDK('https://your-org.mcp.barndoor.ai', {
@@ -53,7 +53,7 @@ For development and prototyping, use the interactive login helper:
 `loginInteractive()` builds an SDK *without* requiring `token` in the ctor—it internally calls `sdk.authenticate()` for you.
 
 ```typescript
-import { loginInteractive } from '@barndoor/sdk';
+import { loginInteractive } from '@barndoor-ai/sdk';
 
 // Automatically handles OAuth flow and token caching
 const sdk = await loginInteractive();
@@ -67,7 +67,7 @@ import {
   loginInteractive,
   ensureServerConnected,
   makeMcpConnectionParams
-} from '@barndoor/sdk';
+} from '@barndoor-ai/sdk';
 
 async function main() {
   // 1. Login (handles OAuth + caching)
@@ -242,7 +242,7 @@ import {
   ConnectionError,
   TokenError,
   ConfigurationError
-} from '@barndoor/sdk';
+} from '@barndoor-ai/sdk';
 
 try {
   await sdk.listServers();
@@ -265,7 +265,7 @@ The SDK works in both Node.js and browser environments:
 
 ```typescript
 // Browser usage
-import { BarndoorSDK } from '@barndoor/sdk';
+import { BarndoorSDK } from '@barndoor-ai/sdk';
 
 // Token storage uses localStorage in browsers
 const sdk = new BarndoorSDK('https://api.barndoor.ai', {
@@ -289,7 +289,7 @@ See the `examples/` directory for complete working examples:
 The SDK is written in TypeScript and includes full type definitions:
 
 ```typescript
-import { BarndoorSDK, ServerSummary } from '@barndoor/sdk';
+import { BarndoorSDK, ServerSummary } from '@barndoor-ai/sdk';
 
 const sdk = new BarndoorSDK('https://api.barndoor.ai', {
   token: 'your-token'
