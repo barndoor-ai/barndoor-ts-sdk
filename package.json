@@ -29,6 +29,11 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "npm run build:types && rollup -c",
     "build:types": "node node_modules/typescript/lib/tsc.js --emitDeclarationOnly",
@@ -43,7 +48,8 @@
     "type-check": "node node_modules/typescript/lib/tsc.js --noEmit",
     "type-coverage": "type-coverage --at-least 60 --strict",
     "dump-all": "node scripts/dump-core-files.js",
-    "dump-typescript": "node scripts/dump-typescript-only.js"
+    "dump-typescript": "node scripts/dump-typescript-only.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
