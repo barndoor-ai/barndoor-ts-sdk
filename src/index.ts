@@ -12,7 +12,7 @@
  * Quick Start
  * -----------
  * ```javascript
- * import { BarndoorSDK } from '@barndoor/sdk';
+ * import { BarndoorSDK } from '@barndoor-ai/sdk';
  *
  * const sdk = new BarndoorSDK('https://api.barndoor.host', {
  *   token: 'your_token'
@@ -22,7 +22,7 @@
  *
  * For interactive login:
  * ```javascript
- * import { loginInteractive } from '@barndoor/sdk';
+ * import { loginInteractive } from '@barndoor-ai/sdk';
  *
  * const sdk = await loginInteractive();
  * ```
