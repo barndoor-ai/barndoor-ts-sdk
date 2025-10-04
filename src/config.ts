@@ -135,18 +135,26 @@ export class BarndoorConfig {
       this.mcpBaseUrl =
         options.mcpBaseUrl ??
         (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') || 'http://localhost:8000');
+      // Override audience for local/dev if not explicitly set
+      if (!options.apiAudience && !getEnvVar('API_AUDIENCE')) {
+        this.apiAudience = 'https://barndoor.api/';
+      }
     } else if (env === 'development' || env === 'dev') {
       this.apiBaseUrl =
-        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://api.barndoordev.com');
+        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://{organization_id}.mcp.barndoordev.com');
       this.mcpBaseUrl =
         options.mcpBaseUrl ??
         (getEnvVar('BARNDOOR_MCP') ||
           getEnvVar('BARNDOOR_URL') ||
           'https://{organization_id}.mcp.barndoordev.com');
+      // Override audience for development if not explicitly set
+      if (!options.apiAudience && !getEnvVar('API_AUDIENCE')) {
+        this.apiAudience = 'https://barndoor.api/';
+      }
     } else {
       // production
       this.apiBaseUrl =
-        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://api.barndoor.ai');
+        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'https://{organization_id}.mcp.barndoor.ai');
       this.mcpBaseUrl =
         options.mcpBaseUrl ??
         (getEnvVar('BARNDOOR_MCP') ||
@@ -189,7 +197,7 @@ export class BarndoorConfig {
       const raw = String(orgResult.organizationId ?? '')
         .trim()
         .toLowerCase();
-      const safe = /^[a-z0-9-]+$/.test(raw);
+      const safe = /^[a-z0-9_-]+$/.test(raw);
       if (!safe) {
         throw new ConfigurationError('Invalid organization ID format from token');
       }
@@ -324,12 +332,14 @@ function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResu
     if (!orgSlug) {
       const customClaimSlug = payload['https://barndoor.ai/organization_slug'];
       const customClaimId = payload['https://barndoor.ai/organization_id'];
-      const orgSlugClaim = payload.organization_slug;
-      const orgSlugShort = payload.org_slug;
+      const orgSlugClaim = payload['organization_slug'];
+      const orgNameClaim = payload['organization_name'];
+      const orgSlugShort = payload['org_slug'];
       const orgIdClaim = payload['org_id'];
       const organizationIdClaim = payload['organization_id'];
 
       orgSlug =
+        (typeof orgNameClaim === 'string' ? orgNameClaim : undefined) ??
         (typeof customClaimSlug === 'string' ? customClaimSlug : undefined) ??
         (typeof customClaimId === 'string' ? customClaimId : undefined) ??
         (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??

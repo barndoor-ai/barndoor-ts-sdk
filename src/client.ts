@@ -231,18 +231,28 @@ export class BarndoorSDK {
     try {
       // Use Auth0's userinfo endpoint for validation
       const config = getStaticConfig();
-      const response = await fetch(`https://${config.authDomain}/userinfo`, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-        },
-      });
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const response = await fetch(`https://${config.authDomain}/userinfo`, {
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+          },
+          signal: controller.signal,
+        });
 
-      const isValid = response.ok;
-      // Only set _tokenValidated to true if the token is actually valid
-      if (isValid) {
-        this._tokenValidated = true;
+        const isValid = response.ok;
+        // Only set _tokenValidated to true if the token is actually valid
+        if (isValid) {
+          this._tokenValidated = true;
+        }
+        return isValid;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return isValid;
     } catch (_error) {
       return false;
     }
