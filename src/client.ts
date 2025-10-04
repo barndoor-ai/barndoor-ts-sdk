@@ -262,6 +262,13 @@ export class BarndoorSDK {
    * Ensure token is valid, validating if necessary.
    */
   public async ensureValidToken(): Promise<void> {
+    // First check if we have a token at all
+    if (!this._token) {
+      throw new Error(
+        'No token available. Call authenticate() first or provide token in constructor.'
+      );
+    }
+
     if (this._tokenValidated) {
       return;
     }

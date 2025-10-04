@@ -102,8 +102,8 @@ describe('validateCachedToken timeout fix', () => {
 });
 
 describe('Organization ID extraction', () => {
-  test('accepts organization IDs with underscores', () => {
-    const tokenWithUnderscore = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+  test('does not use org_id fields for subdomain extraction', () => {
+    const tokenWithOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
       Buffer.from(JSON.stringify({
         org_id: 'org_gFEnMMMIhsK5yiW9',
         iat: 1600000000,
@@ -111,14 +111,9 @@ describe('Organization ID extraction', () => {
       })).toString('base64').replace(/=/g, '') +
       '.signature';
 
-    const result = checkTokenOrganization(tokenWithUnderscore);
-    expect(result.hasOrganization).toBe(true);
-    expect(result.organizationId).toBe('org_gFEnMMMIhsK5yiW9');
-    
-    // Should not throw when creating dynamic config
-    expect(() => getDynamicConfig(tokenWithUnderscore)).not.toThrow();
-    const config = getDynamicConfig(tokenWithUnderscore);
-    expect(config.apiBaseUrl).toContain('org_gfenmmmihsk5yiw9'); // lowercased
+    const result = checkTokenOrganization(tokenWithOrgId);
+    expect(result.hasOrganization).toBe(false);
+    expect(result.error).toContain('No organization information found in token');
   });
 
   test('prioritizes organization_name over org_id', () => {
@@ -136,19 +131,20 @@ describe('Organization ID extraction', () => {
     expect(result.organizationId).toBe('barndoor-ai');
   });
 
-  test('falls back to org_id if organization_name not present', () => {
+  test('does not use organization_id fields for subdomain extraction', () => {
     const tokenWithOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
       Buffer.from(JSON.stringify({
-        org_id: 'org_test123',
+        organization_id: 'fcdc562c-546c-4cca-8fee-e557a642dc9d',
         iat: 1600000000,
         exp: 1600003600,
       })).toString('base64').replace(/=/g, '') +
       '.signature';
 
     const result = checkTokenOrganization(tokenWithOrgId);
-    expect(result.hasOrganization).toBe(true);
-    expect(result.organizationId).toBe('org_test123');
+    expect(result.hasOrganization).toBe(false);
+    expect(result.error).toContain('No organization information found in token');
   });
+
 
   test('handles various organization field locations', () => {
     const testCases = [
@@ -166,11 +162,6 @@ describe('Organization ID extraction', () => {
         name: 'user.organization_name',
         payload: { user: { organization_name: 'user-org-name' } },
         expected: 'user-org-name',
-      },
-      {
-        name: 'organization_id',
-        payload: { organization_id: 'fcdc562c-546c-4cca-8fee-e557a642dc9d' },
-        expected: 'fcdc562c-546c-4cca-8fee-e557a642dc9d',
       },
     ];
 
@@ -202,6 +193,11 @@ describe('Environment-specific API URLs', () => {
   });
 
   test('development environment uses correct subdomain pattern', () => {
+    // Clear any environment variables that might interfere
+    delete process.env.BARNDOOR_API;
+    delete process.env.BARNDOOR_MCP;
+    delete process.env.BARNDOOR_URL;
+    delete process.env.API_AUDIENCE;
     process.env.MODE = 'development';
     const config = getStaticConfig();
     
@@ -211,6 +207,11 @@ describe('Environment-specific API URLs', () => {
   });
 
   test('production environment uses correct subdomain pattern', () => {
+    // Clear any environment variables that might interfere
+    delete process.env.BARNDOOR_API;
+    delete process.env.BARNDOOR_MCP;
+    delete process.env.BARNDOOR_URL;
+    delete process.env.API_AUDIENCE;
     process.env.MODE = 'production';
     const config = getStaticConfig();
     
@@ -228,28 +229,25 @@ describe('Environment-specific API URLs', () => {
       })).toString('base64').replace(/=/g, '') +
       '.signature';
 
+    // Clear environment variables first
+    delete process.env.BARNDOOR_API;
+    delete process.env.BARNDOOR_MCP;
+    delete process.env.BARNDOOR_URL;
+    delete process.env.API_AUDIENCE;
     process.env.MODE = 'development';
     const devConfig = getDynamicConfig(token);
     expect(devConfig.apiBaseUrl).toBe('https://barndoor-ai.mcp.barndoordev.com');
     expect(devConfig.mcpBaseUrl).toBe('https://barndoor-ai.mcp.barndoordev.com');
 
+    // Clear environment variables again for production test
+    delete process.env.BARNDOOR_API;
+    delete process.env.BARNDOOR_MCP;
+    delete process.env.BARNDOOR_URL;
+    delete process.env.API_AUDIENCE;
     process.env.MODE = 'production';
     const prodConfig = getDynamicConfig(token);
     expect(prodConfig.apiBaseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
     expect(prodConfig.mcpBaseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
   });
 
-  test('handles UUID organization IDs correctly', () => {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({
-        organization_id: 'fcdc562c-546c-4cca-8fee-e557a642dc9d',
-        iat: 1600000000,
-        exp: 1600003600,
-      })).toString('base64').replace(/=/g, '') +
-      '.signature';
-
-    process.env.MODE = 'development';
-    const config = getDynamicConfig(token);
-    expect(config.apiBaseUrl).toBe('https://fcdc562c-546c-4cca-8fee-e557a642dc9d.mcp.barndoordev.com');
-  });
 });

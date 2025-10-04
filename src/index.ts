@@ -64,13 +64,13 @@ export {
   loadUserToken,
   saveUserToken,
   clearCachedToken,
+  setTokenLogger,
   verifyJWTLocal,
   JWTVerificationResult,
   isTokenActive,
   isTokenActiveWithRefresh,
   validateToken,
   TokenManager,
-  setTokenLogger,
 } from './auth';
 
 // Configuration

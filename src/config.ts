@@ -197,9 +197,11 @@ export class BarndoorConfig {
       const raw = String(orgResult.organizationId ?? '')
         .trim()
         .toLowerCase();
-      const safe = /^[a-z0-9_-]+$/.test(raw);
+      // Validate subdomain format: must start with alphanumeric, contain only alphanumeric and hyphens,
+      // and not end with a hyphen. Underscores are not valid in DNS subdomains.
+      const safe = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(raw);
       if (!safe) {
-        throw new ConfigurationError('Invalid organization ID format from token');
+        throw new ConfigurationError('Invalid organization subdomain format from token');
       }
       config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', raw);
       config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', raw);
@@ -329,23 +331,19 @@ function extractOrganizationIdSafe(jwtToken: string): OrganizationExtractionResu
     }
 
     // Check custom claims and standard locations
+    // Note: We only use slug/name fields that are valid for subdomains
+    // org_id fields like 'org_gFEnMMMIhsK5yiW9' are not valid for DNS
     if (!orgSlug) {
       const customClaimSlug = payload['https://barndoor.ai/organization_slug'];
-      const customClaimId = payload['https://barndoor.ai/organization_id'];
       const orgSlugClaim = payload['organization_slug'];
       const orgNameClaim = payload['organization_name'];
       const orgSlugShort = payload['org_slug'];
-      const orgIdClaim = payload['org_id'];
-      const organizationIdClaim = payload['organization_id'];
 
       orgSlug =
         (typeof orgNameClaim === 'string' ? orgNameClaim : undefined) ??
         (typeof customClaimSlug === 'string' ? customClaimSlug : undefined) ??
-        (typeof customClaimId === 'string' ? customClaimId : undefined) ??
         (typeof orgSlugClaim === 'string' ? orgSlugClaim : undefined) ??
-        (typeof orgSlugShort === 'string' ? orgSlugShort : undefined) ??
-        (typeof orgIdClaim === 'string' ? orgIdClaim : undefined) ??
-        (typeof organizationIdClaim === 'string' ? organizationIdClaim : undefined);
+        (typeof orgSlugShort === 'string' ? orgSlugShort : undefined);
     }
 
     if (!orgSlug || typeof orgSlug !== 'string' || orgSlug.trim() === '') {
