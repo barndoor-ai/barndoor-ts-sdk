@@ -231,11 +231,11 @@ export class BarndoorSDK {
     try {
       // Use Auth0's userinfo endpoint for validation
       const config = getStaticConfig();
-      
+
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
+
       try {
         const response = await fetch(`https://${config.authDomain}/userinfo`, {
           headers: {

@@ -279,7 +279,9 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   }
 
   // Allow override of redirect host for environments with strict callback allowlists
-  const redirectHost = (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) || 'localhost';
+  const redirectHost =
+    (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
+    'localhost';
   const redirectUri = `http://${redirectHost}:${port}/cb`;
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {

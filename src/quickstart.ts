@@ -107,8 +107,13 @@ export async function loginInteractive(
   }
 
   // 2. Start interactive PKCE flow (with manual fallback)
-  const manual = typeof process !== 'undefined' &&
-    !!(process.env && (process.env['BARNDOOR_MANUAL_CODE'] === '1' || process.env['BARNDOOR_MANUAL_CODE'] === 'true'));
+  const manual =
+    typeof process !== 'undefined' &&
+    !!(
+      process.env &&
+      (process.env['BARNDOOR_MANUAL_CODE'] === '1' ||
+        process.env['BARNDOOR_MANUAL_CODE'] === 'true')
+    );
 
   let redirectUri: string;
   let waiter: Promise<[string, string]> | null = null;
