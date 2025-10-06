@@ -5,7 +5,22 @@
  * functionality that mirrors the Python SDK's capabilities.
  */
 
-import { verifyJWTLocal, JWTVerificationResult, TokenManager } from '../dist/index.esm.js';
+import { 
+  verifyJWTLocal, 
+  JWTVerificationResult, 
+  TokenManager, 
+  setTokenLogger,
+  loadUserToken,
+  saveUserToken,
+  clearCachedToken,
+  validateToken
+} from '../dist/index.esm.js';
+
+// Mock crypto for Node.js compatibility in test environment
+import crypto from 'crypto';
+if (!global.crypto) {
+  global.crypto = crypto.webcrypto;
+}
 
 describe('Enhanced Token Management', () => {
   describe('JWT Verification', () => {
@@ -31,6 +46,15 @@ describe('Enhanced Token Management', () => {
   });
 
   describe('TokenManager', () => {
+    // Clear any cached tokens before tests
+    beforeEach(async () => {
+      try {
+        await clearCachedToken();
+      } catch (e) {
+        // Ignore errors from clearing non-existent tokens
+      }
+    });
+
     test('TokenManager can be instantiated', () => {
       const manager = new TokenManager('https://api.example.com');
       expect(manager).toBeInstanceOf(TokenManager);
@@ -40,31 +64,25 @@ describe('Enhanced Token Management', () => {
       const manager = new TokenManager('https://api.example.com');
 
       // This should throw since there's no token stored
-      await expect(manager.getValidToken()).rejects.toThrow();
+      await expect(manager.getValidToken()).rejects.toThrow('No token found');
     });
   });
 
   describe('Token Storage Integration', () => {
-    test('Token storage functions are available', async () => {
-      const { loadUserToken, saveUserToken, clearCachedToken } = await import(
-        '../dist/index.esm.js'
-      );
-
+    test('Token storage functions are available', () => {
       expect(typeof loadUserToken).toBe('function');
       expect(typeof saveUserToken).toBe('function');
       expect(typeof clearCachedToken).toBe('function');
     });
 
     test('validateToken function works with invalid tokens', async () => {
-      const { validateToken } = await import('../dist/index.esm.js');
-
-      const result = await validateToken('invalid-token');
+      // Use a properly formatted JWT with invalid signature
+      const invalidToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.invalid-signature';
+      const result = await validateToken(invalidToken);
       expect(result).toEqual({ valid: false });
     });
 
-    test('setTokenLogger function is available', async () => {
-      const { setTokenLogger } = await import('../dist/index.esm.js');
-
+    test('setTokenLogger function is available and deprecated', () => {
       expect(typeof setTokenLogger).toBe('function');
 
       // Test that we can set a custom logger
@@ -75,7 +93,25 @@ describe('Enhanced Token Management', () => {
         error: () => {},
       };
 
-      expect(() => setTokenLogger(mockLogger)).not.toThrow();
+      // Mock console.warn to capture the deprecation message
+      const originalWarn = console.warn;
+      let warnCalled = false;
+      let warnMessage = '';
+      console.warn = (msg) => {
+        warnCalled = true;
+        warnMessage = msg;
+      };
+
+      setTokenLogger(mockLogger);
+
+      // Verify deprecation warning was logged
+      expect(warnCalled).toBe(true);
+      expect(warnMessage).toBe(
+        'setTokenLogger is deprecated. Use setLogger from the main logging module instead.'
+      );
+
+      // Restore console.warn
+      console.warn = originalWarn;
     });
   });
 });

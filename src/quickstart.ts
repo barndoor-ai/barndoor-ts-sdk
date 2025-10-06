@@ -15,6 +15,7 @@ import { createScopedLogger } from './logging';
 import { spawn } from 'child_process';
 import os from 'os';
 import crypto from 'crypto';
+import readline from 'readline';
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
@@ -105,8 +106,26 @@ export async function loginInteractive(
     logger.info('No cached token, starting OAuth flow');
   }
 
-  // 2. Start interactive PKCE flow
-  const [redirectUri, waiter] = startLocalCallbackServer(port);
+  // 2. Start interactive PKCE flow (with manual fallback)
+  const manual =
+    typeof process !== 'undefined' &&
+    !!(
+      process.env &&
+      (process.env['BARNDOOR_MANUAL_CODE'] === '1' ||
+        process.env['BARNDOOR_MANUAL_CODE'] === 'true')
+    );
+
+  let redirectUri: string;
+  let waiter: Promise<[string, string]> | null = null;
+
+  if (manual) {
+    const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || 'localhost';
+    redirectUri = `http://${host}:${port}/cb`;
+  } else {
+    const tuple = startLocalCallbackServer(port);
+    redirectUri = tuple[0];
+    waiter = tuple[1];
+  }
 
   // Create PKCE manager for this login session
   const pkceManager = new PKCEManager();
@@ -116,6 +135,9 @@ export async function loginInteractive(
     redirectUri,
     audience,
   });
+
+  // Always print the URL so users can click it manually if auto-open fails
+  logger.info(`Auth URL: ${authUrl}`);
 
   // Open browser
   const platform = os.platform();
@@ -153,8 +175,29 @@ export async function loginInteractive(
     logger.warn('Failed to open browser automatically. Please visit:', authUrl);
   }
 
-  // Wait for callback
-  const [code, _state] = await waiter;
+  // Obtain authorization code
+  let code: string;
+  if (manual) {
+    // Prompt user to paste the code (or full redirected URL)
+    const input = await new Promise<string>(resolve => {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      rl.question('Paste the full redirected URL (or just the code= value): ', (answer: string) => {
+        rl.close();
+        resolve(answer.trim());
+      });
+    });
+    try {
+      // If user pasted full URL, extract code parameter; otherwise assume it's the code
+      const maybeUrl = new URL(input);
+      const c = maybeUrl.searchParams.get('code');
+      code = c || input;
+    } catch {
+      code = input; // not a URL, treat as code
+    }
+  } else {
+    const result = await (waiter as Promise<[string, string]>);
+    code = result[0];
+  }
 
   // Exchange code for token
   const tokenData = (await pkceManager.exchangeCodeForToken({

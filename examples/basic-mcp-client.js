@@ -6,7 +6,15 @@
  */
 
 import 'dotenv/config';
-import { loginInteractive, ensureServerConnected, makeMcpClient } from '../dist/index.esm.js';
+import {
+  loginInteractive,
+  ensureServerConnected,
+  makeMcpClient,
+  BarndoorSDK,
+  getDynamicConfig,
+  getStaticConfig,
+  hasOrganizationInfo,
+} from '../dist/index.esm.js';
 
 const SERVER_SLUG = 'salesforce'; // or 'notion'
 
@@ -18,23 +26,33 @@ async function main() {
     // 1. Initialize Barndoor SDK and MCP client (with retry on 401)
     // ---------------------------------------------------------------------
     console.log('🔐 Authenticating with Barndoor...');
-    let sdk = await loginInteractive();
 
-    // Test authentication by trying to list servers
-    try {
+    let sdk;
+    const envToken = process.env['BARNDOOR_ACCESS_TOKEN'];
+    if (envToken) {
+      console.log('🔑 Using token from BARNDOOR_ACCESS_TOKEN');
+      const cfg = hasOrganizationInfo(envToken) ? getDynamicConfig(envToken) : getStaticConfig();
+      sdk = new BarndoorSDK(cfg.apiBaseUrl, { token: envToken });
       await sdk.listServers();
-      console.log('✅ Authentication successful!');
-    } catch (error) {
-      if (error.statusCode === 401) {
-        console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
-        // Clear cached token and try again
-        const { clearCachedToken } = await import('../dist/index.esm.js');
-        clearCachedToken();
-        sdk = await loginInteractive();
-        await sdk.listServers(); // Test again
-        console.log('✅ Re-authentication successful!');
-      } else {
-        throw error;
+      console.log('✅ Authentication successful (env token)!');
+    } else {
+      sdk = await loginInteractive();
+      // Test authentication by trying to list servers
+      try {
+        await sdk.listServers();
+        console.log('✅ Authentication successful!');
+      } catch (error) {
+        if (error.statusCode === 401) {
+          console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
+          // Clear cached token and try again
+          const { clearCachedToken } = await import('../dist/index.esm.js');
+          clearCachedToken();
+          sdk = await loginInteractive();
+          await sdk.listServers(); // Test again
+          console.log('✅ Re-authentication successful!');
+        } else {
+          throw error;
+        }
       }
     }
 

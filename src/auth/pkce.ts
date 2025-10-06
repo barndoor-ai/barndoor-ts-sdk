@@ -278,7 +278,11 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
     throw new Error('Local callback server is only available in Node.js environment');
   }
 
-  const redirectUri = `http://localhost:${port}/cb`;
+  // Allow override of redirect host for environments with strict callback allowlists
+  const redirectHost =
+    (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
+    'localhost';
+  const redirectUri = `http://${redirectHost}:${port}/cb`;
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -332,7 +336,8 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
       }
     });
 
-    server.listen(port, 'localhost', () => {
+    // Bind to all interfaces and let OS handle IPv4/IPv6; avoids ::1 vs 127.0.0.1 mismatch
+    server.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`OAuth callback server listening on ${redirectUri}`);
     });
