@@ -1,11 +1,12 @@
 /**
- * Basic MCP Client Example
+ * 🔗 Universal Barndoor MCP Client
  *
- * This script demonstrates how to use the Barndoor SDK to connect to MCP servers
- * and perform basic operations without any AI framework dependencies.
+ * Lets the user pick any available MCP server, list its tools,
+ * and run a custom prompt / command interactively — no hardcoded Salesforce or Notion.
  */
 
 import 'dotenv/config';
+import readline from 'readline/promises';
 import {
   loginInteractive,
   ensureServerConnected,
@@ -16,137 +17,125 @@ import {
   hasOrganizationInfo,
 } from '../dist/index.esm.js';
 
-const SERVER_SLUG = 'salesforce'; // or 'notion'
+// simple input helper
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+async function ask(q) {
+  return (await rl.question(q)).trim();
+}
 
 async function main() {
   try {
-    console.log('🚀 Starting Basic MCP Client Example...\n');
+    console.log('\n🚀 Starting Universal MCP Client Example...\n');
 
     // ---------------------------------------------------------------------
-    // 1. Initialize Barndoor SDK and MCP client (with retry on 401)
+    // 1. Authenticate to Barndoor
     // ---------------------------------------------------------------------
     console.log('🔐 Authenticating with Barndoor...');
-
     let sdk;
-    const envToken = process.env['BARNDOOR_ACCESS_TOKEN'];
+    const envToken = process.env.BARNDOOR_ACCESS_TOKEN;
+
     if (envToken) {
       console.log('🔑 Using token from BARNDOOR_ACCESS_TOKEN');
-      const cfg = hasOrganizationInfo(envToken) ? getDynamicConfig(envToken) : getStaticConfig();
+      const cfg = hasOrganizationInfo(envToken)
+        ? getDynamicConfig(envToken)
+        : getStaticConfig();
       sdk = new BarndoorSDK(cfg.apiBaseUrl, { token: envToken });
       await sdk.listServers();
       console.log('✅ Authentication successful (env token)!');
     } else {
       sdk = await loginInteractive();
-      // Test authentication by trying to list servers
-      try {
-        await sdk.listServers();
-        console.log('✅ Authentication successful!');
-      } catch (error) {
-        if (error.statusCode === 401) {
-          console.log('⚠️  Cached token invalid, clearing and re-authenticating...');
-          // Clear cached token and try again
-          const { clearCachedToken } = await import('../dist/index.esm.js');
-          clearCachedToken();
-          sdk = await loginInteractive();
-          await sdk.listServers(); // Test again
-          console.log('✅ Re-authentication successful!');
-        } else {
-          throw error;
-        }
-      }
+      await sdk.listServers();
+      console.log('✅ Authentication successful!');
     }
 
-    console.log(`\n🔗 Ensuring ${SERVER_SLUG} server is connected...`);
+    // ---------------------------------------------------------------------
+    // 2. List all available servers
+    // ---------------------------------------------------------------------
+    const servers = await sdk.listServers();
+    if (!servers.length) throw new Error('No MCP servers found for this user.');
+    console.log('\n📡 Available MCP servers:');
+    servers.forEach((s, i) => console.log(`  ${i + 1}. ${s.slug} (${s.connection_status})`));
+
+    // Ask user which one to use
+    let idx = await ask('\n👉 Enter the number of the server you want to use: ');
+    const choice = servers[parseInt(idx) - 1];
+    if (!choice) throw new Error('Invalid selection.');
+    const SERVER_SLUG = choice.slug;
+    console.log(`\n🔗 Selected: ${SERVER_SLUG}\n`);
+
+    // ---------------------------------------------------------------------
+    // 3. Ensure it’s connected
+    // ---------------------------------------------------------------------
     await ensureServerConnected(sdk, SERVER_SLUG);
-    console.log(`✅ ${SERVER_SLUG} server connected!`);
+    console.log(`✅ ${SERVER_SLUG} connected.`);
 
-    // Use the makeMcpClient helper
+    // ---------------------------------------------------------------------
+    // 4. Build MCP client and show available tools
+    // ---------------------------------------------------------------------
     const mcpClient = await makeMcpClient(sdk, SERVER_SLUG);
-    console.log('📡 MCP client connected!');
+    console.log('\n🔧 Fetching available tools...');
+    const { tools = [] } = await mcpClient.listTools();
+    if (!tools.length) console.log('⚠️  No tools found for this server.');
+    else tools.forEach((t, i) => console.log(`  ${i + 1}. ${t.name} — ${t.description || 'No description'}`));
 
     // ---------------------------------------------------------------------
-    // 2. List available resources and tools using SDK
+    // 5. Ask user for a custom prompt
     // ---------------------------------------------------------------------
-    console.log('\n📋 Listing available resources...');
-    try {
-      const { resources = [] } = await mcpClient.listResources();
-      console.log(`Found ${resources.length} resources`);
-    } catch (error) {
-      console.log('⚠️  List resources failed:', error.message);
+    const prompt = await ask('\n💬 What do you want to ask or do? (describe task): ');
+    console.log(`\n🧠 Interpreting prompt: "${prompt}"`);
+
+    // Naive tool selection: try to find one that matches keyword
+    const matching = tools.find(t =>
+      prompt.toLowerCase().includes(t.name.toLowerCase().split('_')[0])
+    );
+    const tool = matching || tools[0];
+    if (!tool) throw new Error('No tools available to handle this prompt.');
+
+    console.log(`\n⚙️  Using tool: ${tool.name}`);
+
+    // Ask user for optional JSON args
+    let args = '{}';
+    if (tool.input_schema) {
+      args = await ask('🧩 Optional JSON arguments (or Enter for none): ');
+      if (!args.trim()) args = '{}';
     }
 
-    console.log('\n🔧 Listing available tools...');
-    try {
-      const { tools = [] } = await mcpClient.listTools();
-      console.log(`Found ${tools.length} tools`);
-      tools.forEach((tool, i) => {
-        console.log(`  ${i + 1}. ${tool.name}: ${tool.description || 'No description'}`);
-      });
-    } catch (error) {
-      console.log('⚠️  List tools failed:', error.message);
+    // ---------------------------------------------------------------------
+    // 6. Call the selected tool
+    // ---------------------------------------------------------------------
+    console.log('\n🚀 Executing MCP tool...\n');
+    const parsedArgs = JSON.parse(args);
+    const response = await mcpClient.callTool({
+      name: tool.name,
+      arguments: parsedArgs,
+    });
+
+    // ---------------------------------------------------------------------
+    // 7. Pretty-print the result
+    // ---------------------------------------------------------------------
+    console.log('\n✅ MCP Response:');
+    if (response?.content?.[0]?.type === 'text') {
+      console.log(response.content[0].text);
+    } else {
+      console.dir(response, { depth: 4, colors: true });
     }
 
     // ---------------------------------------------------------------------
-    // 3. Test specific operations
+    // 8. Clean up
     // ---------------------------------------------------------------------
-    console.log('\n🧪 Testing specific operations...');
-
-    if (SERVER_SLUG === 'salesforce') {
-      console.log('\n📊 Testing Salesforce operations...');
-      try {
-        const queryResponse = await mcpClient.callTool({
-          name: 'query_records',
-          arguments: {
-            query: 'SELECT Id, Name, Industry FROM Account LIMIT 5',
-          },
-        });
-        const records =
-          queryResponse?.content?.[0]?.type === 'text'
-            ? JSON.parse(queryResponse.content[0].text)
-            : queryResponse.records || [];
-        console.log(`Found ${records.length} accounts`);
-        records.forEach((record, i) => {
-          console.log(`  ${i + 1}. ${record.Name} (${record.Industry || 'No industry'})`);
-        });
-      } catch (error) {
-        console.log('⚠️  Salesforce query failed:', error.message);
-      }
-    } else if (SERVER_SLUG === 'notion') {
-      console.log('\n📝 Testing Notion operations...');
-      try {
-        const pagesResponse = await mcpClient.callTool({
-          name: 'list_pages',
-          arguments: {},
-        });
-        const pages = pagesResponse?.pages || [];
-        console.log(`Found ${pages.length} pages`);
-        pages.slice(0, 5).forEach((page, i) => {
-          console.log(`  ${i + 1}. ${page.title || 'Untitled'}`);
-        });
-      } catch (error) {
-        console.log('⚠️  Notion operation failed:', error.message);
-      }
-    }
-
     await mcpClient.close();
     await sdk.close();
-    console.log('\n✅ Basic MCP client example completed successfully!');
+    rl.close();
+
+    console.log('\n✨ Done!\n');
   } catch (error) {
     console.error('❌ Error:', error.message);
-    if (error.stack) {
-      console.error('Stack trace:', error.stack);
-    }
+    if (error.stack) console.error(error.stack);
+    rl.close();
     process.exit(1);
   }
 }
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
-
-// Run the main function
 if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
