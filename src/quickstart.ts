@@ -10,7 +10,7 @@ import { BarndoorSDK } from './client';
 import { PKCEManager, startLocalCallbackServer } from './auth';
 import { loadUserToken, saveUserToken } from './auth';
 import { getStaticConfig, getDynamicConfig, hasOrganizationInfo, isNode } from './config';
-import { ServerNotFoundError } from './exceptions';
+import { HTTPError, ServerNotFoundError } from './exceptions';
 import { createScopedLogger } from './logging';
 import { spawn } from 'child_process';
 import os from 'os';
@@ -281,12 +281,17 @@ export async function makeMcpConnectionParams(
     transport = 'streamable-http',
   } = options;
 
-  // 1. Ensure server exists
-  const servers = await sdk.listServers();
-  const serverSlugs = new Set(servers.map(s => s.slug));
-
-  if (!serverSlugs.has(serverSlug)) {
-    throw new ServerNotFoundError(serverSlug, Array.from(serverSlugs));
+  // 1. Ensure server exists by fetching it directly
+  // This avoids pagination issues with listServers() and is more efficient
+  try {
+    await sdk.getServer(serverSlug);
+  } catch (error: unknown) {
+    // If server not found (404), throw a helpful error
+    if (error instanceof HTTPError && error.statusCode === 404) {
+      throw new ServerNotFoundError(serverSlug);
+    }
+    // Re-throw other errors
+    throw error;
   }
 
   // 2. Decide proxy vs public based on environment

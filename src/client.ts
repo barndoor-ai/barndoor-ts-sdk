@@ -291,15 +291,29 @@ export class BarndoorSDK {
 
   /**
    * List all MCP servers available to the caller's organization.
+   * Automatically fetches all pages if results are paginated.
    * @returns Array of server summaries
    */
   public async listServers(): Promise<ServerSummary[]> {
     this._logger.debug('Fetching server list');
     try {
-      const response = (await this._req('GET', '/servers')) as PaginatedResponse<unknown>;
-      const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
-      this._logger.info(`Retrieved ${servers.length} servers`);
-      return servers;
+      const allServers: ServerSummary[] = [];
+      let nextPage: number | null = 1;
+
+      // Fetch all pages
+      while (nextPage !== null) {
+        const url = nextPage === 1 ? '/servers' : `/servers?page=${nextPage}`;
+        const response = (await this._req('GET', url)) as PaginatedResponse<unknown>;
+        
+        const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
+        allServers.push(...servers);
+
+        // Check if there's a next page
+        nextPage = response.pagination.next_page;
+      }
+
+      this._logger.info(`Retrieved ${allServers.length} servers total`);
+      return allServers;
     } catch (error) {
       this._logger.error('Failed to list servers:', error);
       throw error;

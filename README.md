@@ -161,7 +161,7 @@ await sdk.ensureServerConnected('notion', { pollSeconds: 2 });
 ```
 
 #### `listServers()`
-List all MCP servers available to your organization.
+List all MCP servers available to your organization. Automatically fetches all pages if results are paginated.
 
 ```typescript
 const servers = await sdk.listServers();

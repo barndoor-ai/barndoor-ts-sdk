@@ -5,26 +5,40 @@
 import * as SDK from '../dist/index.esm.js';
 const { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError } = SDK;
 
-// Mock fetch
+// Mock fetch with proper queue support for multiple responses
 const mockFetch = {
+  responseQueue: [],
   fn: () => {},
   mockResolvedValueOnce: value => {
-    mockFetch.fn = () => Promise.resolve(value);
+    mockFetch.responseQueue.push({ type: 'resolve', value });
     return mockFetch;
   },
   mockRejectedValueOnce: error => {
-    mockFetch.fn = () => Promise.reject(error);
+    mockFetch.responseQueue.push({ type: 'reject', value: error });
     return mockFetch;
   },
   mockClear: () => {
     mockFetch.fn = () => {};
     mockFetch.calls = [];
+    mockFetch.responseQueue = [];
   },
   calls: [],
 };
 
 global.fetch = (...args) => {
   mockFetch.calls.push(args);
+  
+  // If there are queued responses, use them in order
+  if (mockFetch.responseQueue.length > 0) {
+    const response = mockFetch.responseQueue.shift();
+    if (response.type === 'resolve') {
+      return Promise.resolve(response.value);
+    } else {
+      return Promise.reject(response.value);
+    }
+  }
+  
+  // Fallback to the default fn
   return mockFetch.fn(...args);
 };
 
@@ -203,6 +217,115 @@ describe('BarndoorSDK Methods', () => {
 
       const servers = await sdk.listServers();
       expect(servers).toEqual([]);
+    });
+
+    test('automatically fetches all pages when paginated', async () => {
+      // Page 1 response
+      const mockPage1 = {
+        data: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'Server 1',
+            slug: 'server-1',
+            provider: 'github',
+            connection_status: 'connected',
+          },
+          {
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            name: 'Server 2',
+            slug: 'server-2',
+            provider: 'notion',
+            connection_status: 'connected',
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 2,
+          total: 5,
+          pages: 3,
+          previous_page: null,
+          next_page: 2,
+        },
+      };
+
+      // Page 2 response
+      const mockPage2 = {
+        data: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174002',
+            name: 'Server 3',
+            slug: 'server-3',
+            provider: 'salesforce',
+            connection_status: 'available',
+          },
+          {
+            id: '123e4567-e89b-12d3-a456-426614174003',
+            name: 'Server 4',
+            slug: 'server-4',
+            provider: 'slack',
+            connection_status: 'pending',
+          },
+        ],
+        pagination: {
+          page: 2,
+          limit: 2,
+          total: 5,
+          pages: 3,
+          previous_page: 1,
+          next_page: 3,
+        },
+      };
+
+      // Page 3 response
+      const mockPage3 = {
+        data: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174004',
+            name: 'Server 5',
+            slug: 'server-5',
+            provider: 'jira',
+            connection_status: 'connected',
+          },
+        ],
+        pagination: {
+          page: 3,
+          limit: 2,
+          total: 5,
+          pages: 3,
+          previous_page: 2,
+          next_page: null,
+        },
+      };
+
+      // Mock all three page requests
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPage1),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPage2),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPage3),
+      });
+
+      const servers = await sdk.listServers();
+
+      // Should return all 5 servers across all pages
+      expect(servers).toHaveLength(5);
+      expect(servers[0].slug).toBe('server-1');
+      expect(servers[1].slug).toBe('server-2');
+      expect(servers[2].slug).toBe('server-3');
+      expect(servers[3].slug).toBe('server-4');
+      expect(servers[4].slug).toBe('server-5');
+
+      // Should have made 3 requests (one for each page)
+      expect(mockFetch.calls.length).toBe(3);
+      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/servers');
+      expect(mockFetch.calls[1][0]).toBe('https://api.example.com/servers?page=2');
+      expect(mockFetch.calls[2][0]).toBe('https://api.example.com/servers?page=3');
     });
   });
 
