@@ -304,7 +304,7 @@ export class BarndoorSDK {
       while (nextPage !== null) {
         const url = nextPage === 1 ? '/servers' : `/servers?page=${nextPage}`;
         const response = (await this._req('GET', url)) as PaginatedResponse<unknown>;
-        
+
         const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
         allServers.push(...servers);
 
