@@ -265,30 +265,42 @@ export async function ensureServerConnected(
  * framework (CrewAI, LangChain, custom implementations).
  *
  * @param {BarndoorSDK} sdk - SDK instance
- * @param {string} serverSlug - Server slug
+ * @param {string} serverSlugOrId - Server slug (e.g., "salesforce") or UUID
  * @param {Object} [options={}] - Options
+ * @param {string} [options.serverId] - Server UUID (alternative to passing as first param)
+ * @param {string} [options.serverSlug] - Server slug (alternative to passing as first param)
  * @param {string} [options.proxyBaseUrl='http://proxy-ingress:8080'] - Proxy base URL
  * @param {string} [options.transport='streamable-http'] - Transport type
  * @returns {Promise<[Object, string]>} [params, publicUrl]
  */
 export async function makeMcpConnectionParams(
   sdk: BarndoorSDK,
-  serverSlug: string,
-  options: { proxyBaseUrl?: string; transport?: string } = {}
+  serverSlugOrId: string,
+  options: {
+    serverId?: string;
+    serverSlug?: string;
+    proxyBaseUrl?: string;
+    transport?: string;
+  } = {}
 ): Promise<[unknown, string]> {
   const {
+    serverId,
+    serverSlug,
     proxyBaseUrl: _proxyBaseUrl = 'http://proxy-ingress:8080',
     transport = 'streamable-http',
   } = options;
 
+  // Determine which identifier to use (backwards compatible)
+  const serverIdentifier = serverId || serverSlug || serverSlugOrId;
+
   // 1. Ensure server exists by fetching it directly
   // This avoids pagination issues with listServers() and is more efficient
   try {
-    await sdk.getServer(serverSlug);
+    await sdk.getServer(serverIdentifier);
   } catch (error: unknown) {
     // If server not found (404), throw a helpful error
     if (error instanceof HTTPError && error.statusCode === 404) {
-      throw new ServerNotFoundError(serverSlug);
+      throw new ServerNotFoundError(serverIdentifier);
     }
     // Re-throw other errors
     throw error;
@@ -302,21 +314,21 @@ export async function makeMcpConnectionParams(
     // Use dynamic configuration for local/dev environments
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+      url = `${staticConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
     }
   } else {
     // Production - use external MCP URL (same as dynamic config)
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${serverSlug}`;
+      url = `${staticConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
     }
   }
 
@@ -337,20 +349,29 @@ export async function makeMcpConnectionParams(
  * Create and connect an MCP client for the specified server.
  *
  * This helper uses the official `@modelcontextprotocol/sdk` package so callers
- * don’t need to hand-craft JSON-RPC envelopes or manage transports manually.
+ * don't need to hand-craft JSON-RPC envelopes or manage transports manually.
  *
  * @param {BarndoorSDK} sdk – An initialized Barndoor SDK instance (must contain a valid JWT in `sdk.token`).
- * @param {string} serverSlug – The server slug (e.g. "salesforce", "notion").
- * @param {Object} [options] – Optional overrides passed to `makeMcpConnectionParams` (proxyBaseUrl, transport).
+ * @param {string} serverSlugOrId – The server slug (e.g. "salesforce", "notion") or UUID.
+ * @param {Object} [options] – Optional overrides.
+ * @param {string} [options.serverId] - Server UUID (alternative to passing as first param)
+ * @param {string} [options.serverSlug] - Server slug (alternative to passing as first param)
+ * @param {string} [options.proxyBaseUrl] - Proxy base URL override
+ * @param {string} [options.transport] - Transport type override
  * @returns {Promise<McpClient>} A connected MCP client ready for `listTools`, `callTool`, etc.
  */
 export async function makeMcpClient(
   sdk: BarndoorSDK,
-  serverSlug: string,
-  options: { proxyBaseUrl?: string; transport?: string } = {}
+  serverSlugOrId: string,
+  options: {
+    serverId?: string;
+    serverSlug?: string;
+    proxyBaseUrl?: string;
+    transport?: string;
+  } = {}
 ): Promise<McpClient> {
   // 1. Build URL + headers via existing helper
-  const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlug, options);
+  const [mcpParams] = await makeMcpConnectionParams(sdk, serverSlugOrId, options);
   const params = mcpParams as { url: string; headers: Record<string, string> };
 
   // 2. Initialise MCP client

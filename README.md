@@ -223,11 +223,22 @@ Ensure a server is connected, launching OAuth if needed.
 await ensureServerConnected(sdk, 'notion', { timeout: 90 });
 ```
 
-#### `makeMcpConnectionParams(sdk, serverSlug, options?)`
-Generate MCP connection parameters for AI frameworks.
+#### `makeMcpConnectionParams(sdk, serverSlugOrId, options?)`
+Generate MCP connection parameters for AI frameworks. Accepts server slug or UUID.
 
 ```typescript
+// Using slug
 const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
+
+// Using UUID
+const [params, publicUrl] = await makeMcpConnectionParams(sdk, '123e4567-...');
+
+// Or via options
+const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion', {
+  serverId: '123e4567-...',  // alternative: pass UUID in options
+  serverSlug: 'notion'        // alternative: pass slug in options
+});
+
 // params: { url, transport, headers }
 ```
 
