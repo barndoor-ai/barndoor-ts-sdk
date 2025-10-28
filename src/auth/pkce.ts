@@ -278,6 +278,8 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
     throw new Error('Local callback server is only available in Node.js environment');
   }
 
+  const logger = createScopedLogger('pkce');
+
   // Allow override of redirect host for environments with strict callback allowlists
   const redirectHost =
     (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
@@ -286,14 +288,19 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {
     const server = http.createServer((req, res) => {
+      logger.debug(`Callback server received request: ${req.method} ${req.url}`);
+
       const parsedUrl = url.parse(req.url ?? '', true);
+      logger.debug(`Parsed URL - pathname: ${parsedUrl.pathname}, query:`, parsedUrl.query);
 
       if (parsedUrl.pathname === '/cb') {
         const { code, state, error, error_description } = parsedUrl.query;
+        logger.debug(`Callback params - code: ${!!code}, state: ${!!state}, error: ${error}`);
 
         // Send response to browser
         res.writeHead(200, { 'Content-Type': 'text/html' });
         if (error) {
+          logger.error(`OAuth error: ${error} - ${error_description}`);
           res.end(`
             <html>
               <body>
@@ -307,22 +314,31 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
           server.close();
           reject(new OAuthError(`OAuth error: ${error} - ${error_description}`));
         } else if (code) {
+          logger.info('OAuth callback received successfully, closing server');
           res.end(`
             <html>
               <body>
                 <h1>Authentication Successful</h1>
                 <p>You can close this window and return to your application.</p>
+                <script>
+                  console.log('Authentication callback received. You can close this window.');
+                  setTimeout(() => window.close(), 1000);
+                </script>
               </body>
             </html>
           `);
           server.close();
           resolve([code as string, state as string]);
         } else {
+          logger.warn('No authorization code received in callback');
+          logger.warn(`Full URL: ${req.url}`);
+          logger.warn(`Query params:`, parsedUrl.query);
           res.end(`
             <html>
               <body>
                 <h1>Authentication Failed</h1>
                 <p>No authorization code received.</p>
+                <p>Full URL: ${req.url}</p>
                 <p>You can close this window.</p>
               </body>
             </html>
@@ -331,19 +347,25 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
           reject(new OAuthError('No authorization code received'));
         }
       } else {
-        res.writeHead(404);
+        logger.debug(`404 for path: ${parsedUrl.pathname}`);
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('Not found');
       }
     });
 
     // Bind to all interfaces and let OS handle IPv4/IPv6; avoids ::1 vs 127.0.0.1 mismatch
-    server.listen(port, () => {
+    server.listen(port, '0.0.0.0', () => {
       // eslint-disable-next-line no-console
       console.log(`OAuth callback server listening on ${redirectUri}`);
     });
 
     server.on('error', (error: Error) => {
       reject(new OAuthError(`Failed to start callback server: ${error.message}`));
+    });
+
+    // Log all incoming connections for debugging
+    server.on('connection', socket => {
+      logger.debug(`New connection from ${socket.remoteAddress}:${socket.remotePort}`);
     });
   });
 

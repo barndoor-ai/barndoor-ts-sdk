@@ -86,7 +86,7 @@ describe('makeMcpConnectionParams', () => {
 
     // Should have called getServer (not listServers)
     expect(mockFetch.calls.length).toBe(1);
-    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverSlug}`);
+    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/by-slug/${serverSlug}`);
 
     // Validate returned params
     expect(params).toHaveProperty('url');
@@ -110,7 +110,7 @@ describe('makeMcpConnectionParams', () => {
 
     // Should have called getServer
     expect(mockFetch.calls.length).toBe(1);
-    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverSlug}`);
+    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/by-slug/${serverSlug}`);
   });
 
   test('works with server on any pagination page (regression test)', async () => {

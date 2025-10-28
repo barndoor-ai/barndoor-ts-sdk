@@ -322,20 +322,24 @@ export class BarndoorSDK {
 
   /**
    * Get detailed information about a specific server.
-   * @param serverId - Server ID
+   * @param serverId - Server ID or slug
    * @returns Server details
    */
   public async getServer(serverId: string): Promise<ServerDetail> {
     const validatedServerId = this._validateServerId(serverId);
 
     this._logger.info(`Fetching server details for ${validatedServerId}`);
-    const response = await this._req('GET', `/servers/${validatedServerId}`);
+    // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+    const endpoint = this._isUuid(validatedServerId)
+      ? `/servers/${validatedServerId}`
+      : `/servers/by-slug/${validatedServerId}`;
+    const response = await this._req('GET', endpoint);
     return ServerDetail.fromApiResponse(response);
   }
 
   /**
    * Initiate OAuth connection flow for a server.
-   * @param serverId - Server ID
+   * @param serverId - Server ID or slug
    * @param returnUrl - Optional return URL
    * @returns Connection initiation response
    */
@@ -355,7 +359,11 @@ export class BarndoorSDK {
     const params = validatedReturnUrl ? { return_url: validatedReturnUrl } : undefined;
 
     try {
-      const response = await this._req('POST', `/servers/${validatedServerId}/connect`, {
+      // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+      const endpoint = this._isUuid(validatedServerId)
+        ? `/servers/${validatedServerId}/connect`
+        : `/servers/by-slug/${validatedServerId}/connect`;
+      const response = await this._req('POST', endpoint, {
         params,
         json: {},
       });
@@ -377,17 +385,18 @@ export class BarndoorSDK {
 
   /**
    * Get the user's connection status for a specific server.
-   * @param serverId - Server ID
+   * @param serverId - Server ID or slug
    * @returns Connection status
    */
   public async getConnectionStatus(serverId: string): Promise<string> {
     const validatedServerId = this._validateServerId(serverId);
 
     this._logger.info(`Checking connection status for server ${validatedServerId}`);
-    const response = (await this._req(
-      'GET',
-      `/servers/${validatedServerId}/connection`
-    )) as ConnectionStatusResponse;
+    // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+    const endpoint = this._isUuid(validatedServerId)
+      ? `/servers/${validatedServerId}/connection`
+      : `/servers/by-slug/${validatedServerId}/connection`;
+    const response = (await this._req('GET', endpoint)) as ConnectionStatusResponse;
     return response.status;
   }
 
@@ -405,7 +414,11 @@ export class BarndoorSDK {
     this._logger.info(`Disconnecting from server ${validatedServerId}`);
 
     try {
-      await this._req('DELETE', `/servers/${validatedServerId}/connection`);
+      // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+      const endpoint = this._isUuid(validatedServerId)
+        ? `/servers/${validatedServerId}/connection`
+        : `/servers/by-slug/${validatedServerId}/connection`;
+      await this._req('DELETE', endpoint);
       this._logger.info(`Successfully disconnected from server ${validatedServerId}`);
     } catch (error: unknown) {
       if (error instanceof HTTPError && error.statusCode === 404) {
@@ -437,6 +450,15 @@ export class BarndoorSDK {
     }
 
     return serverId;
+  }
+
+  /**
+   * Check if serverId is a UUID or slug.
+   * @private
+   */
+  private _isUuid(serverId: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(serverId);
   }
 
   /**

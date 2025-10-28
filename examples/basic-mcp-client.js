@@ -59,6 +59,19 @@ async function main() {
     console.log(`\n🔗 Ensuring ${SERVER_SLUG} server is connected...`);
     await ensureServerConnected(sdk, SERVER_SLUG);
     console.log(`✅ ${SERVER_SLUG} server connected!`);
+    
+    // Check server details
+    console.log(`\n📝 Checking ${SERVER_SLUG} server status...`);
+    try {
+      const server = await sdk.getServer(SERVER_SLUG);
+      console.log(`Server Status: ${server.status}`);
+      console.log(`Server Type: ${server.type || 'MCP'}`);
+      if (server.oauth_status) {
+        console.log(`OAuth Status: ${server.oauth_status}`);
+      }
+    } catch (e) {
+      console.log('Could not fetch server details');
+    }
 
     // Use the makeMcpClient helper
     const mcpClient = await makeMcpClient(sdk, SERVER_SLUG);
@@ -95,19 +108,37 @@ async function main() {
       console.log('\n📊 Testing Salesforce operations...');
       try {
         const queryResponse = await mcpClient.callTool({
-          name: 'query_records',
+          name: 'queryAccount',
           arguments: {
             query: 'SELECT Id, Name, Industry FROM Account LIMIT 5',
           },
         });
-        const records =
-          queryResponse?.content?.[0]?.type === 'text'
-            ? JSON.parse(queryResponse.content[0].text)
-            : queryResponse.records || [];
-        console.log(`Found ${records.length} accounts`);
-        records.forEach((record, i) => {
-          console.log(`  ${i + 1}. ${record.Name} (${record.Industry || 'No industry'})`);
-        });
+        
+        // Check if it's an error response
+        if (queryResponse?.isError) {
+          console.log('⚠️  Salesforce query failed:', queryResponse.content?.[0]?.text || 'Unknown error');
+        } else {
+          // Parse successful response
+          let records = [];
+          if (queryResponse?.content?.[0]?.type === 'text') {
+            try {
+              const parsed = JSON.parse(queryResponse.content[0].text);
+              records = parsed.records || parsed || [];
+            } catch (e) {
+              // If it's not JSON, it might be the records directly
+              records = [];
+            }
+          } else if (Array.isArray(queryResponse)) {
+            records = queryResponse;
+          } else if (queryResponse?.records) {
+            records = queryResponse.records;
+          }
+          
+          console.log(`Found ${records.length} accounts`);
+          records.forEach((record, i) => {
+            console.log(`  ${i + 1}. ${record.Name} (${record.Industry || 'No industry'})`);
+          });
+        }
       } catch (error) {
         console.log('⚠️  Salesforce query failed:', error.message);
       }

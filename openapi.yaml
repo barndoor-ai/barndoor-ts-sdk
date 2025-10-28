@@ -189,9 +189,52 @@ paths:
         - name: server_id
           in: path
           required: true
-          description: Server UUID or slug
+          description: Server UUID
           schema:
             type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        "200":
+          description: Server details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetail"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /servers/by-slug/{slug}:
+    get:
+      summary: Get server details by slug
+      description: |
+        Get detailed information about a specific MCP server using its slug.
+        Returns extended information including MCP URL if available.
+      operationId: getServerBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Server slug
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
           example: "salesforce"
       responses:
         "200":
@@ -232,9 +275,73 @@ paths:
         - name: server_id
           in: path
           required: true
-          description: Server UUID or slug
+          description: Server UUID
           schema:
             type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: return_url
+          in: query
+          required: false
+          description: Optional return URL after OAuth completion
+          schema:
+            type: string
+            format: uri
+          example: "https://myapp.com/oauth/callback"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              example: {}
+      responses:
+        "200":
+          description: Connection initiation successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionInitiationResponse"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server missing OAuth configuration or other error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "OAuthConfigurationError"
+                message: "Server is missing OAuth configuration. Ask an admin to configure credentials before initiating a connection."
+
+  /servers/by-slug/{slug}/connect:
+    post:
+      summary: Initiate OAuth connection by slug
+      description: |
+        Initiate OAuth connection flow for a server using its slug. Returns an authorization URL
+        that the user should visit to complete the OAuth flow.
+
+        The server must have OAuth configuration set up by an admin.
+      operationId: initiateConnectionBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Server slug
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
           example: "salesforce"
         - name: return_url
           in: query
@@ -292,10 +399,11 @@ paths:
         - name: server_id
           in: path
           required: true
-          description: Server UUID or slug
+          description: Server UUID
           schema:
             type: string
-          example: "salesforce"
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
       responses:
         "200":
           description: Connection status
@@ -334,9 +442,91 @@ paths:
         - name: server_id
           in: path
           required: true
-          description: Server UUID or slug
+          description: Server UUID
           schema:
             type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        "204":
+          description: Connection deleted successfully
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /servers/by-slug/{slug}/connection:
+    get:
+      summary: Get connection status by slug
+      description: |
+        Get the user's connection status for a specific server using its slug.
+        Used to poll connection status during OAuth flows.
+      operationId: getConnectionStatusBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Server slug
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
+          example: "salesforce"
+      responses:
+        "200":
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStatusResponse"
+        "401":
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Server not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete connection by slug
+      description: |
+        Delete the current user's connection to this server using its slug.
+
+        This will remove the connection record and clean up any stored OAuth credentials.
+        The user will need to reconnect to use this server again.
+      operationId: deleteConnectionBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Server slug
+          schema:
+            type: string
+            pattern: "^[a-z0-9-]+$"
           example: "salesforce"
       responses:
         "204":
