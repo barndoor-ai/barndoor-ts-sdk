@@ -289,7 +289,7 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   const waiter = new Promise<[string, string]>((resolve, reject) => {
     const server = http.createServer((req, res) => {
       logger.debug(`Callback server received request: ${req.method} ${req.url}`);
-      
+
       const parsedUrl = url.parse(req.url ?? '', true);
       logger.debug(`Parsed URL - pathname: ${parsedUrl.pathname}, query:`, parsedUrl.query);
 
@@ -364,7 +364,7 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
     });
 
     // Log all incoming connections for debugging
-    server.on('connection', (socket) => {
+    server.on('connection', socket => {
       logger.debug(`New connection from ${socket.remoteAddress}:${socket.remotePort}`);
     });
   });

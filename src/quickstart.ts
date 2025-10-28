@@ -198,18 +198,17 @@ export async function loginInteractive(
     // Add timeout to OAuth callback (2 minutes)
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
-        reject(new Error(
-          'OAuth callback timeout after 2 minutes. ' +
-          'This usually means the callback URL is not registered in Auth0. ' +
-          `Please add "${redirectUri}" to Allowed Callback URLs in your Auth0 application settings.`
-        ));
+        reject(
+          new Error(
+            'OAuth callback timeout after 2 minutes. ' +
+              'This usually means the callback URL is not registered in Auth0. ' +
+              `Please add "${redirectUri}" to Allowed Callback URLs in your Auth0 application settings.`
+          )
+        );
       }, 120000); // 2 minutes
     });
 
-    const result = await Promise.race([
-      waiter as Promise<[string, string]>,
-      timeoutPromise
-    ]);
+    const result = await Promise.race([waiter as Promise<[string, string]>, timeoutPromise]);
     code = result[0];
   }
 
