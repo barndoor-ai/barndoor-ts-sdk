@@ -7,6 +7,7 @@
  */
 
 import { BarndoorSDK } from './client';
+import { ServerDetail } from './models';
 import { PKCEManager, startLocalCallbackServer } from './auth';
 import { loadUserToken, saveUserToken } from './auth';
 import { getStaticConfig, getDynamicConfig, hasOrganizationInfo, isNode } from './config';
@@ -306,10 +307,11 @@ export async function makeMcpConnectionParams(
   // Determine which identifier to use (backwards compatible)
   const serverIdentifier = serverId || serverSlug || serverSlugOrId;
 
-  // 1. Ensure server exists by fetching it directly
-  // This avoids pagination issues with listServers() and is more efficient
+  // 1. Fetch server to validate it exists and get slug
+  // This avoids pagination issues with listServers() and ensures we use slug for MCP endpoint
+  let server: ServerDetail;
   try {
-    await sdk.getServer(serverIdentifier);
+    server = await sdk.getServer(serverIdentifier);
   } catch (error: unknown) {
     // If server not found (404), throw a helpful error
     if (error instanceof HTTPError && error.statusCode === 404) {
@@ -319,6 +321,9 @@ export async function makeMcpConnectionParams(
     throw error;
   }
 
+  // MCP endpoint expects slugs, not UUIDs
+  const mcpIdentifier = server.slug || serverIdentifier;
+
   // 2. Decide proxy vs public based on environment
   const env = (isNode ? process.env['BARNDOOR_ENV'] || process.env['MODE'] : '') || 'localdev';
 
@@ -327,21 +332,21 @@ export async function makeMcpConnectionParams(
     // Use dynamic configuration for local/dev environments
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
+      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
     }
   } else {
     // Production - use external MCP URL (same as dynamic config)
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
+      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${serverIdentifier}`;
+      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
     }
   }
 

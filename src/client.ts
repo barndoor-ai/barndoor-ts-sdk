@@ -493,24 +493,24 @@ export class BarndoorSDK {
       throw new Error('ensureServerConnected requires Node.js environment for browser opening');
     }
 
-    // 1. Locate server
-    const servers = await this.listServers();
-    const target = servers.find(
-      s =>
-        s.slug === serverIdentifier ||
-        (s.provider && s.provider.toLowerCase() === serverIdentifier.toLowerCase())
-    );
-
-    if (!target) {
-      throw new ServerNotFoundError(serverIdentifier);
+    // 1. Locate server using getServer (handles both slugs and UUIDs)
+    let target: ServerDetail;
+    try {
+      target = await this.getServer(serverIdentifier);
+    } catch (error: unknown) {
+      if (error instanceof HTTPError && error.statusCode === 404) {
+        throw new ServerNotFoundError(serverIdentifier);
+      }
+      throw error;
     }
 
     if (target.connection_status === 'connected') {
       return; // Already connected
     }
 
-    // 2. Start OAuth flow
-    const connection = await this.initiateConnection(target.id);
+    // 2. Start OAuth flow - use slug for connection (MCP endpoint expects slugs)
+    const connectionIdentifier = target.slug || serverIdentifier;
+    const connection = await this.initiateConnection(connectionIdentifier);
     const authUrl = connection.auth_url;
     if (!authUrl) {
       throw new Error('Registry did not return auth_url');
@@ -553,7 +553,7 @@ export class BarndoorSDK {
 
     // 4. Poll until connected or timeout
     for (let i = 0; i < pollSeconds; i++) {
-      const status = await this.getConnectionStatus(target.id);
+      const status = await this.getConnectionStatus(connectionIdentifier);
       if (status === 'connected') {
         return;
       }
