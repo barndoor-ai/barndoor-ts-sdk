@@ -27,7 +27,7 @@ const mockFetch = {
 
 global.fetch = (...args) => {
   mockFetch.calls.push(args);
-  
+
   // If there are queued responses, use them in order
   if (mockFetch.responseQueue.length > 0) {
     const response = mockFetch.responseQueue.shift();
@@ -37,7 +37,7 @@ global.fetch = (...args) => {
       return Promise.reject(response.value);
     }
   }
-  
+
   // Fallback to the default fn
   return mockFetch.fn(...args);
 };
@@ -65,7 +65,9 @@ describe('BarndoorSDK Constructor', () => {
 
   test.skip('methods throw when token not provided', async () => {
     const sdk = new BarndoorSDK('https://api.example.com');
-    await expect(sdk.listServers()).rejects.toThrow('No token available. Call authenticate() first or provide token in constructor.');
+    await expect(sdk.listServers()).rejects.toThrow(
+      'No token available. Call authenticate() first or provide token in constructor.'
+    );
   });
 
   test('throws when empty token is provided', () => {
@@ -186,7 +188,7 @@ describe('BarndoorSDK Methods', () => {
       expect(servers[1].provider).toBeNull();
 
       expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/servers');
+      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/api/servers');
       expect(mockFetch.calls[0][1]).toEqual(
         expect.objectContaining({
           method: 'GET',
@@ -323,9 +325,9 @@ describe('BarndoorSDK Methods', () => {
 
       // Should have made 3 requests (one for each page)
       expect(mockFetch.calls.length).toBe(3);
-      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/servers');
-      expect(mockFetch.calls[1][0]).toBe('https://api.example.com/servers?page=2');
-      expect(mockFetch.calls[2][0]).toBe('https://api.example.com/servers?page=3');
+      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/api/servers');
+      expect(mockFetch.calls[1][0]).toBe('https://api.example.com/api/servers?page=2');
+      expect(mockFetch.calls[2][0]).toBe('https://api.example.com/api/servers?page=3');
     });
   });
 
@@ -352,7 +354,7 @@ describe('BarndoorSDK Methods', () => {
       expect(server.id).toBe(serverId);
       expect(server.url).toBe(mockServer.url);
 
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}`);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/${serverId}`);
       expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({ method: 'GET' }));
     });
 
@@ -384,7 +386,7 @@ describe('BarndoorSDK Methods', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connect`);
+      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/${serverId}/connect`);
       expect(mockFetch.calls[0][1]).toEqual(
         expect.objectContaining({
           method: 'POST',
@@ -406,7 +408,7 @@ describe('BarndoorSDK Methods', () => {
 
       expect(mockFetch.calls.length).toBe(1);
       expect(mockFetch.calls[0][0]).toBe(
-        `https://api.example.com/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`
+        `https://api.example.com/api/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`
       );
       expect(mockFetch.calls[0][1]).toEqual(expect.any(Object));
     });
@@ -439,7 +441,9 @@ describe('BarndoorSDK Methods', () => {
 
       expect(status).toBe('connected');
       expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
+      expect(mockFetch.calls[0][0]).toBe(
+        `https://api.example.com/api/servers/${serverId}/connection`
+      );
       expect(mockFetch.calls[0][1]).toEqual(
         expect.objectContaining({
           method: 'GET',
@@ -460,7 +464,9 @@ describe('BarndoorSDK Methods', () => {
       await sdk.disconnectServer(serverId);
 
       expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/${serverId}/connection`);
+      expect(mockFetch.calls[0][0]).toBe(
+        `https://api.example.com/api/servers/${serverId}/connection`
+      );
       expect(mockFetch.calls[0][1]).toEqual(
         expect.objectContaining({
           method: 'DELETE',
@@ -493,7 +499,9 @@ describe('BarndoorSDK Methods', () => {
     test.skip('close() prevents further requests - edge case', async () => {
       await sdk.close();
 
-      await expect(sdk.listServers()).rejects.toThrow('SDK has been closed. Create a new instance or use as context manager.');
+      await expect(sdk.listServers()).rejects.toThrow(
+        'SDK has been closed. Create a new instance or use as context manager.'
+      );
     });
 
     test('aclose() is alias for close()', async () => {
