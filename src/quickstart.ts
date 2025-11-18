@@ -35,7 +35,7 @@ const logger = createScopedLogger('quickstart');
  * @param {string} [options.clientId] - OAuth client ID
  * @param {string} [options.clientSecret] - OAuth client secret
  * @param {string} [options.audience] - API audience identifier
- * @param {string} [options.apiBaseUrl] - Base URL of the Barndoor API
+ * @param {string} [options.baseUrl] - Base URL of the Barndoor API
  * @param {number} [options.port=52765] - Local port for OAuth callback
  * @returns {Promise<BarndoorSDK>} Initialized SDK instance
  */
@@ -52,7 +52,7 @@ export interface LoginInteractiveOptions {
   /** API audience identifier */
   audience?: string;
   /** Base URL of the Barndoor API */
-  apiBaseUrl?: string;
+  baseUrl?: string;
   /** Local port for OAuth callback */
   port?: number;
 }
@@ -73,7 +73,7 @@ export async function loginInteractive(
     clientId = config.clientId,
     clientSecret = config.clientSecret,
     audience = config.apiAudience,
-    apiBaseUrl: _apiBaseUrl = config.apiBaseUrl,
+    baseUrl: _baseUrl = config.baseUrl,
     port = 52765,
   } = options;
 
@@ -96,7 +96,7 @@ export async function loginInteractive(
         sdkConfig = getStaticConfig();
       }
 
-      const sdk = new BarndoorSDK(sdkConfig.apiBaseUrl, { token: cachedToken });
+      const sdk = new BarndoorSDK(sdkConfig.baseUrl, { token: cachedToken });
       await sdk.validateCachedToken();
       logger.info('Using cached valid token');
       return sdk;
@@ -234,7 +234,7 @@ export async function loginInteractive(
     sdkConfig = getStaticConfig();
   }
 
-  return new BarndoorSDK(sdkConfig.apiBaseUrl, { token: tokenData.access_token });
+  return new BarndoorSDK(sdkConfig.baseUrl, { token: tokenData.access_token });
 }
 
 /**
@@ -332,21 +332,21 @@ export async function makeMcpConnectionParams(
     // Use dynamic configuration for local/dev environments
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
     }
   } else {
     // Production - use external MCP URL (same as dynamic config)
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
     }
   }
 

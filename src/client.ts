@@ -302,7 +302,7 @@ export class BarndoorSDK {
 
       // Fetch all pages
       while (nextPage !== null) {
-        const url = nextPage === 1 ? '/servers' : `/servers?page=${nextPage}`;
+        const url = nextPage === 1 ? '/api/servers' : `/api/servers?page=${nextPage}`;
         const response = (await this._req('GET', url)) as PaginatedResponse<unknown>;
 
         const servers = response.data.map(data => ServerSummary.fromApiResponse(data));
@@ -329,10 +329,10 @@ export class BarndoorSDK {
     const validatedServerId = this._validateServerId(serverId);
 
     this._logger.info(`Fetching server details for ${validatedServerId}`);
-    // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+    // Use /api/servers/by-slug/{slug} for slugs, /api/servers/{uuid} for UUIDs
     const endpoint = this._isUuid(validatedServerId)
-      ? `/servers/${validatedServerId}`
-      : `/servers/by-slug/${validatedServerId}`;
+      ? `/api/servers/${validatedServerId}`
+      : `/api/servers/by-slug/${validatedServerId}`;
     const response = await this._req('GET', endpoint);
     return ServerDetail.fromApiResponse(response);
   }
@@ -359,10 +359,10 @@ export class BarndoorSDK {
     const params = validatedReturnUrl ? { return_url: validatedReturnUrl } : undefined;
 
     try {
-      // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+      // Use /api/servers/by-slug/{slug} for slugs, /api/servers/{uuid} for UUIDs
       const endpoint = this._isUuid(validatedServerId)
-        ? `/servers/${validatedServerId}/connect`
-        : `/servers/by-slug/${validatedServerId}/connect`;
+        ? `/api/servers/${validatedServerId}/connect`
+        : `/api/servers/by-slug/${validatedServerId}/connect`;
       const response = await this._req('POST', endpoint, {
         params,
         json: {},
@@ -392,10 +392,10 @@ export class BarndoorSDK {
     const validatedServerId = this._validateServerId(serverId);
 
     this._logger.info(`Checking connection status for server ${validatedServerId}`);
-    // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+    // Use /api/servers/by-slug/{slug} for slugs, /api/servers/{uuid} for UUIDs
     const endpoint = this._isUuid(validatedServerId)
-      ? `/servers/${validatedServerId}/connection`
-      : `/servers/by-slug/${validatedServerId}/connection`;
+      ? `/api/servers/${validatedServerId}/connection`
+      : `/api/servers/by-slug/${validatedServerId}/connection`;
     const response = (await this._req('GET', endpoint)) as ConnectionStatusResponse;
     return response.status;
   }
@@ -414,10 +414,10 @@ export class BarndoorSDK {
     this._logger.info(`Disconnecting from server ${validatedServerId}`);
 
     try {
-      // Use /servers/by-slug/{slug} for slugs, /servers/{uuid} for UUIDs
+      // Use /api/servers/by-slug/{slug} for slugs, /api/servers/{uuid} for UUIDs
       const endpoint = this._isUuid(validatedServerId)
-        ? `/servers/${validatedServerId}/connection`
-        : `/servers/by-slug/${validatedServerId}/connection`;
+        ? `/api/servers/${validatedServerId}/connection`
+        : `/api/servers/by-slug/${validatedServerId}/connection`;
       await this._req('DELETE', endpoint);
       this._logger.info(`Successfully disconnected from server ${validatedServerId}`);
     } catch (error: unknown) {

@@ -63,54 +63,38 @@ describe('BarndoorConfig', () => {
   test('sets environment-specific defaults for localdev', () => {
     const config = new BarndoorConfig({ environment: 'localdev' });
 
-    expect(config.apiBaseUrl).toBe('http://localhost:8000');
-    expect(config.mcpBaseUrl).toBe('http://localhost:8000');
+    expect(config.baseUrl).toBe('http://localhost:8080');
   });
 
   test('sets environment-specific defaults for development', () => {
     const config = new BarndoorConfig({ environment: 'development' });
 
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
-    expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
   });
 
   test('sets environment-specific defaults for production', () => {
     const config = new BarndoorConfig({ environment: 'production' });
 
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
-    expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
   });
 
   test('respects custom URLs even in specific environments', () => {
-    process.env.BARNDOOR_API = 'https://custom.api.com';
-    process.env.BARNDOOR_URL = 'https://custom.mcp.com';
+    process.env.BARNDOOR_URL = 'https://custom.api.com';
 
     const config = new BarndoorConfig({ environment: 'localdev' });
 
-    expect(config.apiBaseUrl).toBe('https://custom.api.com');
-    expect(config.mcpBaseUrl).toBe('https://custom.mcp.com');
+    expect(config.baseUrl).toBe('https://custom.api.com');
   });
 
-  test('MCP env var precedence prefers BARNDOOR_MCP over BARNDOOR_URL', () => {
-    process.env.BARNDOOR_MCP = 'https://mcp.preferred.com';
-    process.env.BARNDOOR_URL = 'https://mcp.legacy.com';
-
-    const config = new BarndoorConfig({ environment: 'development' });
-    expect(config.mcpBaseUrl).toBe('https://mcp.preferred.com');
-  });
-
-  test('options override API/MCP env vars', () => {
-    process.env.BARNDOOR_API = 'https://api.env.com';
-    process.env.BARNDOOR_MCP = 'https://mcp.env.com';
+  test('options override env vars', () => {
+    process.env.BARNDOOR_URL = 'https://env.com';
 
     const config = new BarndoorConfig({
       environment: 'production',
-      apiBaseUrl: 'https://api.options.com',
-      mcpBaseUrl: 'https://mcp.options.com',
+      baseUrl: 'https://api.options.com',
     });
 
-    expect(config.apiBaseUrl).toBe('https://api.options.com');
-    expect(config.mcpBaseUrl).toBe('https://mcp.options.com');
+    expect(config.baseUrl).toBe('https://api.options.com');
   });
 
   test('validation passes for valid config', () => {
@@ -147,16 +131,14 @@ describe('Dynamic Configuration', () => {
   test.skip('getDynamicConfig substitutes organization ID - needs update for organization_name', () => {
     const config = getDynamicConfig(mockJwtToken);
 
-    expect(config.apiBaseUrl).toBe('https://test-org.mcp.barndoor.ai');
-    expect(config.mcpBaseUrl).toBe('https://test-org.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://test-org.mcp.barndoor.ai');
   });
 
   test.skip('BarndoorConfig.getDynamicConfig works the same - needs update for organization_name', () => {
     const config1 = getDynamicConfig(mockJwtToken);
     const config2 = BarndoorConfig.getDynamicConfig(mockJwtToken);
 
-    expect(config1.apiBaseUrl).toBe(config2.apiBaseUrl);
-    expect(config1.mcpBaseUrl).toBe(config2.mcpBaseUrl);
+    expect(config1.baseUrl).toBe(config2.baseUrl);
   });
 
   test('throws error for invalid JWT token', () => {
@@ -194,9 +176,9 @@ describe('Environment Detection', () => {
 
   test('case insensitive environment matching', () => {
     const localConfig = new BarndoorConfig({ environment: 'LOCALDEV' });
-    expect(localConfig.apiBaseUrl).toBe('http://localhost:8000');
+    expect(localConfig.baseUrl).toBe('http://localhost:8080');
 
     const devConfig = new BarndoorConfig({ environment: 'DEV' });
-    expect(devConfig.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+    expect(devConfig.baseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
   });
 });

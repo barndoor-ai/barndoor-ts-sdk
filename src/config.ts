@@ -43,10 +43,8 @@ export interface BarndoorConfigOptions {
   clientSecret?: string;
   /** API audience identifier */
   apiAudience?: string;
-  /** API base URL template */
-  apiBaseUrl?: string;
-  /** MCP base URL template */
-  mcpBaseUrl?: string;
+  /** Base URL template */
+  baseUrl?: string;
   /** Environment name */
   environment?: string;
   /** Whether to prompt for login */
@@ -83,10 +81,8 @@ export class BarndoorConfig {
   public clientSecret: string;
   /** API audience identifier */
   public apiAudience: string;
-  /** API base URL template */
-  public apiBaseUrl: string;
-  /** MCP base URL template */
-  public mcpBaseUrl: string;
+  /** Base URL template */
+  public baseUrl: string;
   /** Environment name */
   public environment: string;
   /** Whether to prompt for login */
@@ -113,9 +109,8 @@ export class BarndoorConfig {
     this.promptForLogin = options.promptForLogin ?? false;
     this.skipLoginLocal = options.skipLoginLocal ?? false;
 
-    // Initialize URL properties (will be set by _setEnvironmentDefaults)
-    this.apiBaseUrl = '';
-    this.mcpBaseUrl = '';
+    // Initialize URL property (will be set by _setEnvironmentDefaults)
+    this.baseUrl = '';
 
     // Set environment-specific defaults
     this._setEnvironmentDefaults(options);
@@ -130,22 +125,17 @@ export class BarndoorConfig {
 
     if (env === 'localdev' || env === 'local') {
       this.authDomain = this.authDomain || 'localhost:3001';
-      this.apiBaseUrl =
-        options.apiBaseUrl ?? (getEnvVar('BARNDOOR_API') || 'http://localhost:8000');
-      this.mcpBaseUrl =
-        options.mcpBaseUrl ??
-        (getEnvVar('BARNDOOR_MCP') || getEnvVar('BARNDOOR_URL') || 'http://localhost:8000');
+      this.baseUrl =
+        options.baseUrl ??
+        (getEnvVar('BARNDOOR_API') || getEnvVar('BARNDOOR_URL') || 'http://localhost:8080');
       // Override audience for local/dev if not explicitly set
       if (!options.apiAudience && !getEnvVar('API_AUDIENCE')) {
         this.apiAudience = 'https://barndoor.api/';
       }
     } else if (env === 'development' || env === 'dev') {
-      this.apiBaseUrl =
-        options.apiBaseUrl ??
-        (getEnvVar('BARNDOOR_API') || 'https://{organization_id}.mcp.barndoordev.com');
-      this.mcpBaseUrl =
-        options.mcpBaseUrl ??
-        (getEnvVar('BARNDOOR_MCP') ||
+      this.baseUrl =
+        options.baseUrl ??
+        (getEnvVar('BARNDOOR_API') ||
           getEnvVar('BARNDOOR_URL') ||
           'https://{organization_id}.mcp.barndoordev.com');
       // Override audience for development if not explicitly set
@@ -154,12 +144,9 @@ export class BarndoorConfig {
       }
     } else {
       // production
-      this.apiBaseUrl =
-        options.apiBaseUrl ??
-        (getEnvVar('BARNDOOR_API') || 'https://{organization_id}.mcp.barndoor.ai');
-      this.mcpBaseUrl =
-        options.mcpBaseUrl ??
-        (getEnvVar('BARNDOOR_MCP') ||
+      this.baseUrl =
+        options.baseUrl ??
+        (getEnvVar('BARNDOOR_API') ||
           getEnvVar('BARNDOOR_URL') ||
           'https://{organization_id}.mcp.barndoor.ai');
     }
@@ -205,16 +192,14 @@ export class BarndoorConfig {
       if (!safe) {
         throw new ConfigurationError('Invalid organization subdomain format from token');
       }
-      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', raw);
-      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', raw);
+      config.baseUrl = config.baseUrl.replace('{organization_id}', raw);
       return config;
     }
 
     // No organization found - handle based on options
     if (fallbackOrganizationId) {
       // Use fallback organization ID
-      config.apiBaseUrl = config.apiBaseUrl.replace('{organization_id}', fallbackOrganizationId);
-      config.mcpBaseUrl = config.mcpBaseUrl.replace('{organization_id}', fallbackOrganizationId);
+      config.baseUrl = config.baseUrl.replace('{organization_id}', fallbackOrganizationId);
       return config;
     }
 
@@ -246,12 +231,8 @@ export class BarndoorConfig {
       throw new ConfigurationError('apiAudience is required');
     }
 
-    if (!this.apiBaseUrl || this.apiBaseUrl.trim() === '') {
-      throw new ConfigurationError('apiBaseUrl is required');
-    }
-
-    if (!this.mcpBaseUrl || this.mcpBaseUrl.trim() === '') {
-      throw new ConfigurationError('mcpBaseUrl is required');
+    if (!this.baseUrl || this.baseUrl.trim() === '') {
+      throw new ConfigurationError('baseUrl is required');
     }
   }
 }
