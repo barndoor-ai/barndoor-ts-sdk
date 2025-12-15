@@ -870,7 +870,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /admin/policy:
+  /api/policy:
     put:
       summary: Publish Cerbos Policy
       operationId: publish_cerbos_policy_admin_policy_put
@@ -917,7 +917,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /admin/policies:
+  /api/policies:
     get:
       summary: List Cerbos Policies
       operationId: list_cerbos_policies_admin_policies_get
@@ -964,7 +964,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /admin/policies/inspect:
+  /api/policies/inspect:
     get:
       summary: Inspect Cerbos Policy
       operationId: inspect_cerbos_policy_admin_policies_inspect_get
@@ -989,7 +989,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /admin/policy/enable:
+  /api/policy/enable:
     put:
       summary: Enable Cerbos Policy
       operationId: enable_cerbos_policy_admin_policy_enable_put
@@ -1038,7 +1038,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /admin/policy/disable:
+  /api/policy/disable:
     put:
       summary: Disable Cerbos Policy
       operationId: disable_cerbos_policy_admin_policy_disable_put
