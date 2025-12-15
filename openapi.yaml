@@ -869,3 +869,221 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /api/policy:
+    put:
+      summary: Publish Cerbos Policy
+      operationId: publish_cerbos_policy_admin_policy_put
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      summary: Publish Cerbos Policy
+      operationId: publish_cerbos_policy_admin_policy_post
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    get:
+      summary: Get Cerbos Policy
+      operationId: get_cerbos_policy_admin_policy_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policies:
+    get:
+      summary: List Cerbos Policies
+      operationId: list_cerbos_policies_admin_policies_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: include_disabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Disabled
+      - name: name_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Name Regexp
+      - name: scope_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Scope Regexp
+      - name: version_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Version Regexp
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policies/inspect:
+    get:
+      summary: Inspect Cerbos Policy
+      operationId: inspect_cerbos_policy_admin_policies_inspect_get
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/enable:
+    put:
+      summary: Enable Cerbos Policy
+      operationId: enable_cerbos_policy_admin_policy_enable_put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Enable Cerbos Policy
+      operationId: enable_cerbos_policy_admin_policy_enable_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/disable:
+    put:
+      summary: Disable Cerbos Policy
+      operationId: disable_cerbos_policy_admin_policy_disable_put
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Disable Cerbos Policy
+      operationId: disable_cerbos_policy_admin_policy_disable_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
