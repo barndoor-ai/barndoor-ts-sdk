@@ -1172,27 +1172,20 @@ paths:
           type: boolean
           default: false
           title: Include Disabled
-      - name: name_regexp
+      - name: agent_id
         in: query
         required: false
         schema:
           type: string
           default: ''
-          title: Name Regexp
-      - name: scope_regexp
+          title: Agent ID
+      - name: server_id
         in: query
         required: false
         schema:
           type: string
           default: ''
-          title: Scope Regexp
-      - name: version_regexp
-        in: query
-        required: false
-        schema:
-          type: string
-          default: ''
-          title: Version Regexp
+          title: Server ID
       responses:
         '200':
           description: Successful Response
