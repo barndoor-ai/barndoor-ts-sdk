@@ -17,6 +17,79 @@ import { jwtVerify, createRemoteJWKSet } from 'jose';
 const _logger = createScopedLogger('token');
 
 /**
+ * OIDC configuration from discovery endpoint.
+ */
+export interface OidcConfig {
+  issuer: string;
+  token_endpoint: string;
+  authorization_endpoint: string;
+  userinfo_endpoint: string;
+  jwks_uri: string;
+  [key: string]: unknown;
+}
+
+// Cache for OIDC discovery results
+const _oidcConfigCache = new Map<string, OidcConfig>();
+
+/**
+ * Fetch and cache OIDC configuration from the issuer's discovery endpoint.
+ *
+ * @param issuer - The OIDC issuer URL (e.g., https://auth.barndoor.ai or
+ *                 https://auth.trial.barndoordev.com/realms/barndoor-local)
+ * @returns OIDC configuration containing endpoints like token_endpoint, jwks_uri, etc.
+ */
+export async function getOidcConfig(issuer: string): Promise<OidcConfig> {
+  // Check cache first
+  if (_oidcConfigCache.has(issuer)) {
+    return _oidcConfigCache.get(issuer)!;
+  }
+
+  // Normalize issuer URL
+  const normalizedIssuer = issuer.replace(/\/$/, '');
+  const discoveryUrl = `${normalizedIssuer}/.well-known/openid-configuration`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const response = await fetch(discoveryUrl, {
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const config = (await response.json()) as OidcConfig;
+      _oidcConfigCache.set(issuer, config);
+      _logger.debug(`OIDC discovery successful for ${issuer}`);
+      return config;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (error) {
+    _logger.warn(`OIDC discovery failed for ${issuer}:`, error);
+    // Return minimal fallback config (Auth0-style paths)
+    const fallback: OidcConfig = {
+      issuer: normalizedIssuer,
+      token_endpoint: `${normalizedIssuer}/oauth/token`,
+      authorization_endpoint: `${normalizedIssuer}/authorize`,
+      userinfo_endpoint: `${normalizedIssuer}/userinfo`,
+      jwks_uri: `${normalizedIssuer}/.well-known/jwks.json`,
+    };
+    return fallback;
+  }
+}
+
+/**
+ * Clear the OIDC config cache (useful for testing).
+ */
+export function clearOidcConfigCache(): void {
+  _oidcConfigCache.clear();
+}
+
+/**
  * Set a custom logger for the token management module.
  * @deprecated Use setLogger from the main logging module instead
  */
@@ -107,14 +180,28 @@ export enum JWTVerificationResult {
 const _jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 /**
- * Get or create a JWKS instance for the given domain.
+ * Get or create a JWKS instance for the given issuer using OIDC discovery.
  */
-function getJWKS(authDomain: string) {
-  if (!_jwksCache.has(authDomain)) {
-    const jwks = createRemoteJWKSet(new URL(`https://${authDomain}/.well-known/jwks.json`));
-    _jwksCache.set(authDomain, jwks);
+async function getJWKS(issuer: string): Promise<ReturnType<typeof createRemoteJWKSet>> {
+  if (_jwksCache.has(issuer)) {
+    return _jwksCache.get(issuer)!;
   }
-  return _jwksCache.get(authDomain)!;
+
+  try {
+    const oidcConfig = await getOidcConfig(issuer);
+    const jwksUri = oidcConfig.jwks_uri;
+    if (!jwksUri) {
+      _logger.debug(`No jwks_uri in OIDC config for ${issuer}`);
+      throw new Error('No jwks_uri available');
+    }
+
+    const jwks = createRemoteJWKSet(new URL(jwksUri));
+    _jwksCache.set(issuer, jwks);
+    return jwks;
+  } catch (error) {
+    _logger.debug(`Failed to get JWKS for ${issuer}:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -373,20 +460,23 @@ export function getTokenStorage(): TokenStorage {
 /**
  * Verify JWT locally using JWKS.
  * @param token - JWT token to verify
- * @param authDomain - Auth0 domain
+ * @param issuer - OIDC issuer URL (e.g., https://auth.barndoor.ai)
  * @param audience - Expected audience
  * @returns Verification result
  */
 export async function verifyJWTLocal(
   token: string,
-  authDomain: string,
+  issuer: string,
   audience: string
 ): Promise<JWTVerificationResult> {
   try {
-    const JWKS = getJWKS(authDomain);
+    const JWKS = await getJWKS(issuer);
+
+    // Normalize issuer for comparison (with trailing slash)
+    const expectedIssuer = issuer.replace(/\/$/, '') + '/';
 
     await jwtVerify(token, JWKS, {
-      issuer: `https://${authDomain}/`,
+      issuer: expectedIssuer,
       audience,
     });
 
@@ -518,7 +608,7 @@ export class TokenManager {
     const cfg = getStaticConfig();
 
     // Fast path: local JWT verification
-    const jwtValid = await verifyJWTLocal(accessToken, cfg.authDomain, cfg.apiAudience);
+    const jwtValid = await verifyJWTLocal(accessToken, cfg.authIssuer, cfg.apiAudience);
 
     if (jwtValid === JWTVerificationResult.VALID) {
       _logger.debug('Token validated locally');
@@ -546,13 +636,16 @@ export class TokenManager {
   }
 
   /**
-   * Validate token remotely using Auth0's userinfo endpoint.
+   * Validate token remotely using userinfo endpoint (discovered via OIDC).
    * @private
    */
   private async _isTokenValidRemote(token: string): Promise<boolean> {
     try {
       const cfg = getStaticConfig();
-      const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
+      const oidcConfig = await getOidcConfig(cfg.authIssuer);
+      const userinfoEndpoint = oidcConfig.userinfo_endpoint;
+
+      const fetchPromise = fetch(userinfoEndpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -588,24 +681,28 @@ export class TokenManager {
       );
     }
 
-    const payload: Record<string, string> = {
+    // Get token endpoint from OIDC discovery
+    const oidcConfig = await getOidcConfig(cfg.authIssuer);
+    const tokenEndpoint = oidcConfig.token_endpoint;
+
+    const payload = new URLSearchParams({
       grant_type: 'refresh_token',
       client_id: cfg.clientId,
       refresh_token: refreshToken,
-    };
+    });
 
     // Only add client_secret if we have one and we're not in browser
     if (cfg.clientSecret && !isBrowser) {
-      payload['client_secret'] = cfg.clientSecret;
+      payload.set('client_secret', cfg.clientSecret);
     }
 
     try {
-      const fetchPromise = fetch(`https://${cfg.authDomain}/oauth/token`, {
+      const fetchPromise = fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify(payload),
+        body: payload.toString(),
         ...(typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
           ? { signal: AbortSignal.timeout(15000) }
           : {}),
@@ -726,8 +823,12 @@ export async function isTokenActive(_apiBaseUrl?: string): Promise<boolean> {
 
     const cfg = getStaticConfig();
 
-    // Test the access token against Auth0
-    const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
+    // Get userinfo endpoint from OIDC discovery
+    const oidcConfig = await getOidcConfig(cfg.authIssuer);
+    const userinfoEndpoint = oidcConfig.userinfo_endpoint;
+
+    // Test the access token via userinfo endpoint
+    const fetchPromise = fetch(userinfoEndpoint, {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
       },
@@ -774,7 +875,7 @@ export async function validateToken(
     const cfg = getStaticConfig();
 
     // Fast path: local JWT verification
-    const jwtValid = await verifyJWTLocal(token, cfg.authDomain, cfg.apiAudience);
+    const jwtValid = await verifyJWTLocal(token, cfg.authIssuer, cfg.apiAudience);
 
     if (jwtValid === JWTVerificationResult.VALID) {
       return { valid: true };
@@ -783,7 +884,10 @@ export async function validateToken(
     if (jwtValid === JWTVerificationResult.INVALID) {
       // Couldn't verify locally, try remote validation
       try {
-        const fetchPromise = fetch(`https://${cfg.authDomain}/userinfo`, {
+        const oidcConfig = await getOidcConfig(cfg.authIssuer);
+        const userinfoEndpoint = oidcConfig.userinfo_endpoint;
+
+        const fetchPromise = fetch(userinfoEndpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
