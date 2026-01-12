@@ -170,7 +170,8 @@ export class BarndoorConfig {
    */
   constructor(options: BarndoorConfigOptions = {}) {
     // Determine environment first (needed for baked-in config lookup)
-    const rawEnv = options.environment ?? (getEnvVar('MODE') || getEnvVar('BARNDOOR_ENV') || 'production');
+    const rawEnv =
+      options.environment ?? (getEnvVar('MODE') || getEnvVar('BARNDOOR_ENV') || 'production');
     this.environment = normalizeEnvironmentMode(rawEnv);
 
     // Get baked-in auth config for this environment
@@ -191,8 +192,11 @@ export class BarndoorConfig {
       this.authIssuer = authCfg.issuer;
     }
 
-    this.clientId = options.clientId ?? (getEnvVar('AGENT_CLIENT_ID') || getEnvVar('AUTH_CLIENT_ID') || '');
-    this.clientSecret = options.clientSecret ?? (getEnvVar('AGENT_CLIENT_SECRET') || getEnvVar('AUTH_CLIENT_SECRET') || '');
+    this.clientId =
+      options.clientId ?? (getEnvVar('AGENT_CLIENT_ID') || getEnvVar('AUTH_CLIENT_ID') || '');
+    this.clientSecret =
+      options.clientSecret ??
+      (getEnvVar('AGENT_CLIENT_SECRET') || getEnvVar('AUTH_CLIENT_SECRET') || '');
     this.apiAudience = options.apiAudience ?? (getEnvVar('API_AUDIENCE') || authCfg.audience);
 
     // Runtime settings
@@ -200,7 +204,9 @@ export class BarndoorConfig {
     this.skipLoginLocal = options.skipLoginLocal ?? false;
 
     // Set base_url from config, with optional override
-    this.baseUrl = options.baseUrl ?? (getEnvVar('BARNDOOR_API') || getEnvVar('BARNDOOR_URL') || authCfg.baseUrl);
+    this.baseUrl =
+      options.baseUrl ??
+      (getEnvVar('BARNDOOR_API') || getEnvVar('BARNDOOR_URL') || authCfg.baseUrl);
   }
 
   /**

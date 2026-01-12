@@ -473,7 +473,7 @@ export async function verifyJWTLocal(
     const JWKS = await getJWKS(issuer);
 
     // Normalize issuer for comparison (with trailing slash)
-    const expectedIssuer = issuer.replace(/\/$/, '') + '/';
+    const expectedIssuer = `${issuer.replace(/\/$/, '')}/`;
 
     await jwtVerify(token, JWKS, {
       issuer: expectedIssuer,
