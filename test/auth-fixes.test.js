@@ -221,11 +221,12 @@ describe('Environment-specific API URLs', () => {
     delete process.env.BARNDOOR_API;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
-    process.env.MODE = 'development';
+    process.env.MODE = 'dev';
     const config = getStaticConfig();
 
-    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
-    expect(config.apiAudience).toBe('https://barndoor.api/');
+    // Now uses {org_slug} placeholder and platform subdomain for dev
+    expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoordev.com');
+    expect(config.apiAudience).toBe('https://barndoor.ai/');
   });
 
   test('production environment uses correct subdomain pattern', () => {
@@ -236,7 +237,8 @@ describe('Environment-specific API URLs', () => {
     process.env.MODE = 'production';
     const config = getStaticConfig();
 
-    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
+    // Now uses {org_slug} placeholder
+    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
     expect(config.apiAudience).toBe('https://barndoor.ai/');
   });
 
@@ -258,9 +260,9 @@ describe('Environment-specific API URLs', () => {
     delete process.env.BARNDOOR_API;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
-    process.env.MODE = 'development';
+    process.env.MODE = 'dev';
     const devConfig = getDynamicConfig(token);
-    expect(devConfig.baseUrl).toBe('https://barndoor-ai.mcp.barndoordev.com');
+    expect(devConfig.baseUrl).toBe('https://barndoor-ai.platform.barndoordev.com');
 
     // Clear environment variables again for production test
     delete process.env.BARNDOOR_API;

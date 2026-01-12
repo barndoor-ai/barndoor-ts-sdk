@@ -4,11 +4,14 @@
  * This module provides PKCE functionality that mirrors the Python SDK's
  * auth.py implementation, supporting secure OAuth flows in both browser
  * and Node.js environments.
+ *
+ * Uses OIDC discovery to automatically determine endpoints for any provider.
  */
 
 import { OAuthError } from '../exceptions';
 import { isBrowser, isNode } from '../config';
 import { createScopedLogger } from '../logging';
+import { getOidcConfig } from './store';
 import crypto from 'crypto';
 import http from 'http';
 import url from 'url';
@@ -47,6 +50,7 @@ export class PKCEManager {
     redirectUri,
     audience,
     scope = 'openid profile email',
+    issuer,
   }: AuthorizationUrlParams): Promise<string> {
     // Generate PKCE parameters
     this._codeVerifier = generateRandomString(32);
@@ -65,8 +69,18 @@ export class PKCEManager {
       code_challenge_method: 'S256',
     });
 
-    const authUrl = `https://${domain}/authorize?${params.toString()}`;
-    return authUrl;
+    // Use OIDC discovery if issuer provided, otherwise fall back to domain
+    let authEndpoint: string;
+    if (issuer) {
+      const oidcConfig = await getOidcConfig(issuer);
+      authEndpoint = oidcConfig.authorization_endpoint;
+    } else if (domain) {
+      authEndpoint = `https://${domain}/authorize`;
+    } else {
+      throw new OAuthError('Either issuer or domain must be provided');
+    }
+
+    return `${authEndpoint}?${params.toString()}`;
   }
 
   /**
@@ -80,22 +94,23 @@ export class PKCEManager {
     code,
     redirectUri,
     clientSecret,
+    issuer,
   }: TokenExchangeParams): Promise<unknown> {
-    const payload: Record<string, string> = {
+    const payload = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: clientId,
       code,
       redirect_uri: redirectUri,
-    };
+    });
 
     // Always add client_secret if provided (like Python SDK)
     if (clientSecret) {
-      payload['client_secret'] = clientSecret;
+      payload.set('client_secret', clientSecret);
     }
 
     // Add PKCE verifier if available
     if (this._codeVerifier) {
-      payload['code_verifier'] = this._codeVerifier;
+      payload.set('code_verifier', this._codeVerifier);
     }
 
     // Validate we have either client_secret or PKCE verifier
@@ -103,13 +118,24 @@ export class PKCEManager {
       throw new OAuthError('Either client_secret or PKCE verifier must be provided');
     }
 
+    // Use OIDC discovery if issuer provided, otherwise fall back to domain
+    let tokenEndpoint: string;
+    if (issuer) {
+      const oidcConfig = await getOidcConfig(issuer);
+      tokenEndpoint = oidcConfig.token_endpoint;
+    } else if (domain) {
+      tokenEndpoint = `https://${domain}/oauth/token`;
+    } else {
+      throw new OAuthError('Either issuer or domain must be provided');
+    }
+
     try {
-      const response = await fetch(`https://${domain}/oauth/token`, {
+      const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify(payload),
+        body: payload.toString(),
       });
 
       if (!response.ok) {
@@ -240,8 +266,8 @@ async function sha256(str: string): Promise<Uint8Array> {
  * Authorization URL parameters.
  */
 export interface AuthorizationUrlParams {
-  /** Auth0 domain */
-  domain: string;
+  /** @deprecated Use issuer instead. Auth domain for backwards compatibility. */
+  domain?: string;
   /** OAuth client ID */
   clientId: string;
   /** Redirect URI */
@@ -250,14 +276,16 @@ export interface AuthorizationUrlParams {
   audience: string;
   /** OAuth scopes */
   scope?: string;
+  /** OIDC issuer URL. If provided, uses OIDC discovery to find authorization endpoint. */
+  issuer?: string;
 }
 
 /**
  * Token exchange parameters.
  */
 export interface TokenExchangeParams {
-  /** Auth0 domain */
-  domain: string;
+  /** @deprecated Use issuer instead. Auth domain for backwards compatibility. */
+  domain?: string;
   /** OAuth client ID */
   clientId: string;
   /** Authorization code */
@@ -266,6 +294,8 @@ export interface TokenExchangeParams {
   redirectUri: string;
   /** Client secret (for backend flows) */
   clientSecret?: string;
+  /** OIDC issuer URL. If provided, uses OIDC discovery to find token endpoint. */
+  issuer?: string;
 }
 
 /**
@@ -281,9 +311,10 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   const logger = createScopedLogger('pkce');
 
   // Allow override of redirect host for environments with strict callback allowlists
+  // Default to 127.0.0.1 instead of localhost for better Keycloak compatibility
   const redirectHost =
     (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
-    'localhost';
+    '127.0.0.1';
   const redirectUri = `http://${redirectHost}:${port}/cb`;
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {
