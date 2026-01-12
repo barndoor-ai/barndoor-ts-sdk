@@ -311,9 +311,10 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   const logger = createScopedLogger('pkce');
 
   // Allow override of redirect host for environments with strict callback allowlists
+  // Default to 127.0.0.1 instead of localhost for better Keycloak compatibility
   const redirectHost =
     (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
-    'localhost';
+    '127.0.0.1';
   const redirectUri = `http://${redirectHost}:${port}/cb`;
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {

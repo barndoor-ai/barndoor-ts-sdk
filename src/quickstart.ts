@@ -137,7 +137,7 @@ export async function loginInteractive(
   let waiter: Promise<[string, string]> | null = null;
 
   if (manual) {
-    const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || 'localhost';
+    const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || '127.0.0.1';
     redirectUri = `http://${host}:${port}/cb`;
   } else {
     const tuple = startLocalCallbackServer(port);
