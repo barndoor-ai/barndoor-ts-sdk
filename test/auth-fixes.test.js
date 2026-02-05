@@ -27,7 +27,7 @@ global.fetch = (...args) => {
 beforeEach(() => {
   mockFetchBehavior = 'success';
   mockFetch.mockClear();
-  
+
   mockFetch.fn = async (url, options) => {
     // Simulate different behaviors
     if (mockFetchBehavior === 'hang') {
@@ -59,23 +59,28 @@ beforeEach(() => {
 
 describe('validateCachedToken timeout fix', () => {
   // Create a valid JWT token for testing
-  const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-    Buffer.from(JSON.stringify({
-      sub: '1234567890',
-      name: 'Test User',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    })).toString('base64').replace(/=/g, '') +
+  const validToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+    Buffer.from(
+      JSON.stringify({
+        sub: '1234567890',
+        name: 'Test User',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      })
+    )
+      .toString('base64')
+      .replace(/=/g, '') +
     '.signature';
 
   test('validateCachedToken completes within timeout', async () => {
     mockFetchBehavior = 'success';
     const sdk = new BarndoorSDK('https://api.test.com', { token: validToken });
-    
+
     const startTime = Date.now();
     const result = await sdk.validateCachedToken();
     const elapsed = Date.now() - startTime;
-    
+
     expect(result).toBe(true);
     expect(elapsed).toBeLessThan(1000); // Should be fast
   });
@@ -83,11 +88,11 @@ describe('validateCachedToken timeout fix', () => {
   test('validateCachedToken returns false on timeout', async () => {
     mockFetchBehavior = 'timeout';
     const sdk = new BarndoorSDK('https://api.test.com', { token: validToken });
-    
+
     const startTime = Date.now();
     const result = await sdk.validateCachedToken();
     const elapsed = Date.now() - startTime;
-    
+
     expect(result).toBe(false);
     expect(elapsed).toBeLessThan(11000); // Should timeout at ~10 seconds
   }, 15000);
@@ -95,7 +100,7 @@ describe('validateCachedToken timeout fix', () => {
   test('validateCachedToken returns false on 401', async () => {
     mockFetchBehavior = 'unauthorized';
     const sdk = new BarndoorSDK('https://api.test.com', { token: validToken });
-    
+
     const result = await sdk.validateCachedToken();
     expect(result).toBe(false);
   });
@@ -103,12 +108,17 @@ describe('validateCachedToken timeout fix', () => {
 
 describe('Organization ID extraction', () => {
   test('does not use org_id fields for subdomain extraction', () => {
-    const tokenWithOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({
-        org_id: 'org_gFEnMMMIhsK5yiW9',
-        iat: 1600000000,
-        exp: 1600003600,
-      })).toString('base64').replace(/=/g, '') +
+    const tokenWithOrgId =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+      Buffer.from(
+        JSON.stringify({
+          org_id: 'org_gFEnMMMIhsK5yiW9',
+          iat: 1600000000,
+          exp: 1600003600,
+        })
+      )
+        .toString('base64')
+        .replace(/=/g, '') +
       '.signature';
 
     const result = checkTokenOrganization(tokenWithOrgId);
@@ -117,13 +127,18 @@ describe('Organization ID extraction', () => {
   });
 
   test('prioritizes organization_name over org_id', () => {
-    const tokenWithBothFields = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({
-        organization_name: 'barndoor-ai',
-        org_id: 'org_gFEnMMMIhsK5yiW9',
-        iat: 1600000000,
-        exp: 1600003600,
-      })).toString('base64').replace(/=/g, '') +
+    const tokenWithBothFields =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+      Buffer.from(
+        JSON.stringify({
+          organization_name: 'barndoor-ai',
+          org_id: 'org_gFEnMMMIhsK5yiW9',
+          iat: 1600000000,
+          exp: 1600003600,
+        })
+      )
+        .toString('base64')
+        .replace(/=/g, '') +
       '.signature';
 
     const result = checkTokenOrganization(tokenWithBothFields);
@@ -132,19 +147,23 @@ describe('Organization ID extraction', () => {
   });
 
   test('does not use organization_id fields for subdomain extraction', () => {
-    const tokenWithOrgId = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({
-        organization_id: 'fcdc562c-546c-4cca-8fee-e557a642dc9d',
-        iat: 1600000000,
-        exp: 1600003600,
-      })).toString('base64').replace(/=/g, '') +
+    const tokenWithOrgId =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+      Buffer.from(
+        JSON.stringify({
+          organization_id: 'fcdc562c-546c-4cca-8fee-e557a642dc9d',
+          iat: 1600000000,
+          exp: 1600003600,
+        })
+      )
+        .toString('base64')
+        .replace(/=/g, '') +
       '.signature';
 
     const result = checkTokenOrganization(tokenWithOrgId);
     expect(result.hasOrganization).toBe(false);
     expect(result.error).toContain('No organization information found in token');
   });
-
 
   test('handles various organization field locations', () => {
     const testCases = [
@@ -166,12 +185,17 @@ describe('Organization ID extraction', () => {
     ];
 
     testCases.forEach(({ name, payload, expected }) => {
-      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-        Buffer.from(JSON.stringify({
-          ...payload,
-          iat: 1600000000,
-          exp: 1600003600,
-        })).toString('base64').replace(/=/g, '') +
+      const token =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+        Buffer.from(
+          JSON.stringify({
+            ...payload,
+            iat: 1600000000,
+            exp: 1600003600,
+          })
+        )
+          .toString('base64')
+          .replace(/=/g, '') +
         '.signature';
 
       const result = checkTokenOrganization(token);
@@ -195,59 +219,57 @@ describe('Environment-specific API URLs', () => {
   test('development environment uses correct subdomain pattern', () => {
     // Clear any environment variables that might interfere
     delete process.env.BARNDOOR_API;
-    delete process.env.BARNDOOR_MCP;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
-    process.env.MODE = 'development';
+    process.env.MODE = 'dev';
     const config = getStaticConfig();
-    
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
-    expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
-    expect(config.apiAudience).toBe('https://barndoor.api/');
+
+    // Now uses {org_slug} placeholder and platform subdomain for dev
+    expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoordev.com');
+    expect(config.apiAudience).toBe('https://barndoor.ai/');
   });
 
   test('production environment uses correct subdomain pattern', () => {
     // Clear any environment variables that might interfere
     delete process.env.BARNDOOR_API;
-    delete process.env.BARNDOOR_MCP;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
     process.env.MODE = 'production';
     const config = getStaticConfig();
-    
-    expect(config.apiBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
-    expect(config.mcpBaseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
+
+    // Now uses {org_slug} placeholder
+    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
     expect(config.apiAudience).toBe('https://barndoor.ai/');
   });
 
   test('dynamic config substitutes organization correctly', () => {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({
-        organization_name: 'barndoor-ai',
-        iat: 1600000000,
-        exp: 1600003600,
-      })).toString('base64').replace(/=/g, '') +
+    const token =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+      Buffer.from(
+        JSON.stringify({
+          organization_name: 'barndoor-ai',
+          iat: 1600000000,
+          exp: 1600003600,
+        })
+      )
+        .toString('base64')
+        .replace(/=/g, '') +
       '.signature';
 
     // Clear environment variables first
     delete process.env.BARNDOOR_API;
-    delete process.env.BARNDOOR_MCP;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
-    process.env.MODE = 'development';
+    process.env.MODE = 'dev';
     const devConfig = getDynamicConfig(token);
-    expect(devConfig.apiBaseUrl).toBe('https://barndoor-ai.mcp.barndoordev.com');
-    expect(devConfig.mcpBaseUrl).toBe('https://barndoor-ai.mcp.barndoordev.com');
+    expect(devConfig.baseUrl).toBe('https://barndoor-ai.platform.barndoordev.com');
 
     // Clear environment variables again for production test
     delete process.env.BARNDOOR_API;
-    delete process.env.BARNDOOR_MCP;
     delete process.env.BARNDOOR_URL;
     delete process.env.API_AUDIENCE;
     process.env.MODE = 'production';
     const prodConfig = getDynamicConfig(token);
-    expect(prodConfig.apiBaseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
-    expect(prodConfig.mcpBaseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
+    expect(prodConfig.baseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
   });
-
 });

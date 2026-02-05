@@ -30,12 +30,15 @@ const logger = createScopedLogger('quickstart');
  * user to complete login, exchanges the authorization code for a JWT,
  * and returns a configured BarndoorSDK instance ready for use.
  *
+ * Auth configuration is baked in per environment (set via BARNDOOR_ENV).
+ * You typically only need to set AGENT_CLIENT_ID and AGENT_CLIENT_SECRET.
+ *
  * @param {Object} [options={}] - Login options
- * @param {string} [options.authDomain] - Auth0 domain
+ * @param {string} [options.authIssuer] - OIDC issuer URL (baked in per environment by default)
  * @param {string} [options.clientId] - OAuth client ID
  * @param {string} [options.clientSecret] - OAuth client secret
  * @param {string} [options.audience] - API audience identifier
- * @param {string} [options.apiBaseUrl] - Base URL of the Barndoor API
+ * @param {string} [options.baseUrl] - Base URL of the Barndoor API
  * @param {number} [options.port=52765] - Local port for OAuth callback
  * @returns {Promise<BarndoorSDK>} Initialized SDK instance
  */
@@ -43,7 +46,9 @@ const logger = createScopedLogger('quickstart');
  * Login options interface.
  */
 export interface LoginInteractiveOptions {
-  /** Auth0 domain */
+  /** OIDC issuer URL (e.g., https://auth.barndoor.ai) */
+  authIssuer?: string;
+  /** @deprecated Use authIssuer instead. Auth domain for backwards compatibility. */
   authDomain?: string;
   /** OAuth client ID */
   clientId?: string;
@@ -52,7 +57,7 @@ export interface LoginInteractiveOptions {
   /** API audience identifier */
   audience?: string;
   /** Base URL of the Barndoor API */
-  apiBaseUrl?: string;
+  baseUrl?: string;
   /** Local port for OAuth callback */
   port?: number;
 }
@@ -68,12 +73,24 @@ export async function loginInteractive(
 
   const config = getStaticConfig();
 
+  // Support both authIssuer and legacy authDomain
+  let authIssuer: string;
+  if (options.authIssuer) {
+    authIssuer = options.authIssuer;
+  } else if (options.authDomain) {
+    // Convert legacy domain to issuer
+    authIssuer = options.authDomain.startsWith('http')
+      ? options.authDomain
+      : `https://${options.authDomain}`;
+  } else {
+    authIssuer = config.authIssuer;
+  }
+
   const {
-    authDomain = config.authDomain,
     clientId = config.clientId,
     clientSecret = config.clientSecret,
     audience = config.apiAudience,
-    apiBaseUrl: _apiBaseUrl = config.apiBaseUrl,
+    baseUrl: userProvidedBaseUrl,
     port = 52765,
   } = options;
 
@@ -96,7 +113,7 @@ export async function loginInteractive(
         sdkConfig = getStaticConfig();
       }
 
-      const sdk = new BarndoorSDK(sdkConfig.apiBaseUrl, { token: cachedToken });
+      const sdk = new BarndoorSDK(sdkConfig.baseUrl, { token: cachedToken });
       await sdk.validateCachedToken();
       logger.info('Using cached valid token');
       return sdk;
@@ -120,7 +137,7 @@ export async function loginInteractive(
   let waiter: Promise<[string, string]> | null = null;
 
   if (manual) {
-    const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || 'localhost';
+    const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || '127.0.0.1';
     redirectUri = `http://${host}:${port}/cb`;
   } else {
     const tuple = startLocalCallbackServer(port);
@@ -131,10 +148,10 @@ export async function loginInteractive(
   // Create PKCE manager for this login session
   const pkceManager = new PKCEManager();
   const authUrl = await pkceManager.buildAuthorizationUrl({
-    domain: authDomain,
     clientId,
     redirectUri,
     audience,
+    issuer: authIssuer,
   });
 
   // Always print the URL so users can click it manually if auto-open fails
@@ -215,26 +232,31 @@ export async function loginInteractive(
 
   // Exchange code for token
   const tokenData = (await pkceManager.exchangeCodeForToken({
-    domain: authDomain,
     clientId,
     clientSecret,
     code,
     redirectUri,
+    issuer: authIssuer,
   })) as { access_token: string; [key: string]: unknown };
 
   // Save token and create SDK
   await saveUserToken(tokenData);
 
-  // Try to use dynamic config with org ID substitution
-  let sdkConfig: ReturnType<typeof getDynamicConfig>;
-  if (hasOrganizationInfo(tokenData.access_token)) {
-    sdkConfig = getDynamicConfig(tokenData.access_token);
+  // Build dynamic configuration - extracts org from JWT and resolves URL
+  let finalBaseUrl: string;
+  if (userProvidedBaseUrl) {
+    // Use user-provided base_url if given
+    finalBaseUrl = userProvidedBaseUrl;
+  } else if (hasOrganizationInfo(tokenData.access_token)) {
+    // Use the resolved URL from JWT
+    const dynamicConfig = getDynamicConfig(tokenData.access_token);
+    finalBaseUrl = dynamicConfig.baseUrl;
   } else {
     logger.warn('New token has no organization information, using static config');
-    sdkConfig = getStaticConfig();
+    finalBaseUrl = getStaticConfig().baseUrl;
   }
 
-  return new BarndoorSDK(sdkConfig.apiBaseUrl, { token: tokenData.access_token });
+  return new BarndoorSDK(finalBaseUrl, { token: tokenData.access_token });
 }
 
 /**
@@ -332,21 +354,21 @@ export async function makeMcpConnectionParams(
     // Use dynamic configuration for local/dev environments
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
     }
   } else {
     // Production - use external MCP URL (same as dynamic config)
     if (hasOrganizationInfo(sdk.token)) {
       const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
     } else {
       logger.warn('Token has no organization information, using static config for MCP connection');
       const staticConfig = getStaticConfig();
-      url = `${staticConfig.mcpBaseUrl}/mcp/${mcpIdentifier}`;
+      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
     }
   }
 

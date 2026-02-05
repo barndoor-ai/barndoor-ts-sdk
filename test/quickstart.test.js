@@ -27,7 +27,7 @@ const mockFetch = {
 
 global.fetch = (...args) => {
   mockFetch.calls.push(args);
-  
+
   // If there are queued responses, use them in order
   if (mockFetch.responseQueue.length > 0) {
     const response = mockFetch.responseQueue.shift();
@@ -37,7 +37,7 @@ global.fetch = (...args) => {
       return Promise.reject(response.value);
     }
   }
-  
+
   // Fallback to the default fn
   return mockFetch.fn(...args);
 };
@@ -86,7 +86,7 @@ describe('makeMcpConnectionParams', () => {
 
     // Should have called getServer (not listServers)
     expect(mockFetch.calls.length).toBe(1);
-    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/by-slug/${serverSlug}`);
+    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/by-slug/${serverSlug}`);
 
     // Validate returned params
     expect(params).toHaveProperty('url');
@@ -110,7 +110,7 @@ describe('makeMcpConnectionParams', () => {
 
     // Should have called getServer
     expect(mockFetch.calls.length).toBe(1);
-    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/servers/by-slug/${serverSlug}`);
+    expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/by-slug/${serverSlug}`);
   });
 
   test('works with server on any pagination page (regression test)', async () => {
@@ -138,7 +138,7 @@ describe('makeMcpConnectionParams', () => {
 
     expect(params).toHaveProperty('url');
     expect(url).toBeTruthy();
-    
+
     // Should have made only 1 request (getServer), not multiple listServers requests
     expect(mockFetch.calls.length).toBe(1);
   });
@@ -148,4 +148,3 @@ describe('makeMcpConnectionParams', () => {
     // The main functionality (using getServer instead of listServers) is tested above
   });
 });
-

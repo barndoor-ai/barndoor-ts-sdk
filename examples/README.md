@@ -53,10 +53,8 @@ Both examples use the same authentication pattern:
 
 1. **Environment Variables** (create a `.env` file):
    ```
-   AUTH_DOMAIN=your-auth-domain
    AGENT_CLIENT_ID=your-client-id
    AGENT_CLIENT_SECRET=your-client-secret
-   MODE=development  # or production
    ```
 
 2. **Server Configuration**: Change the `SERVER_SLUG` constant in each file to target different MCP servers:

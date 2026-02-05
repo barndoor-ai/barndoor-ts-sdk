@@ -105,26 +105,18 @@ await sdk.disconnectServer('123e4567-e89b-12d3-a456-426614174000');
 
 ## Environment Configuration
 
-The SDK automatically detects your environment and configures appropriate endpoints:
+The SDK automatically configures endpoints. Just set your credentials:
 
 ```bash
-# Development
-export MODE=development
 export AGENT_CLIENT_ID=your_client_id
 export AGENT_CLIENT_SECRET=your_client_secret
-
-# Production  
-export MODE=production
-export AGENT_CLIENT_ID=your_client_id
-export AGENT_CLIENT_SECRET=your_client_secret
-
-# Local development
-export MODE=localdev
-export BARNDOOR_API=http://localhost:8000
-export BARNDOOR_URL=http://localhost:8000
 ```
 
-If you run without a token at construction time the SDK will still read `AGENT_CLIENT_ID/SECRET` when `loginInteractive()` is invoked.
+**OAuth Redirect Host:** The SDK defaults to `127.0.0.1` for OAuth callbacks. If you need to use a different host (e.g., `localhost`), set:
+
+```bash
+export BARNDOOR_REDIRECT_HOST=localhost
+```
 
 ## API Reference
 
@@ -208,8 +200,11 @@ This will remove the connection record and clean up any stored OAuth credentials
 Perform interactive OAuth login and return initialized SDK.
 
 ```typescript
+// Uses env vars by default (AGENT_CLIENT_ID, AGENT_CLIENT_SECRET)
+const sdk = await loginInteractive();
+
+// Or pass credentials explicitly
 const sdk = await loginInteractive({
-  authDomain: 'auth.barndoor.ai',
   clientId: 'your-client-id',
   clientSecret: 'your-client-secret',
   port: 52765
