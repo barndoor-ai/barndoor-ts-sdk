@@ -78,9 +78,12 @@ describe('SDK Integration Tests', () => {
   });
 
   test('Configuration validation works', () => {
-    const config = new BarndoorConfig({ authDomain: '' });
+    // authIssuer is baked in per environment, so we need to clear it after construction
+    const config = new BarndoorConfig();
+    // Manually clear the authIssuer to test validation
+    Object.defineProperty(config, 'authIssuer', { value: '', writable: true });
     expect(() => config.validate()).toThrow(ConfigurationError);
-    expect(() => config.validate()).toThrow('authDomain is required');
+    expect(() => config.validate()).toThrow('authIssuer is required');
   });
 
   test('SDK can be closed properly', async () => {

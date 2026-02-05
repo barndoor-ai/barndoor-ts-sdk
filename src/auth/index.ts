@@ -19,7 +19,12 @@ export {
   isTokenActiveWithRefresh,
   validateToken,
   setTokenLogger,
+  getOidcConfig,
+  clearOidcConfigCache,
 } from './store';
+
+// Re-export OIDC types
+export type { OidcConfig } from './store';
 
 // Re-export types
 export type { AuthorizationUrlParams, TokenExchangeParams, PKCEState } from './pkce';

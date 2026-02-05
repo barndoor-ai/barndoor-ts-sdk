@@ -9,6 +9,7 @@ import { HTTPClient, TimeoutConfig } from './http/client';
 import { ServerSummary, ServerDetail } from './models';
 import { HTTPError, ConfigurationError, TokenError, ServerNotFoundError } from './exceptions';
 import { getStaticConfig, isNode } from './config';
+import { getOidcConfig } from './auth';
 import { createScopedLogger } from './logging';
 import { spawn } from 'child_process';
 import os from 'os';
@@ -229,15 +230,17 @@ export class BarndoorSDK {
     }
 
     try {
-      // Use Auth0's userinfo endpoint for validation
+      // Use userinfo endpoint for validation (discovered via OIDC)
       const config = getStaticConfig();
+      const oidcConfig = await getOidcConfig(config.authIssuer);
+      const userinfoEndpoint = oidcConfig.userinfo_endpoint;
 
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       try {
-        const response = await fetch(`https://${config.authDomain}/userinfo`, {
+        const response = await fetch(userinfoEndpoint, {
           headers: {
             Authorization: `Bearer ${this.token}`,
           },

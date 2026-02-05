@@ -22,10 +22,13 @@ afterAll(() => {
 });
 
 describe('BarndoorConfig', () => {
-  test('creates config with default values', () => {
+  test('creates config with default values (baked-in per environment)', () => {
     const config = new BarndoorConfig();
 
-    expect(config.authDomain).toBe('auth.barndoor.ai');
+    // Default environment is production with trial (Keycloak) auth
+    expect(config.authIssuer).toBe('https://auth.trial.barndoor.ai/realms/barndoor-local');
+    // authDomain is derived from authIssuer for backwards compatibility
+    expect(config.authDomain).toBe('auth.trial.barndoor.ai/realms/barndoor-local');
     expect(config.clientId).toBe('');
     expect(config.clientSecret).toBe('');
     expect(config.apiAudience).toBe('https://barndoor.ai/');
@@ -35,47 +38,65 @@ describe('BarndoorConfig', () => {
   });
 
   test('uses environment variables when available', () => {
-    process.env.AUTH_DOMAIN = 'custom.auth0.com';
+    process.env.AUTH_URL = 'https://custom.auth.com';
     process.env.AGENT_CLIENT_ID = 'test-client-id';
     process.env.AGENT_CLIENT_SECRET = 'test-client-secret';
     process.env.API_AUDIENCE = 'https://custom.api/';
-    process.env.BARNDOOR_ENV = 'development';
+    process.env.BARNDOOR_ENV = 'dev';
 
     const config = new BarndoorConfig();
 
-    expect(config.authDomain).toBe('custom.auth0.com');
+    expect(config.authIssuer).toBe('https://custom.auth.com');
     expect(config.clientId).toBe('test-client-id');
     expect(config.clientSecret).toBe('test-client-secret');
     expect(config.apiAudience).toBe('https://custom.api/');
-    expect(config.environment).toBe('development');
+    expect(config.environment).toBe('dev');
   });
 
   test('constructor options override environment variables', () => {
-    process.env.AUTH_DOMAIN = 'env.auth0.com';
+    process.env.AUTH_URL = 'https://env.auth.com';
 
     const config = new BarndoorConfig({
-      authDomain: 'override.auth0.com',
+      authIssuer: 'https://override.auth.com',
     });
 
-    expect(config.authDomain).toBe('override.auth0.com');
+    expect(config.authIssuer).toBe('https://override.auth.com');
+  });
+
+  test('legacy authDomain option is converted to authIssuer', () => {
+    const config = new BarndoorConfig({
+      authDomain: 'legacy.auth0.com',
+    });
+
+    expect(config.authIssuer).toBe('https://legacy.auth0.com');
   });
 
   test('sets environment-specific defaults for localdev', () => {
     const config = new BarndoorConfig({ environment: 'localdev' });
 
-    expect(config.baseUrl).toBe('http://localhost:8080');
+    expect(config.baseUrl).toBe('http://localhost:8000');
+    expect(config.authIssuer).toBe('http://localhost:8080/realms/barndoor-local');
   });
 
-  test('sets environment-specific defaults for development', () => {
-    const config = new BarndoorConfig({ environment: 'development' });
+  test('sets environment-specific defaults for development/dev', () => {
+    const config = new BarndoorConfig({ environment: 'dev' });
 
-    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+    expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoordev.com');
+    expect(config.authIssuer).toBe('https://auth.trial.barndoordev.com/realms/barndoor-local');
   });
 
   test('sets environment-specific defaults for production', () => {
     const config = new BarndoorConfig({ environment: 'production' });
 
-    expect(config.baseUrl).toBe('https://{organization_id}.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
+    expect(config.authIssuer).toBe('https://auth.trial.barndoor.ai/realms/barndoor-local');
+  });
+
+  test('supports enterprise environments', () => {
+    const config = new BarndoorConfig({ environment: 'enterprise-production' });
+
+    expect(config.authIssuer).toBe('https://auth.barndoor.ai');
+    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
   });
 
   test('respects custom URLs even in specific environments', () => {
@@ -103,9 +124,12 @@ describe('BarndoorConfig', () => {
   });
 
   test('validation fails for missing required fields', () => {
-    const config = new BarndoorConfig({ authDomain: '' });
+    // authIssuer is baked in per environment, so we need to clear it after construction
+    const config = new BarndoorConfig();
+    // Manually clear the authIssuer to test validation
+    Object.defineProperty(config, 'authIssuer', { value: '', writable: true });
     expect(() => config.validate()).toThrow(ConfigurationError);
-    expect(() => config.validate()).toThrow('authDomain is required');
+    expect(() => config.validate()).toThrow('authIssuer is required');
   });
 });
 
@@ -119,7 +143,7 @@ describe('Static Configuration', () => {
     const config1 = getStaticConfig();
     const config2 = BarndoorConfig.getStaticConfig();
 
-    expect(config1.authDomain).toBe(config2.authDomain);
+    expect(config1.authIssuer).toBe(config2.authIssuer);
     expect(config1.apiAudience).toBe(config2.apiAudience);
   });
 });
@@ -159,15 +183,15 @@ describe('Dynamic Configuration', () => {
 
 describe('Environment Detection', () => {
   test('environment priority: MODE > BARNDOOR_ENV > default', () => {
-    process.env.MODE = 'test-mode';
-    process.env.BARNDOOR_ENV = 'test-barndoor-env';
+    process.env.MODE = 'dev';
+    process.env.BARNDOOR_ENV = 'uat';
 
     const config = new BarndoorConfig();
-    expect(config.environment).toBe('test-mode');
+    expect(config.environment).toBe('dev');
 
     delete process.env.MODE;
     const config2 = new BarndoorConfig();
-    expect(config2.environment).toBe('test-barndoor-env');
+    expect(config2.environment).toBe('uat');
 
     delete process.env.BARNDOOR_ENV;
     const config3 = new BarndoorConfig();
@@ -176,9 +200,20 @@ describe('Environment Detection', () => {
 
   test('case insensitive environment matching', () => {
     const localConfig = new BarndoorConfig({ environment: 'LOCALDEV' });
-    expect(localConfig.baseUrl).toBe('http://localhost:8080');
+    expect(localConfig.baseUrl).toBe('http://localhost:8000');
 
     const devConfig = new BarndoorConfig({ environment: 'DEV' });
-    expect(devConfig.baseUrl).toBe('https://{organization_id}.mcp.barndoordev.com');
+    expect(devConfig.baseUrl).toBe('https://{org_slug}.platform.barndoordev.com');
+  });
+
+  test('environment normalization works correctly', () => {
+    // Trial environments
+    expect(new BarndoorConfig({ environment: 'prod' }).environment).toBe('production');
+    expect(new BarndoorConfig({ environment: 'development' }).environment).toBe('dev');
+    expect(new BarndoorConfig({ environment: 'local' }).environment).toBe('localdev');
+
+    // Enterprise environments
+    expect(new BarndoorConfig({ environment: 'enterprise' }).environment).toBe('enterprise-production');
+    expect(new BarndoorConfig({ environment: 'enterprise-prod' }).environment).toBe('enterprise-production');
   });
 });
