@@ -134,7 +134,256 @@ components:
           type: object
           description: Additional error details
           additionalProperties: true
+    PaginationMeta:
+      properties:
+        page:
+          type: integer
+          title: Page
+          description: Current page number
+        limit:
+          type: integer
+          title: Limit
+          description: Items per page
+        total:
+          type: integer
+          title: Total
+          description: Total number of items
+        pages:
+          type: integer
+          title: Pages
+          description: Total number of pages
+        previous_page:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Previous Page
+          description: Previous page number (null if first page)
+        next_page:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Next Page
+          description: Next page number (null if last page)
+      type: object
+      required:
+      - page
+      - limit
+      - total
+      - pages
+      - previous_page
+      - next_page
+      title: PaginationMeta
+      description: Pagination metadata.
+    PaginationResponse_AgentResponse_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/AgentResponse'
+          type: array
+          title: Data
+          description: Array of items for current page
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+          description: Pagination metadata
+      type: object
+      required:
+      - data
+      - pagination
+      title: PaginationResponse[AgentResponse]
+    Agent:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        application_directory_id:
+          type: string
+          format: uuid
+          title: Agent Directory Id
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - organization_id
+      - application_directory_id
+      title: Agent
+    AgentPayload:
+      properties:
+        application_directory_id:
+          type: string
+          title: Agent Directory Id
+      type: object
+      required:
+      - application_directory_id
+      title: AgentPayload
+    AgentResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        application_directory_id:
+          type: string
+          format: uuid
+          title: Agent Directory Id
+        application_directory:
+          $ref: '#/components/schemas/AgentDirectoryBase'
+        agent_type:
+          $ref: '#/components/schemas/AgentType'
+          description: Determine agent type based on application directory properties.
+          readOnly: true
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - organization_id
+      - application_directory_id
+      - application_directory
+      - agent_type
+      title: AgentResponse
 
+    AgentType:
+      type: string
+      enum:
+      - internal
+      - external
+      title: AgentType
+      description: Agent type classification for applications.
+    AgentCounts:
+      properties:
+        all:
+          type: integer
+          title: All
+        internal:
+          type: integer
+          title: Internal
+        external:
+          type: integer
+          title: External
+      type: object
+      required:
+      - all
+      - internal
+      - external
+      title: AgentCounts
+    AgentDirectoryBase:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        external_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Id
+        public:
+          type: boolean
+          title: Public
+        dcr:
+          type: boolean
+          title: Dcr
+        post_login_success:
+          type: boolean
+          title: Post Login Success
+        callbacks:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Callbacks
+          description: OAuth callback URLs stored in alphanumeric ascending order
+      type: object
+      required:
+      - id
+      - created_at
+      - updated_at
+      - name
+      - description
+      - organization_id
+      - external_id
+      - public
+      - dcr
+      - post_login_success
+      - callbacks
+      title: AgentDirectoryBase
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
 paths:
   /api/servers:
     get:
@@ -869,3 +1118,345 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /api/policy:
+    put:
+      summary: Publish Cerbos Policy
+      operationId: publish_cerbos_policy_admin_policy_put
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      summary: Publish Cerbos Policy
+      operationId: publish_cerbos_policy_admin_policy_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    get:
+      summary: Get Cerbos Policy
+      operationId: get_cerbos_policy_admin_policy_get
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policies:
+    get:
+      summary: List Cerbos Policies
+      operationId: list_cerbos_policies_admin_policies_get
+      parameters:
+      - name: include_disabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Disabled
+      - name: name_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Name Regexp
+      - name: scope_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Scope Regexp
+      - name: version_regexp
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Version Regexp
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policies/inspect:
+    get:
+      summary: Inspect Cerbos Policy
+      operationId: inspect_cerbos_policy_admin_policies_inspect_get
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/enable:
+    put:
+      summary: Enable Cerbos Policy
+      operationId: enable_cerbos_policy_admin_policy_enable_put
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Enable Cerbos Policy
+      operationId: enable_cerbos_policy_admin_policy_enable_post
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/disable:
+    put:
+      summary: Disable Cerbos Policy
+      operationId: disable_cerbos_policy_admin_policy_disable_put
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Disable Cerbos Policy
+      operationId: disable_cerbos_policy_admin_policy_disable_post
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+
+  /api/agents:
+    post:
+      summary: Register Agent
+      operationId: register_application_applications_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentPayload'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      summary: List Agents
+      description: List agents with pagination.
+      operationId: list_applications_applications_get
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Search applications by name or description
+          title: Search
+        description: Search applications by name or description
+      - name: agent_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/AgentType'
+          - type: 'null'
+          description: Filter by agent type
+          title: Agent Type
+        description: Filter by agent type
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number (1-based)
+          default: 1
+          title: Page
+        description: Page number (1-based)
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Number of items per page (max 100)
+          default: 10
+          title: Limit
+        description: Number of items per page (max 100)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginationResponse_AgentResponse_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/agents/counts:
+    get:
+      summary: Get Agent Counts
+      description: Get counts of applications by agent type.
+      operationId: get_application_counts_applications_counts_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentCounts'
+  /api/agents/{agent_id}:
+    get:
+      summary: Get Agent
+      operationId: get_application_applications__agent_id__get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      summary: Unregister Agent
+      operationId: unregister_application_applications__agent_id__delete
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Agent Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'

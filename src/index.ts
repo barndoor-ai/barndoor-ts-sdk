@@ -71,10 +71,14 @@ export {
   isTokenActiveWithRefresh,
   validateToken,
   TokenManager,
+  getOidcConfig,
+  clearOidcConfigCache,
 } from './auth';
+export type { OidcConfig } from './auth';
 
 // Configuration
 export {
+  AUTH_CONFIG,
   BarndoorConfig,
   getStaticConfig,
   getDynamicConfig,

@@ -3,10 +3,58 @@
  *
  * This module provides unified configuration that mirrors the Python SDK's
  * configuration system, supporting environment-specific defaults and
- * dynamic organization ID substitution.
+ * dynamic organization slug substitution.
  */
 
 import { ConfigurationError } from './exceptions';
+
+/**
+ * Baked-in auth configuration per environment.
+ * Users should NOT need to configure these - just set BARNDOOR_ENV.
+ *
+ * We have 6 environments: 3 for trial (Keycloak), 3 for enterprise (Auth0).
+ * Will consolidate in the future.
+ */
+export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; baseUrl: string }> = {
+  // === Trial environments (Keycloak) - DEFAULT ===
+  production: {
+    issuer: 'https://auth.trial.barndoor.ai/realms/barndoor-local',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.mcp.barndoor.ai',
+  },
+  uat: {
+    issuer: 'https://auth.trial.barndooruat.com/realms/barndoor-local',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.platform.barndooruat.com',
+  },
+  dev: {
+    issuer: 'https://auth.trial.barndoordev.com/realms/barndoor-local',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.platform.barndoordev.com',
+  },
+  // === Enterprise environments (Auth0) ===
+  'enterprise-production': {
+    issuer: 'https://auth.barndoor.ai',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.mcp.barndoor.ai',
+  },
+  'enterprise-uat': {
+    issuer: 'https://auth.barndooruat.com',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.platform.barndooruat.com',
+  },
+  'enterprise-dev': {
+    issuer: 'https://auth.barndoordev.com',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'https://{org_slug}.platform.barndoordev.com',
+  },
+  // === Local development (Keycloak) ===
+  localdev: {
+    issuer: 'http://localhost:8080/realms/barndoor-local',
+    audience: 'https://barndoor.ai/',
+    baseUrl: 'http://localhost:8000',
+  },
+};
 
 /**
  * Environment detection utilities
@@ -35,7 +83,9 @@ declare global {
  * Configuration options for BarndoorConfig constructor.
  */
 export interface BarndoorConfigOptions {
-  /** Auth0 domain */
+  /** OIDC issuer URL (e.g., https://auth.barndoor.ai) */
+  authIssuer?: string;
+  /** @deprecated Use authIssuer instead. Auth domain for backwards compatibility. */
   authDomain?: string;
   /** OAuth client ID */
   clientId?: string;
@@ -67,14 +117,38 @@ function getEnvVar(name: string, defaultValue = ''): string {
 }
 
 /**
+ * Normalize environment mode string to canonical form.
+ */
+function normalizeEnvironmentMode(env: string): string {
+  const envModeMap: Record<string, string> = {
+    // Trial (default)
+    production: 'production',
+    prod: 'production',
+    uat: 'uat',
+    dev: 'dev',
+    development: 'dev',
+    // Enterprise (requires prefix)
+    'enterprise-production': 'enterprise-production',
+    'enterprise-prod': 'enterprise-production',
+    'enterprise-uat': 'enterprise-uat',
+    'enterprise-dev': 'enterprise-dev',
+    enterprise: 'enterprise-production', // Default enterprise to prod
+    // Local
+    localdev: 'localdev',
+    local: 'localdev',
+  };
+  return envModeMap[env.toLowerCase()] ?? 'production';
+}
+
+/**
  * Unified configuration for the Barndoor SDK.
  *
  * Mirrors the Python SDK's BarndoorConfig class with environment-specific
- * defaults and support for organization ID templating.
+ * defaults and support for organization slug templating.
  */
 export class BarndoorConfig {
-  /** Auth0 domain */
-  public authDomain: string;
+  /** OIDC issuer URL */
+  public authIssuer: string;
   /** OAuth client ID */
   public clientId: string;
   /** OAuth client secret */
@@ -95,61 +169,59 @@ export class BarndoorConfig {
    * @param options - Configuration options
    */
   constructor(options: BarndoorConfigOptions = {}) {
-    // Authentication settings
-    this.authDomain = options.authDomain ?? (getEnvVar('AUTH_DOMAIN') || 'auth.barndoor.ai');
-    this.clientId = options.clientId ?? (getEnvVar('AGENT_CLIENT_ID') || '');
-    this.clientSecret = options.clientSecret ?? (getEnvVar('AGENT_CLIENT_SECRET') || '');
-    this.apiAudience = options.apiAudience ?? (getEnvVar('API_AUDIENCE') || 'https://barndoor.ai/');
-
-    // Environment settings
-    this.environment =
+    // Determine environment first (needed for baked-in config lookup)
+    const rawEnv =
       options.environment ?? (getEnvVar('MODE') || getEnvVar('BARNDOOR_ENV') || 'production');
+    this.environment = normalizeEnvironmentMode(rawEnv);
+
+    // Get baked-in auth config for this environment
+    const authCfg = AUTH_CONFIG[this.environment] ?? AUTH_CONFIG['production']!;
+
+    // Authentication settings - auth issuer is baked in, with optional override via AUTH_URL
+    // Support both authIssuer and legacy authDomain
+    const envAuthUrl = getEnvVar('AUTH_URL');
+    const legacyDomain = options.authDomain ?? getEnvVar('AUTH_DOMAIN');
+    if (options.authIssuer) {
+      this.authIssuer = options.authIssuer;
+    } else if (envAuthUrl) {
+      this.authIssuer = envAuthUrl;
+    } else if (legacyDomain) {
+      // Convert legacy domain to issuer URL
+      this.authIssuer = legacyDomain.startsWith('http') ? legacyDomain : `https://${legacyDomain}`;
+    } else {
+      this.authIssuer = authCfg.issuer;
+    }
+
+    this.clientId =
+      options.clientId ?? (getEnvVar('AGENT_CLIENT_ID') || getEnvVar('AUTH_CLIENT_ID') || '');
+    this.clientSecret =
+      options.clientSecret ??
+      (getEnvVar('AGENT_CLIENT_SECRET') || getEnvVar('AUTH_CLIENT_SECRET') || '');
+    this.apiAudience = options.apiAudience ?? (getEnvVar('API_AUDIENCE') || authCfg.audience);
 
     // Runtime settings
     this.promptForLogin = options.promptForLogin ?? false;
     this.skipLoginLocal = options.skipLoginLocal ?? false;
 
-    // Initialize URL property (will be set by _setEnvironmentDefaults)
-    this.baseUrl = '';
-
-    // Set environment-specific defaults
-    this._setEnvironmentDefaults(options);
+    // Set base_url from config, with optional override
+    this.baseUrl =
+      options.baseUrl ??
+      (getEnvVar('BARNDOOR_API') || getEnvVar('BARNDOOR_URL') || authCfg.baseUrl);
   }
 
   /**
-   * Set environment-specific default URLs.
-   * @private
+   * Extract domain from issuer URL for backwards compatibility.
+   * @deprecated Use authIssuer instead
    */
-  private _setEnvironmentDefaults(options: BarndoorConfigOptions): void {
-    const env = this.environment.toLowerCase();
-
-    if (env === 'localdev' || env === 'local') {
-      this.authDomain = this.authDomain || 'localhost:3001';
-      this.baseUrl =
-        options.baseUrl ??
-        (getEnvVar('BARNDOOR_API') || getEnvVar('BARNDOOR_URL') || 'http://localhost:8080');
-      // Override audience for local/dev if not explicitly set
-      if (!options.apiAudience && !getEnvVar('API_AUDIENCE')) {
-        this.apiAudience = 'https://barndoor.api/';
-      }
-    } else if (env === 'development' || env === 'dev') {
-      this.baseUrl =
-        options.baseUrl ??
-        (getEnvVar('BARNDOOR_API') ||
-          getEnvVar('BARNDOOR_URL') ||
-          'https://{organization_id}.mcp.barndoordev.com');
-      // Override audience for development if not explicitly set
-      if (!options.apiAudience && !getEnvVar('API_AUDIENCE')) {
-        this.apiAudience = 'https://barndoor.api/';
-      }
-    } else {
-      // production
-      this.baseUrl =
-        options.baseUrl ??
-        (getEnvVar('BARNDOOR_API') ||
-          getEnvVar('BARNDOOR_URL') ||
-          'https://{organization_id}.mcp.barndoor.ai');
+  public get authDomain(): string {
+    let issuer = this.authIssuer;
+    if (issuer.startsWith('https://')) {
+      issuer = issuer.slice(8);
+    } else if (issuer.startsWith('http://')) {
+      issuer = issuer.slice(7);
     }
+    // Return domain + path (needed for Keycloak realms)
+    return issuer;
   }
 
   /**
@@ -161,8 +233,8 @@ export class BarndoorConfig {
   }
 
   /**
-   * Get dynamic configuration with organization ID substituted.
-   * @param jwtToken - JWT token to extract organization ID from
+   * Get dynamic configuration with organization slug substituted.
+   * @param jwtToken - JWT token to extract organization slug from
    * @param options - Configuration options
    * @returns Dynamic configuration instance
    */
@@ -171,14 +243,14 @@ export class BarndoorConfig {
     options: {
       /** Whether to throw error for tokens without organization info */
       requireOrganization?: boolean;
-      /** Fallback organization ID to use if none found in token */
+      /** Fallback organization slug to use if none found in token */
       fallbackOrganizationId?: string;
     } = {}
   ): BarndoorConfig {
     const { requireOrganization = true, fallbackOrganizationId } = options;
     const config = new BarndoorConfig();
 
-    // Try to extract organization ID safely
+    // Try to extract organization slug safely
     const orgResult = extractOrganizationIdSafe(jwtToken);
 
     if (orgResult.hasOrganization) {
@@ -192,14 +264,14 @@ export class BarndoorConfig {
       if (!safe) {
         throw new ConfigurationError('Invalid organization subdomain format from token');
       }
-      config.baseUrl = config.baseUrl.replace('{organization_id}', raw);
+      config.baseUrl = config.baseUrl.replace('{org_slug}', raw);
       return config;
     }
 
     // No organization found - handle based on options
     if (fallbackOrganizationId) {
-      // Use fallback organization ID
-      config.baseUrl = config.baseUrl.replace('{organization_id}', fallbackOrganizationId);
+      // Use fallback organization slug
+      config.baseUrl = config.baseUrl.replace('{org_slug}', fallbackOrganizationId);
       return config;
     }
 
@@ -214,7 +286,7 @@ export class BarndoorConfig {
       );
     }
 
-    // Return config without organization substitution (URLs will contain {organization_id} placeholder)
+    // Return config without organization substitution (URLs will contain {org_slug} placeholder)
     return config;
   }
 
@@ -223,8 +295,8 @@ export class BarndoorConfig {
    * @throws ConfigurationError if configuration is invalid
    */
   public validate(): void {
-    if (!this.authDomain || this.authDomain.trim() === '') {
-      throw new ConfigurationError('authDomain is required');
+    if (!this.authIssuer || this.authIssuer.trim() === '') {
+      throw new ConfigurationError('authIssuer is required');
     }
 
     if (!this.apiAudience || this.apiAudience.trim() === '') {
