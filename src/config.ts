@@ -20,15 +20,15 @@ export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; bas
   production: {
     issuer: 'https://auth.trial.barndoor.ai/realms/barndoor-local',
     audience: 'https://barndoor.ai/',
-    baseUrl: 'https://{org_slug}.mcp.barndoor.ai',
+    baseUrl: 'https://{org_slug}.platform.barndoor.ai',
   },
   uat: {
-    issuer: 'https://auth.trial.barndooruat.com/realms/barndoor-local',
+    issuer: 'https://auth.barndooruat.com/realms/barndoor-local',
     audience: 'https://barndoor.ai/',
-    baseUrl: 'https://{org_slug}.platform.barndooruat.com',
+    baseUrl: 'https://{org_slug}.trial.barndooruat.com',
   },
   dev: {
-    issuer: 'https://auth.trial.barndoordev.com/realms/barndoor-local',
+    issuer: 'https://auth.barndoordev.com/realms/barndoor-local',
     audience: 'https://barndoor.ai/',
     baseUrl: 'https://{org_slug}.platform.barndoordev.com',
   },
@@ -41,12 +41,12 @@ export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; bas
   'enterprise-uat': {
     issuer: 'https://auth.barndooruat.com',
     audience: 'https://barndoor.ai/',
-    baseUrl: 'https://{org_slug}.platform.barndooruat.com',
+    baseUrl: 'https://{org_slug}.mcp.barndooruat.com',
   },
   'enterprise-dev': {
     issuer: 'https://auth.barndoordev.com',
     audience: 'https://barndoor.ai/',
-    baseUrl: 'https://{org_slug}.platform.barndoordev.com',
+    baseUrl: 'https://{org_slug}.mcp.barndoordev.com',
   },
   // === Local development (Keycloak) ===
   localdev: {
