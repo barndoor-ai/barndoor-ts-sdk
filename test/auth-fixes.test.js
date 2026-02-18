@@ -238,7 +238,7 @@ describe('Environment-specific API URLs', () => {
     const config = getStaticConfig();
 
     // Now uses {org_slug} placeholder
-    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoor.ai');
     expect(config.apiAudience).toBe('https://barndoor.ai/');
   });
 
@@ -270,6 +270,6 @@ describe('Environment-specific API URLs', () => {
     delete process.env.API_AUDIENCE;
     process.env.MODE = 'production';
     const prodConfig = getDynamicConfig(token);
-    expect(prodConfig.baseUrl).toBe('https://barndoor-ai.mcp.barndoor.ai');
+    expect(prodConfig.baseUrl).toBe('https://barndoor-ai.platform.barndoor.ai');
   });
 });

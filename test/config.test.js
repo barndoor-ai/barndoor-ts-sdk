@@ -82,13 +82,13 @@ describe('BarndoorConfig', () => {
     const config = new BarndoorConfig({ environment: 'dev' });
 
     expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoordev.com');
-    expect(config.authIssuer).toBe('https://auth.trial.barndoordev.com/realms/barndoor-local');
+    expect(config.authIssuer).toBe('https://auth.barndoordev.com/realms/barndoor-local');
   });
 
   test('sets environment-specific defaults for production', () => {
     const config = new BarndoorConfig({ environment: 'production' });
 
-    expect(config.baseUrl).toBe('https://{org_slug}.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoor.ai');
     expect(config.authIssuer).toBe('https://auth.trial.barndoor.ai/realms/barndoor-local');
   });
 
@@ -155,7 +155,7 @@ describe('Dynamic Configuration', () => {
   test.skip('getDynamicConfig substitutes organization ID - needs update for organization_name', () => {
     const config = getDynamicConfig(mockJwtToken);
 
-    expect(config.baseUrl).toBe('https://test-org.mcp.barndoor.ai');
+    expect(config.baseUrl).toBe('https://test-org.platform.barndoor.ai');
   });
 
   test.skip('BarndoorConfig.getDynamicConfig works the same - needs update for organization_name', () => {

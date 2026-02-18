@@ -35,7 +35,7 @@ const _oidcConfigCache = new Map<string, OidcConfig>();
  * Fetch and cache OIDC configuration from the issuer's discovery endpoint.
  *
  * @param issuer - The OIDC issuer URL (e.g., https://auth.barndoor.ai or
- *                 https://auth.trial.barndoordev.com/realms/barndoor-local)
+ *                 https://auth.barndoordev.com/realms/barndoor-local)
  * @returns OIDC configuration containing endpoints like token_endpoint, jwks_uri, etc.
  */
 export async function getOidcConfig(issuer: string): Promise<OidcConfig> {
@@ -70,15 +70,27 @@ export async function getOidcConfig(issuer: string): Promise<OidcConfig> {
     }
   } catch (error) {
     _logger.warn(`OIDC discovery failed for ${issuer}:`, error);
-    // Return minimal fallback config (Auth0-style paths)
-    const fallback: OidcConfig = {
-      issuer: normalizedIssuer,
-      token_endpoint: `${normalizedIssuer}/oauth/token`,
-      authorization_endpoint: `${normalizedIssuer}/authorize`,
-      userinfo_endpoint: `${normalizedIssuer}/userinfo`,
-      jwks_uri: `${normalizedIssuer}/.well-known/jwks.json`,
-    };
-    return fallback;
+    // Return minimal fallback config using RFC 8414 / OpenID Connect standard paths.
+    // Keycloak, Auth0, and most OIDC providers support these.
+    if (normalizedIssuer.includes('/realms/')) {
+      // Keycloak-style issuer — use protocol endpoint paths
+      return {
+        issuer: normalizedIssuer,
+        token_endpoint: `${normalizedIssuer}/protocol/openid-connect/token`,
+        authorization_endpoint: `${normalizedIssuer}/protocol/openid-connect/auth`,
+        userinfo_endpoint: `${normalizedIssuer}/protocol/openid-connect/userinfo`,
+        jwks_uri: `${normalizedIssuer}/protocol/openid-connect/certs`,
+      };
+    } else {
+      // Auth0/generic OIDC provider — use standard paths
+      return {
+        issuer: normalizedIssuer,
+        token_endpoint: `${normalizedIssuer}/oauth/token`,
+        authorization_endpoint: `${normalizedIssuer}/authorize`,
+        userinfo_endpoint: `${normalizedIssuer}/userinfo`,
+        jwks_uri: `${normalizedIssuer}/.well-known/jwks.json`,
+      };
+    }
   }
 }
 
