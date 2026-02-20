@@ -315,7 +315,9 @@ export function startLocalCallbackServer(port = 52765): [string, Promise<[string
   const redirectHost =
     (typeof process !== 'undefined' && process.env && process.env['BARNDOOR_REDIRECT_HOST']) ||
     '127.0.0.1';
-  const redirectUri = `http://${redirectHost}:${port}/cb`;
+  const redirectUri = redirectHost.startsWith('http')
+    ? `${redirectHost}:${port}/cb`
+    : `http://${redirectHost}:${port}/cb`;
 
   const waiter = new Promise<[string, string]>((resolve, reject) => {
     const server = http.createServer((req, res) => {
