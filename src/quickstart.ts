@@ -138,7 +138,9 @@ export async function loginInteractive(
 
   if (manual) {
     const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || '127.0.0.1';
-    redirectUri = `http://${host}:${port}/cb`;
+    redirectUri = host.startsWith('http')
+      ? `${host}:${port}/cb`
+      : `http://${host}:${port}/cb`;
   } else {
     const tuple = startLocalCallbackServer(port);
     redirectUri = tuple[0];
@@ -346,30 +348,15 @@ export async function makeMcpConnectionParams(
   // MCP endpoint expects slugs, not UUIDs
   const mcpIdentifier = server.slug || serverIdentifier;
 
-  // 2. Decide proxy vs public based on environment
-  const env = (isNode ? process.env['BARNDOOR_ENV'] || process.env['MODE'] : '') || 'localdev';
-
+  // 2. Build MCP URL using dynamic or static config
   let url: string;
-  if (['localdev', 'local', 'development', 'dev'].includes(env.toLowerCase())) {
-    // Use dynamic configuration for local/dev environments
-    if (hasOrganizationInfo(sdk.token)) {
-      const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
-    } else {
-      logger.warn('Token has no organization information, using static config for MCP connection');
-      const staticConfig = getStaticConfig();
-      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
-    }
+  if (hasOrganizationInfo(sdk.token)) {
+    const dynamicConfig = getDynamicConfig(sdk.token);
+    url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
   } else {
-    // Production - use external MCP URL (same as dynamic config)
-    if (hasOrganizationInfo(sdk.token)) {
-      const dynamicConfig = getDynamicConfig(sdk.token);
-      url = `${dynamicConfig.baseUrl}/mcp/${mcpIdentifier}`;
-    } else {
-      logger.warn('Token has no organization information, using static config for MCP connection');
-      const staticConfig = getStaticConfig();
-      url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
-    }
+    logger.warn('Token has no organization information, using static config for MCP connection');
+    const staticConfig = getStaticConfig();
+    url = `${staticConfig.baseUrl}/mcp/${mcpIdentifier}`;
   }
 
   const params = {
