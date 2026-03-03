@@ -138,9 +138,7 @@ export async function loginInteractive(
 
   if (manual) {
     const host = (process.env && process.env['BARNDOOR_REDIRECT_HOST']) || '127.0.0.1';
-    redirectUri = host.startsWith('http')
-      ? `${host}:${port}/cb`
-      : `http://${host}:${port}/cb`;
+    redirectUri = host.startsWith('http') ? `${host}:${port}/cb` : `http://${host}:${port}/cb`;
   } else {
     const tuple = startLocalCallbackServer(port);
     redirectUri = tuple[0];
