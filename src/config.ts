@@ -18,17 +18,17 @@ import { ConfigurationError } from './exceptions';
 export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; baseUrl: string }> = {
   // === Trial environments (Keycloak) - DEFAULT ===
   production: {
-    issuer: 'https://auth.trial.barndoor.ai/realms/barndoor-local',
+    issuer: 'https://auth.trial.barndoor.ai/realms/barndoor',
     audience: 'https://barndoor.ai/',
     baseUrl: 'https://{org_slug}.platform.barndoor.ai',
   },
   uat: {
-    issuer: 'https://auth.barndooruat.com/realms/barndoor-local',
+    issuer: 'https://auth.barndooruat.com/realms/barndoor',
     audience: 'https://barndoor.ai/',
     baseUrl: 'https://{org_slug}.trial.barndooruat.com',
   },
   dev: {
-    issuer: 'https://auth.barndoordev.com/realms/barndoor-local',
+    issuer: 'https://auth.barndoordev.com/realms/barndoor',
     audience: 'https://barndoor.ai/',
     baseUrl: 'https://{org_slug}.platform.barndoordev.com',
   },
@@ -50,7 +50,7 @@ export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; bas
   },
   // === Local development (Keycloak) ===
   localdev: {
-    issuer: 'http://localhost:8080/realms/barndoor-local',
+    issuer: 'http://localhost:8080/realms/barndoor',
     audience: 'https://barndoor.ai/',
     baseUrl: 'http://localhost:8000',
   },

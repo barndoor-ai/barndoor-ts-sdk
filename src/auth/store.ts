@@ -35,7 +35,7 @@ const _oidcConfigCache = new Map<string, OidcConfig>();
  * Fetch and cache OIDC configuration from the issuer's discovery endpoint.
  *
  * @param issuer - The OIDC issuer URL (e.g., https://auth.barndoor.ai or
- *                 https://auth.barndoordev.com/realms/barndoor-local)
+ *                 https://auth.barndoordev.com/realms/barndoor)
  * @returns OIDC configuration containing endpoints like token_endpoint, jwks_uri, etc.
  */
 export async function getOidcConfig(issuer: string): Promise<OidcConfig> {
