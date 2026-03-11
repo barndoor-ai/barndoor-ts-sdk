@@ -26,9 +26,9 @@ describe('BarndoorConfig', () => {
     const config = new BarndoorConfig();
 
     // Default environment is production with trial (Keycloak) auth
-    expect(config.authIssuer).toBe('https://auth.trial.barndoor.ai/realms/barndoor');
+    expect(config.authIssuer).toBe('https://auth.barndoor.ai/realms/barndoor');
     // authDomain is derived from authIssuer for backwards compatibility
-    expect(config.authDomain).toBe('auth.trial.barndoor.ai/realms/barndoor');
+    expect(config.authDomain).toBe('auth.barndoor.ai/realms/barndoor');
     expect(config.clientId).toBe('');
     expect(config.clientSecret).toBe('');
     expect(config.apiAudience).toBe('https://barndoor.ai/');
@@ -89,7 +89,7 @@ describe('BarndoorConfig', () => {
     const config = new BarndoorConfig({ environment: 'production' });
 
     expect(config.baseUrl).toBe('https://{org_slug}.platform.barndoor.ai');
-    expect(config.authIssuer).toBe('https://auth.trial.barndoor.ai/realms/barndoor');
+    expect(config.authIssuer).toBe('https://auth.barndoor.ai/realms/barndoor');
   });
 
   test('supports enterprise environments', () => {
@@ -213,7 +213,11 @@ describe('Environment Detection', () => {
     expect(new BarndoorConfig({ environment: 'local' }).environment).toBe('localdev');
 
     // Enterprise environments
-    expect(new BarndoorConfig({ environment: 'enterprise' }).environment).toBe('enterprise-production');
-    expect(new BarndoorConfig({ environment: 'enterprise-prod' }).environment).toBe('enterprise-production');
+    expect(new BarndoorConfig({ environment: 'enterprise' }).environment).toBe(
+      'enterprise-production'
+    );
+    expect(new BarndoorConfig({ environment: 'enterprise-prod' }).environment).toBe(
+      'enterprise-production'
+    );
   });
 });
