@@ -18,7 +18,7 @@ import { ConfigurationError } from './exceptions';
 export const AUTH_CONFIG: Record<string, { issuer: string; audience: string; baseUrl: string }> = {
   // === Trial environments (Keycloak) - DEFAULT ===
   production: {
-    issuer: 'https://auth.trial.barndoor.ai/realms/barndoor',
+    issuer: 'https://auth.barndoor.ai/realms/barndoor',
     audience: 'https://barndoor.ai/',
     baseUrl: 'https://{org_slug}.platform.barndoor.ai',
   },
