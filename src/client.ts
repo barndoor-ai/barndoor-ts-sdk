@@ -464,6 +464,133 @@ export class BarndoorSDK {
     return uuidRegex.test(serverId);
   }
 
+  // ---------- Policy management (V2 ACC APIs) -----------------
+
+  /**
+   * List policies with pagination and filtering.
+   * @param page - Page number for pagination (default: 1)
+   * @param limit - Number of items per page (default: 10)
+   * @param filters - Additional query parameters for filtering
+   * @returns Paginated response containing policies
+   */
+  public async listPolicies(page = 1, limit = 10, filters: Record<string, any> = {}): Promise<any> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw new Error('Page must be a positive integer');
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
+      throw new Error('Limit must be a positive integer between 1 and 1000');
+    }
+
+    this._logger.debug(`Listing policies (page=${page}, limit=${limit})`);
+    const params = { page, limit, ...filters };
+    return this._req('GET', '/api/v2/policies', { params });
+  }
+
+  /**
+   * Get detailed information about a specific policy.
+   * @param policyId - Unique identifier of the policy
+   * @returns Policy details
+   */
+  public async getPolicy(policyId: string): Promise<any> {
+    if (!policyId || typeof policyId !== 'string') {
+      throw new Error('Policy ID must be a non-empty string');
+    }
+    if (!this._isUuid(policyId)) {
+      throw new Error('Policy ID must be a valid UUID');
+    }
+
+    this._logger.debug(`Fetching policy details for ${policyId}`);
+    return this._req('GET', `/api/v2/policies/${policyId}`);
+  }
+
+  /**
+   * Create a new policy.
+   * @param policyData - Policy configuration data
+   * @returns Created policy details
+   */
+  public async createPolicy(policyData: any): Promise<any> {
+    if (!policyData || typeof policyData !== 'object') {
+      throw new Error('Policy data must be a non-empty object');
+    }
+
+    this._logger.debug('Creating new policy');
+    return this._req('POST', '/api/v2/policies', { json: policyData });
+  }
+
+  /**
+   * Update an existing policy.
+   * @param policyId - Unique identifier of the policy to update
+   * @param policyData - Updated policy configuration data
+   * @returns Updated policy details
+   */
+  public async updatePolicy(policyId: string, policyData: any): Promise<any> {
+    if (!policyId || typeof policyId !== 'string') {
+      throw new Error('Policy ID must be a non-empty string');
+    }
+    if (!this._isUuid(policyId)) {
+      throw new Error('Policy ID must be a valid UUID');
+    }
+    if (!policyData || typeof policyData !== 'object') {
+      throw new Error('Policy data must be a non-empty object');
+    }
+
+    this._logger.debug(`Updating policy ${policyId}`);
+    return this._req('PATCH', `/api/v2/policies/${policyId}`, { json: policyData });
+  }
+
+  /**
+   * Clone an existing policy.
+   * @param policyId - Unique identifier of the policy to clone
+   * @param newName - Name for the cloned policy
+   * @returns Cloned policy details
+   */
+  public async clonePolicy(policyId: string, newName: string): Promise<any> {
+    if (!policyId || typeof policyId !== 'string') {
+      throw new Error('Policy ID must be a non-empty string');
+    }
+    if (!this._isUuid(policyId)) {
+      throw new Error('Policy ID must be a valid UUID');
+    }
+    if (!newName || typeof newName !== 'string') {
+      throw new Error('New name must be a non-empty string');
+    }
+
+    this._logger.debug(`Cloning policy ${policyId} with new name: ${newName}`);
+    return this._req('POST', `/api/v2/policies/${policyId}/clone`, { json: { name: newName } });
+  }
+
+  /**
+   * Validate policy configuration.
+   * @param validationData - Policy data to validate
+   * @returns Validation result
+   */
+  public async validatePolicy(validationData: any): Promise<any> {
+    if (!validationData || typeof validationData !== 'object') {
+      throw new Error('Validation data must be a non-empty object');
+    }
+
+    this._logger.debug('Validating policy configuration');
+    return this._req('POST', '/api/v2/policies/validate', { json: validationData });
+  }
+
+  /**
+   * Get summary of all policies.
+   * @returns Policy summary information
+   */
+  public async getPolicySummary(): Promise<any> {
+    this._logger.debug('Fetching policy summary');
+    return this._req('GET', '/api/v2/policies/summary');
+  }
+
+  /**
+   * Get available filter definitions for policies.
+   * @returns Available filter categories and options
+   */
+  public async getPolicyFilterDefinitions(): Promise<any> {
+    this._logger.debug('Fetching policy filter definitions');
+    return this._req('GET', '/api/v2/policies/filter-definitions');
+  }
+
   /**
    * Close the SDK and clean up resources.
    */
