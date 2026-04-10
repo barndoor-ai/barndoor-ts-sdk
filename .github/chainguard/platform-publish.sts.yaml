@@ -1,0 +1,5 @@
+# barndoor-ai/barndoor-go-sdk/.github/chainguard/platform-publish.sts.yaml
+issuer: https://token.actions.githubusercontent.com
+subject: repo:barndoor-ai/platform:ref:refs/heads/main
+permissions:
+  contents: write
