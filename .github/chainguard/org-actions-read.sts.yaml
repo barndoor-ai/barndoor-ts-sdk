@@ -1,0 +1,13 @@
+# Trust policy: allow any GitHub Actions workflow in the barndoor-ai org
+# to read the contents of this repository via octo-sts.
+#
+# Usage:
+#   curl -sf \
+#     -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+#     "https://octo-sts.internal.barndoor.ai/sts/exchange?scope=barndoor-ai/barndoor-ts-sdk&identity=org-actions-read" \
+#     | jq -r .token
+issuer: https://token.actions.githubusercontent.com
+subject_pattern: "repo:barndoor-ai/.*"
+
+permissions:
+  contents: read
