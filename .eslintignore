@@ -6,3 +6,5 @@ coverage/
 test/**
 examples/**
 
+# Skip built proto codegen clients
+src/generated/**
