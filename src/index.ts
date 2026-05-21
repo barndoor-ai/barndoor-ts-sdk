@@ -30,6 +30,7 @@
 
 // Main SDK class
 export { BarndoorSDK } from './client';
+export type { FromClientCredentialsOptions } from './client';
 
 // Exception classes
 export {
@@ -73,8 +74,9 @@ export {
   TokenManager,
   getOidcConfig,
   clearOidcConfigCache,
+  getClientCredentialsToken,
 } from './auth';
-export type { OidcConfig } from './auth';
+export type { OidcConfig, ClientCredentialsParams } from './auth';
 
 // Configuration
 export {
