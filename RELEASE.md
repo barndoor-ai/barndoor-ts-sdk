@@ -9,6 +9,8 @@ The SDK uses automated publishing via GitHub Actions. When you create a GitHub r
 2. Builds the package
 3. Publishes to npm
 
+Publishing authenticates to npm via [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — no `NPM_TOKEN` secret is involved, and there is nothing to rotate. The trusted-publisher binding is configured on the npm package's Access page and is scoped to this repo's `ci.yml` workflow running in the `release` environment.
+
 ## Prerequisites
 
 Before creating a release, ensure you have:
@@ -29,8 +31,8 @@ Create a release branch from `main`:
 git checkout main
 git pull origin main
 
-# Create a release branch
-git checkout -b release/v0.1.1
+# Create a release branch (replace X.Y.Z with the new version)
+git checkout -b release/vX.Y.Z
 ```
 
 #### Update Version Number
@@ -38,13 +40,13 @@ git checkout -b release/v0.1.1
 Update the version in `package.json`:
 
 ```bash
-# For patch releases (0.1.0 -> 0.1.1)
+# For patch releases (e.g. 1.1.0 -> 1.1.1)
 npm version patch --no-git-tag-version
 
-# For minor releases (0.1.0 -> 0.2.0)
+# For minor releases (e.g. 1.1.0 -> 1.2.0)
 npm version minor --no-git-tag-version
 
-# For major releases (0.1.0 -> 1.0.0)
+# For major releases (e.g. 1.1.0 -> 2.0.0)
 npm version major --no-git-tag-version
 ```
 
@@ -81,7 +83,7 @@ Commit the version bump and any documentation updates:
 
 ```bash
 git add package.json package-lock.json README.md
-git commit -m "chore: bump version to v0.1.1"
+git commit -m "chore: bump version to vX.Y.Z"
 ```
 
 ### 2. Create and Merge Pull Request
@@ -91,15 +93,15 @@ git commit -m "chore: bump version to v0.1.1"
 Push the release branch to GitHub:
 
 ```bash
-git push origin release/v0.1.1
+git push origin release/vX.Y.Z
 ```
 
 #### Open Pull Request
 
 1. Go to: https://github.com/barndoor-ai/barndoor-ts-sdk/pulls
 2. Click "New pull request"
-3. Set base to `main` and compare to `release/v0.1.1`
-4. Title: "Release v0.1.1"
+3. Set base to `main` and compare to `release/vX.Y.Z`
+4. Title: "Release vX.Y.Z"
 5. Description should include:
    - Summary of changes
    - Release notes
@@ -118,10 +120,10 @@ git checkout main
 git pull origin main
 
 # Create the version tag
-git tag v0.1.1
+git tag vX.Y.Z
 
 # Push the tag
-git push origin v0.1.1
+git push origin vX.Y.Z
 ```
 
 ### 4. Create GitHub Release
@@ -129,8 +131,8 @@ git push origin v0.1.1
 #### Via GitHub Web UI
 
 1. Go to: https://github.com/barndoor-ai/barndoor-ts-sdk/releases/new
-2. Click "Choose a tag" and select the version tag you just pushed (e.g., `v0.1.1`)
-3. Set the release title to the version number (e.g., `v0.1.1`)
+2. Click "Choose a tag" and select the version tag you just pushed (e.g., `vX.Y.Z`)
+3. Set the release title to the version number (e.g., `vX.Y.Z`)
 4. Add release notes describing:
    - **New Features**: What's new in this release
    - **Bug Fixes**: What issues were resolved
@@ -167,10 +169,10 @@ Once the release is successfully published, clean up the release branch:
 
 ```bash
 # Delete local branch
-git branch -d release/v0.1.1
+git branch -d release/vX.Y.Z
 
 # Delete remote branch (if it wasn't auto-deleted by GitHub)
-git push origin --delete release/v0.1.1
+git push origin --delete release/vX.Y.Z
 ```
 
 ## Release Checklist
@@ -197,7 +199,7 @@ If a critical issue is discovered after release:
 1. Publish a new patch version with the fix immediately
 2. Deprecate the broken version:
    ```bash
-   npm deprecate @barndoor-ai/sdk@0.1.1 "Critical bug - use 0.1.2+"
+   npm deprecate @barndoor-ai/sdk@X.Y.Z "Critical bug - use X.Y.(Z+1)+"
    ```
 3. Notify all users through appropriate channels
 4. Consider creating a security advisory if it's a security issue
