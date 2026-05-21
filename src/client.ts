@@ -10,9 +10,17 @@ import { ServerSummary, ServerDetail } from './models';
 import { HTTPError, ConfigurationError, TokenError, ServerNotFoundError } from './exceptions';
 import { getStaticConfig, isNode } from './config';
 import { getOidcConfig } from './auth';
+import {
+  ClientCredentialsParams,
+  getClientCredentialsToken,
+  _tokenNearExpiry,
+} from './auth/clientCredentials';
 import { createScopedLogger } from './logging';
 import { spawn } from 'child_process';
 import os from 'os';
+
+/** Refresh M2M tokens this many seconds before their `exp` claim. */
+const M2M_REFRESH_SKEW_SECONDS = 60;
 
 /**
  * Configuration options for BarndoorSDK constructor.
@@ -74,6 +82,16 @@ export interface ConnectionStatusResponse {
 }
 
 /**
+ * Options for {@link BarndoorSDK.fromClientCredentials}.
+ */
+export interface FromClientCredentialsOptions extends ClientCredentialsParams {
+  /** Request timeout in seconds for API calls (default: 30). */
+  timeout?: number;
+  /** Maximum number of retries for API calls (default: 3). */
+  maxRetries?: number;
+}
+
+/**
  * Async client for interacting with the Barndoor Platform API.
  *
  * This SDK provides methods to:
@@ -95,6 +113,8 @@ export class BarndoorSDK {
   private _tokenValidated: boolean;
   /** Whether the SDK has been closed */
   private _closed: boolean;
+  /** Cached client-credentials parameters for automatic token refresh. */
+  private _credentials: ClientCredentialsParams | null = null;
   /** Scoped logger for this SDK instance */
   private readonly _logger = createScopedLogger('client');
 
@@ -128,6 +148,49 @@ export class BarndoorSDK {
     this._closed = false;
 
     this._logger.info(`Initialized BarndoorSDK for ${this.base}`);
+  }
+
+  /**
+   * Build a {@link BarndoorSDK} authenticated via the OAuth 2.0
+   * client-credentials (machine-to-machine) grant.
+   *
+   * Performs the grant against the Barndoor auth server and returns a
+   * ready-to-use SDK instance. The credentials are retained on the
+   * instance so the access token can be refreshed automatically when it
+   * nears expiry or when the API responds with 401.
+   *
+   * @example
+   * ```ts
+   * const sdk = await BarndoorSDK.fromClientCredentials(
+   *   'https://api.barndoor.host',
+   *   {
+   *     clientId: process.env.BARNDOOR_M2M_CLIENT_ID!,
+   *     clientSecret: process.env.BARNDOOR_M2M_CLIENT_SECRET!,
+   *     audience: 'https://barndoor.ai/',
+   *     issuer: 'https://auth.barndoor.ai/realms/barndoor',
+   *   }
+   * );
+   * const servers = await sdk.listServers();
+   * ```
+   */
+  public static async fromClientCredentials(
+    apiBaseUrl: string,
+    options: FromClientCredentialsOptions
+  ): Promise<BarndoorSDK> {
+    const { timeout, maxRetries, ...credentials } = options;
+
+    const token = await getClientCredentialsToken(credentials);
+
+    const sdkOptions: BarndoorSDKOptions = { token };
+    if (timeout !== undefined) sdkOptions.timeout = timeout;
+    if (maxRetries !== undefined) sdkOptions.maxRetries = maxRetries;
+
+    const sdk = new BarndoorSDK(apiBaseUrl, sdkOptions);
+    sdk._credentials = { ...credentials };
+    // M2M tokens come from the auth server we just called — no need to
+    // re-validate via the API on every request.
+    sdk._tokenValidated = true;
+    return sdk;
   }
 
   /**
@@ -212,12 +275,57 @@ export class BarndoorSDK {
   ): Promise<unknown> {
     this._ensureNotClosed();
     await this.ensureValidToken();
-
-    const headers = (options['headers'] as Record<string, string>) ?? {};
-    headers['Authorization'] = `Bearer ${this.token}`;
+    await this._maybeRefreshM2MToken();
 
     const url = `${this.base}${path}`;
-    return await this._http.request(method, url, { ...options, headers });
+    const buildOptions = (): Record<string, unknown> => {
+      const headers = { ...((options['headers'] as Record<string, string>) ?? {}) };
+      headers['Authorization'] = `Bearer ${this.token}`;
+      return { ...options, headers };
+    };
+
+    try {
+      return await this._http.request(method, url, buildOptions());
+    } catch (error: unknown) {
+      // For M2M sessions, transparently refresh once on 401 and retry.
+      if (error instanceof HTTPError && error.statusCode === 401 && this._credentials !== null) {
+        this._logger.info('M2M token rejected (401); refreshing and retrying once');
+        await this._refreshM2MToken();
+        return await this._http.request(method, url, buildOptions());
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh the M2M access token if it is near expiry.
+   *
+   * No-op for SDK instances not created via {@link BarndoorSDK.fromClientCredentials}.
+   * @private
+   */
+  private async _maybeRefreshM2MToken(): Promise<void> {
+    if (this._credentials === null) {
+      return;
+    }
+    if (!_tokenNearExpiry(this.token, M2M_REFRESH_SKEW_SECONDS)) {
+      return;
+    }
+    this._logger.debug('M2M token near expiry; refreshing');
+    await this._refreshM2MToken();
+  }
+
+  /**
+   * Unconditionally fetch a fresh M2M token using stored credentials.
+   * @private
+   */
+  private async _refreshM2MToken(): Promise<void> {
+    if (this._credentials === null) {
+      throw new Error(
+        '_refreshM2MToken() called on an SDK not created via BarndoorSDK.fromClientCredentials()'
+      );
+    }
+    this._token = await getClientCredentialsToken(this._credentials);
+    this._tokenValidated = true;
   }
 
   /**

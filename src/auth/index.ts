@@ -7,6 +7,9 @@
 
 export { PKCEManager, startLocalCallbackServer } from './pkce';
 
+export { getClientCredentialsToken, _tokenNearExpiry } from './clientCredentials';
+export type { ClientCredentialsParams } from './clientCredentials';
+
 export {
   getTokenStorage,
   TokenManager,
