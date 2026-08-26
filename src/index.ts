@@ -49,6 +49,19 @@ export {
 
 // Data models
 export { ServerSummary, ServerDetail, AgentToken } from './models';
+// Notification channels (BCP-3758) — type-only, so they erase at runtime.
+export type {
+  AlertTypeOption,
+  Channel,
+  ChannelListResponse,
+  ChannelOptions,
+  ChannelSubscription,
+  ChannelTestResult,
+  ChannelType,
+  LabeledOption,
+  UpsertChannelInput,
+  WebhookSecret,
+} from './models';
 
 // Quick-start helpers
 export {

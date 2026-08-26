@@ -154,3 +154,155 @@ export class AgentToken {
     return new AgentToken(data as AgentTokenData);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Notification channels (BCP-3758)
+//
+// Mirrors the platform's public channel-management surface at
+// /api/notification/public/v1/channels. Plain interfaces rather than the
+// validating classes above: these are response shapes, not objects with
+// behaviour, and interfaces give full compile-time typing at zero runtime cost.
+// ---------------------------------------------------------------------------
+
+/**
+ * What kind of destination a channel delivers to.
+ *
+ * `in_app` and `user_email` are personal (owned by one user, always the caller);
+ * `email`, `webhook`, `slack` and `teams` are organization-wide.
+ */
+export type ChannelType = 'in_app' | 'user_email' | 'email' | 'webhook' | 'slack' | 'teams';
+
+/** One alert type a channel is subscribed to. */
+export interface ChannelSubscription {
+  /**
+   * The alert type delivered to the channel (e.g. `break_glass_used`). Read the live
+   * vocabulary from `getChannelOptions()` rather than hardcoding it — the set grows
+   * over time and is gated per organization.
+   */
+  alert_type: string;
+}
+
+/**
+ * A notification delivery destination.
+ *
+ * Only the destination field belonging to `type` is populated; the rest are null.
+ * Secrets are never returned — a webhook's signing secret and a Teams workflow URL
+ * surface only as the `has_signing_secret` / `has_workflow_url` flags.
+ */
+export interface Channel {
+  /** Server-assigned channel id. */
+  id: string;
+  type: ChannelType;
+  /** Whether the channel currently delivers. */
+  enabled: boolean;
+  /** Owning user for a personal channel; null for organization-wide types. */
+  user_id: string | null;
+  /** Destination for `type: 'email'`. */
+  email_address: string | null;
+  /** Destination for `type: 'webhook'`. */
+  url: string | null;
+  /** Human-readable name, set for `slack` and `teams`. */
+  label: string | null;
+  /** Slack channel id for `type: 'slack'`. */
+  slack_channel_id: string | null;
+  /** Alert types this channel delivers. Empty means it delivers nothing. */
+  subscriptions: ChannelSubscription[];
+  created_at?: string;
+  updated_at?: string;
+  /** Whether a webhook channel has a stored signing secret (never readable back). */
+  has_signing_secret: boolean;
+  /** Whether a teams channel has a stored Workflows URL (itself a secret). */
+  has_workflow_url: boolean;
+  /**
+   * One-time reveal of a newly generated webhook signing secret. Present ONLY on the
+   * response that created it, and null on every later read — store it when you receive
+   * it, or rotate with `regenerateChannelSecret()`.
+   */
+  signing_secret?: string | null;
+}
+
+/** Response envelope for the channel list endpoints. */
+export interface ChannelListResponse {
+  data: Channel[];
+}
+
+/** One subscribable alert type, with its intrinsic category and severity. */
+export interface AlertTypeOption {
+  /** What to send as a subscription's `alert_type`. */
+  value: string;
+  label: string;
+  /** Intrinsic to the type, not configurable. */
+  category: string;
+  /** Intrinsic to the type, not configurable. */
+  severity: string;
+}
+
+/** An enum value paired with its display label. */
+export interface LabeledOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * The subscription vocabulary a channel's `subscriptions` may draw from.
+ *
+ * `alertTypes` is filtered to what the caller's organization is admitted to —
+ * subscribing to a type absent here is accepted but never delivers.
+ */
+export interface ChannelOptions {
+  alert_types: AlertTypeOption[];
+  /** The full category vocabulary, unfiltered. */
+  categories: LabeledOption[];
+  /** The full severity vocabulary, unfiltered. */
+  severities: LabeledOption[];
+}
+
+/**
+ * Result of sending a connectivity-test message through a channel.
+ *
+ * A transport failure is reported here as `ok: false` with a reason, not as a thrown
+ * error: the request to test succeeded, the delivery is what failed.
+ */
+export interface ChannelTestResult {
+  ok: boolean;
+  error?: string | null;
+}
+
+/** The one-time reveal of a webhook channel's signing secret. */
+export interface WebhookSecret {
+  /**
+   * Standard Webhooks secret (`whsec_` + base64), shown exactly once. Rotating
+   * invalidates the previous secret immediately, so deploy this value before the next
+   * alert fires.
+   */
+  signing_secret: string;
+}
+
+/** Arguments for {@link BarndoorSDK.upsertChannel}. */
+export interface UpsertChannelInput {
+  type: ChannelType;
+  /**
+   * Existing channel to edit authoritatively. Omit to create-or-dedup on the type's
+   * natural identity.
+   */
+  channelId?: string;
+  /** Defaults to true. `false` suspends delivery without deleting the channel. */
+  enabled?: boolean;
+  /** Required for `type: 'email'`. */
+  emailAddress?: string;
+  /** Required for `type: 'webhook'`. Must be https and resolve to a public address. */
+  url?: string;
+  /** Required for `slack` and `teams`. */
+  label?: string;
+  /** Required for `type: 'slack'` — the channel id, not its name. */
+  slackChannelId?: string;
+  /**
+   * Required on create for `type: 'teams'`. Write-only: never returned by any endpoint.
+   */
+  teamsWorkflowUrl?: string;
+  /**
+   * The complete set of alert types to deliver. **Replaces** the channel's existing
+   * set — omitting it unsubscribes the channel from everything.
+   */
+  subscriptions?: string[];
+}
