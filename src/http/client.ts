@@ -139,6 +139,16 @@ export class HTTPClient {
           throw new HTTPError(response.status, response.statusText, responseText);
         }
 
+        // A 204 (or any bodyless success) is not JSON. A real fetch Response always has
+        // .json(), and a 204 carries no content-type, so the content-type sniffing below
+        // would call .json() on an empty body and throw SyntaxError. Return null before
+        // reaching it. This was already live for disconnectServer(); its test mocks a bare
+        // { ok: true, status: 204 } with no .json(), which falls through to the raw-response
+        // branch and so never exercised the real path (BCP-3758).
+        if (response.status === 204 || response.status === 205 || response.status === 304) {
+          return null;
+        }
+
         // Parse response based on Content-Type with robust fallbacks for test mocks
         let contentType = '';
         const respAny: any = response as any;

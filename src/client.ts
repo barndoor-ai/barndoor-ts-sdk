@@ -7,6 +7,14 @@
 
 import { HTTPClient, TimeoutConfig } from './http/client';
 import { ServerSummary, ServerDetail } from './models';
+import type {
+  Channel,
+  ChannelListResponse,
+  ChannelOptions,
+  ChannelTestResult,
+  UpsertChannelInput,
+  WebhookSecret,
+} from './models';
 import { HTTPError, ConfigurationError, TokenError, ServerNotFoundError } from './exceptions';
 import { getStaticConfig, isNode } from './config';
 import { getOidcConfig } from './auth';
@@ -103,6 +111,8 @@ export interface FromClientCredentialsOptions extends ClientCredentialsParams {
  * JWT token in all requests.
  */
 export class BarndoorSDK {
+  /** Platform path for the public notification channel-management surface (BCP-3758). */
+  private static readonly CHANNELS_PATH = '/api/notification/public/v1/channels';
   /** Base URL of the Barndoor API */
   public readonly base: string;
   /** User JWT token */
@@ -539,6 +549,190 @@ export class BarndoorSDK {
       }
       throw error;
     }
+  }
+
+  // ---------- Notification channels (public v1) -----------------
+  //
+  // Platform surface: /api/notification/public/v1/channels (BCP-3758). Every call is
+  // organization-scoped from the caller's token — there is no organization parameter.
+
+  /**
+   * List the alert types this organization may subscribe a channel to.
+   *
+   * Read this before building a subscription set: the alert-type vocabulary grows over
+   * time and is gated per organization, so this endpoint — not a hardcoded list — is the
+   * authoritative answer to what `subscriptions` accepts. Subscribing to a type absent
+   * here is accepted but never delivers.
+   *
+   * @returns The admitted alert types, plus the category and severity vocabularies
+   */
+  public async getChannelOptions(): Promise<ChannelOptions> {
+    this._logger.debug('Fetching notification channel options');
+    return (await this._req('GET', `${BarndoorSDK.CHANNELS_PATH}/options`)) as ChannelOptions;
+  }
+
+  /**
+   * List the organization's shared notification channels.
+   *
+   * Returns the organization-wide channels — `email`, `webhook`, `slack`, `teams` — with
+   * their current subscription sets. Personal channels are not included; use
+   * {@link listUserChannels} for those.
+   *
+   * @returns The organization's shared channels, in no guaranteed order
+   */
+  public async listChannels(): Promise<Channel[]> {
+    this._logger.debug('Listing organization notification channels');
+    const response = (await this._req('GET', BarndoorSDK.CHANNELS_PATH)) as ChannelListResponse;
+    return response?.data ?? [];
+  }
+
+  /**
+   * List the caller's own personal notification channels.
+   *
+   * Returns the authenticated caller's `in_app` and `user_email` channels. Always
+   * self-scoped — there is no way to read another user's personal channels.
+   *
+   * @returns The caller's personal channels
+   */
+  public async listUserChannels(): Promise<Channel[]> {
+    this._logger.debug("Listing caller's personal notification channels");
+    const response = (await this._req(
+      'GET',
+      `${BarndoorSDK.CHANNELS_PATH}/user`
+    )) as ChannelListResponse;
+    return response?.data ?? [];
+  }
+
+  /**
+   * Create or update a notification channel and replace its subscriptions.
+   *
+   * This is a full upsert, not a patch: `subscriptions` **replaces** the channel's
+   * existing set, so omitting it removes every subscription the channel had. Send the
+   * complete desired set on every call.
+   *
+   * Without `channelId` the channel is keyed on its type's natural identity, so repeating
+   * an identical call is idempotent rather than creating duplicates: `email` by address,
+   * `webhook` by URL, `slack` by channel id, and the personal types by (organization,
+   * type, caller). With `channelId` it is an authoritative edit of that row — the only way
+   * to update a `teams` channel, whose natural identity is a secret URL.
+   *
+   * Which destination fields are permitted depends on `type`; sending one that does not
+   * belong throws {@link HTTPError} with status 422 rather than being silently ignored.
+   *
+   * @param input - Channel definition; see {@link UpsertChannelInput}
+   * @returns The created or updated channel. When this call *creates* a `webhook`
+   *   channel, `signing_secret` carries the one-time reveal — store it. A retried create
+   *   that lands after the first attempt already succeeded returns a null
+   *   `signing_secret` rather than a second secret; use {@link regenerateChannelSecret}
+   *   if you need one.
+   */
+  public async upsertChannel(input: UpsertChannelInput): Promise<Channel> {
+    if (!input || typeof input !== 'object') {
+      throw new Error('Channel input must be a non-empty object');
+    }
+    if (!input.type || typeof input.type !== 'string') {
+      throw new Error('Channel type must be a non-empty string');
+    }
+
+    const body: Record<string, unknown> = {
+      type: input.type,
+      enabled: input.enabled ?? true,
+    };
+    if (input.channelId !== undefined) {
+      body['id'] = this._requireChannelId(input.channelId);
+    }
+    // Only forward destination fields the caller actually supplied: padding the body with
+    // nulls for the other types' fields is a 422 server-side.
+    const optional: Array<[string, string | undefined]> = [
+      ['email_address', input.emailAddress],
+      ['url', input.url],
+      ['label', input.label],
+      ['slack_channel_id', input.slackChannelId],
+      ['teams_workflow_url', input.teamsWorkflowUrl],
+    ];
+    for (const [key, value] of optional) {
+      if (value !== undefined) {
+        body[key] = value;
+      }
+    }
+    // Always send the key: an omitted list and an empty list mean the same thing to this
+    // endpoint (unsubscribe from everything), and being explicit keeps that destructive
+    // default visible on the wire.
+    body['subscriptions'] = (input.subscriptions ?? []).map(alertType => ({
+      alert_type: alertType,
+    }));
+
+    this._logger.info(`Upserting notification channel (type=${input.type})`);
+    return (await this._req('PUT', BarndoorSDK.CHANNELS_PATH, { json: body })) as Channel;
+  }
+
+  /**
+   * Delete a notification channel.
+   *
+   * Its subscriptions cascade and any stored secret is removed. Irreversible — to stop
+   * delivery reversibly, call {@link upsertChannel} with `enabled: false`.
+   *
+   * @param channelId - Unique identifier of the channel to delete
+   * @throws {HTTPError} With status 404 when no such channel exists in the caller's org
+   */
+  public async deleteChannel(channelId: string): Promise<void> {
+    const id = this._requireChannelId(channelId);
+    this._logger.info(`Deleting notification channel ${id}`);
+    await this._req('DELETE', `${BarndoorSDK.CHANNELS_PATH}/${id}`);
+  }
+
+  /**
+   * Rotate a webhook channel's signing secret.
+   *
+   * Returns the new secret once. The previous secret stops verifying immediately, so
+   * deploy the new one to your receiver before the next alert fires. There is no endpoint
+   * that reads the current secret, so this is also the recovery path when a secret from
+   * channel creation was lost.
+   *
+   * @param channelId - Unique identifier of the webhook channel
+   * @returns The new signing secret
+   */
+  public async regenerateChannelSecret(channelId: string): Promise<WebhookSecret> {
+    const id = this._requireChannelId(channelId);
+    this._logger.info(`Rotating signing secret for notification channel ${id}`);
+    return (await this._req(
+      'POST',
+      `${BarndoorSDK.CHANNELS_PATH}/${id}/regenerate-secret`
+    )) as WebhookSecret;
+  }
+
+  /**
+   * Send a connectivity-test message through a channel's real transport.
+   *
+   * Lets you verify a webhook receiver, email address, Slack channel, or Teams workflow
+   * actually works. It is not an alert: nothing is persisted, no other channel is
+   * notified, and it ignores the channel's subscriptions.
+   *
+   * A transport failure comes back as `ok: false` with a reason, not as a thrown error —
+   * the request succeeded, the delivery did not.
+   *
+   * @param channelId - Unique identifier of the channel to test
+   * @returns Whether the message reached the transport, and why not if it did not
+   */
+  public async testChannel(channelId: string): Promise<ChannelTestResult> {
+    const id = this._requireChannelId(channelId);
+    this._logger.debug(`Testing notification channel ${id}`);
+    return (await this._req(
+      'POST',
+      `${BarndoorSDK.CHANNELS_PATH}/${id}/test`
+    )) as ChannelTestResult;
+  }
+
+  /** Validate and normalize a channel id shared by the by-id channel methods. */
+  private _requireChannelId(channelId: string): string {
+    if (!channelId || typeof channelId !== 'string') {
+      throw new Error('Channel ID must be a non-empty string');
+    }
+    const trimmed = channelId.trim();
+    if (!trimmed) {
+      throw new Error('Channel ID cannot be empty or whitespace');
+    }
+    return trimmed;
   }
 
   /**
