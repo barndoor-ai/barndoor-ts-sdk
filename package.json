@@ -93,10 +93,12 @@
     "brace-expansion@1": "^1.1.16",
     "brace-expansion@2": "^2.1.4",
     "brace-expansion@5": "^5.0.9",
-    "fast-uri": "^3.1.5",
-    "hono": "^4.13.2",
-    "js-yaml@3": "^3.15.1",
-    "js-yaml@4": "^4.3.1"
+    "browserslist": "^4.28.7",
+    "fast-uri": "^3.1.6",
+    "hono": "^4.13.5",
+    "js-yaml@3": "^3.15.2",
+    "js-yaml@4": "^4.3.2",
+    "qs": "^6.16.0"
   },
   "typeCoverage": {
     "atLeast": 60,
