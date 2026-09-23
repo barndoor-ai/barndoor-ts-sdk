@@ -148,6 +148,17 @@ jobs:
         if: steps.published.outputs.already != 'true'
         run: npm publish --provenance --access public --tag dev
 
+      # `npm publish` returns success and then processes the upload
+      # asynchronously — its own last line is "Your package is being processed
+      # and may take a few minutes to become available." A green publish step is
+      # therefore not evidence that anything was published, which is exactly how
+      # this pipeline's rollout produced a success that served nothing.
+      - name: Confirm the registry serves it
+        if: steps.published.outputs.already != 'true'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: .github/scripts/verify-published.sh '@barndoor-ai/sdk' "$VERSION" dev
+
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -168,4 +179,19 @@ jobs:
 
       - run: npm ci
 
+      # The version is whatever package.json holds — the clean one, since the
+      # -dev suffix is only ever applied in the prerelease job above and never
+      # committed.
+      - name: Resolve the version
+        id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - run: npm publish --provenance --access public
+
+      # Same reason as the prerelease job, and it matters more here: this is the
+      # release customers get from a bare `npm install`, so "did `latest`
+      # actually move" is the thing worth proving.
+      - name: Confirm the registry serves it
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: .github/scripts/verify-published.sh '@barndoor-ai/sdk' "$VERSION" latest
