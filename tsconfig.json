@@ -1,61 +1,27 @@
 {
   "compilerOptions": {
-    // Language and Environment
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    
-    // Type Checking - Strict Mode
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    
-    // Additional Checks
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true,
-    
-    // Emit
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "removeComments": false,
-    "importHelpers": true,
-    
-    // Interop Constraints
-    "isolatedModules": true,
-    "allowJs": false,
-    "checkJs": false,
-    
-    // Skip type checking of declaration files
-    "skipLibCheck": true
+    "target": "es2022",
+    "lib": [
+      "es2022",
+      "dom"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": "src",
+    "typeRoots": [
+      "node_modules/@types"
+    ]
   },
   "include": [
-    "src/**/*",
-    "test/**/*",
-    "examples/**/*"
+    "src"
   ],
   "exclude": [
-    "node_modules",
     "dist",
-    "**/*.js"
-  ],
-  "ts-node": {
-    "esm": true
-  }
+    "node_modules"
+  ]
 }

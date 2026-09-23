@@ -48,10 +48,10 @@ coverage/
 .cache
 .parcel-cache
 
-# Build outputs
+# Build outputs. NOT `lib/` — a bare rule there matches src/lib/, the
+# hand-written half of the SDK, and silently drops it from every commit.
 dist/
 build/
-lib/
 out/
 
 # Temporary folders

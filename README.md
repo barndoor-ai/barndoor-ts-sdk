@@ -1,315 +1,159 @@
-# Barndoor TypeScript SDK
+# @barndoor-ai/sdk
 
-A lightweight, **framework-agnostic** TypeScript/JavaScript client for the Barndoor Platform REST APIs and Model Context Protocol (MCP) servers.
-
-The SDK supports *lazy authentication*—you can build an SDK instance first, then inject a JWT later with `authenticate()`.
-
-The SDK removes boiler-plate around:
-
-* Secure, offline-friendly **authentication to Barndoor** (interactive PKCE flow + token caching).
-* **Server registry** – list, inspect and connect third-party providers (Salesforce, Notion, Slack …).
-* **Managed Connector Proxy** – build ready-to-use connection parameters for any LLM/agent framework (CrewAI, LangChain, custom code …) without importing Barndoor-specific adapters.
-
-## Installation
+TypeScript client for the [Barndoor AI](https://barndoor.ai) platform API.
 
 ```bash
 npm install @barndoor-ai/sdk
 ```
 
-## Quick Start
+Node 22 or later. Ships ESM and CommonJS builds with type declarations.
 
-### Basic Usage
+## Quick start
 
-```typescript
-import { BarndoorSDK } from '@barndoor-ai/sdk';
+```ts
+import { createClient } from '@barndoor-ai/sdk';
 
-// ① token known at construction time (unchanged)
-const sdk = new BarndoorSDK('https://your-org.mcp.barndoor.ai', {
-  token: 'your-jwt'
-});
-```
+const client = createClient({ auth: process.env.BARNDOOR_API_KEY! });
 
-```typescript
-// ② deferred login (new)
-const sdk = new BarndoorSDK('https://your-org.mcp.barndoor.ai');
-await sdk.authenticate('your-jwt');
-
-// List available MCP servers
-const servers = await sdk.listServers();
-console.log('Available servers:', servers);
-
-// Get details for a specific server
-const server = await sdk.getServer('server-uuid');
-console.log('Server details:', server);
-
-// Clean up
-await sdk.close();
-```
-
-### Interactive Login
-
-For development and prototyping, use the interactive login helper:
-
-`loginInteractive()` builds an SDK *without* requiring `token` in the ctor—it internally calls `sdk.authenticate()` for you.
-
-```typescript
-import { loginInteractive } from '@barndoor-ai/sdk';
-
-// Automatically handles OAuth flow and token caching
-const sdk = await loginInteractive();
-const servers = await sdk.listServers();
-```
-
-### Complete Workflow
-
-```typescript
-import {
-  loginInteractive,
-  ensureServerConnected,
-  makeMcpConnectionParams
-} from '@barndoor-ai/sdk';
-
-async function main() {
-  // 1. Login (handles OAuth + caching)
-  const sdk = await loginInteractive();
-
-  // 2. Ensure server is connected (launches OAuth if needed)
-  await ensureServerConnected(sdk, 'notion'); // sdk.ensureServerConnected(...) is also available directly
-
-  // 3. Get connection parameters for your AI framework
-  const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
-
-  // 4. Use with any MCP-compatible framework
-  console.log('MCP URL:', params.url);
-  console.log('Headers:', params.headers);
-
-  // 5. Disconnect when done (optional)
-  await sdk.disconnectServer('notion');
-
-  await sdk.close();
+const { data } = await client.registry.listMcpServers({});
+for (const server of data) {
+  console.log(server.name, server.slug);
 }
 ```
 
-### Disconnecting from Servers
+`createClient` is synchronous — nothing it does touches the network, so building
+a client cannot fail because an identity provider is briefly unreachable. The
+first request performs discovery and obtains a token.
 
-To disconnect from a server and clean up OAuth credentials:
+## Authentication
 
-```typescript
-// Disconnect using server ID or slug
-await sdk.disconnectServer('notion');
-// or
-await sdk.disconnectServer('123e4567-e89b-12d3-a456-426614174000');
+`auth` takes one of three things.
 
-// The server will need to be reconnected before use
+**An API key**, or any token you already hold:
+
+```ts
+createClient({ auth: 'bdai_…' });
 ```
 
-## Environment Configuration
+**Machine-to-machine credentials**, exchanged and refreshed for you:
 
-The SDK automatically configures endpoints. Just set your credentials:
-
-```bash
-export AGENT_CLIENT_ID=your_client_id
-export AGENT_CLIENT_SECRET=your_client_secret
-```
-
-**OAuth Redirect Host:** The SDK defaults to `127.0.0.1` for OAuth callbacks. If you need to use a different host (e.g., `localhost`), set:
-
-```bash
-export BARNDOOR_REDIRECT_HOST=localhost
-```
-
-## API Reference
-
-### BarndoorSDK
-
-Main SDK class for API interactions.
-
-```javascript
-const sdk = new BarndoorSDK(apiBaseUrl, options);
-```
-
-**Parameters:**
-- `apiBaseUrl` (string): Base URL of the Barndoor API
-- `options.token?` (string): Initial JWT (pass later via authenticate() if omitted)
-- `options.timeout` (number): Request timeout in seconds (default: 30)
-- `options.maxRetries` (number): Maximum retry attempts (default: 3)
-
-**Methods:**
-
-#### `authenticate(jwtToken)`
-Sets/validates token for the SDK instance.
-
-```typescript
-await sdk.authenticate(jwtToken);
-// Returns: Promise<void>
-```
-
-#### `ensureServerConnected(serverSlug, options?)`
-Ensure a server is connected, launching OAuth if needed – same behaviour as quick-start helper.
-
-```typescript
-await sdk.ensureServerConnected('notion', { pollSeconds: 2 });
-// Returns: Promise<void>
-```
-
-#### `listServers()`
-List all MCP servers available to your organization. Automatically fetches all pages if results are paginated.
-
-```typescript
-const servers = await sdk.listServers();
-// Returns: ServerSummary[]
-```
-
-#### `getServer(serverId)`
-Get detailed information about a specific server.
-
-```typescript
-const server = await sdk.getServer('server-uuid');
-// Returns: ServerDetail
-```
-
-#### `initiateConnection(serverId, returnUrl?)`
-Initiate OAuth connection flow for a server.
-
-```typescript
-const connection = await sdk.initiateConnection('server-uuid');
-// Returns: { connection_id, auth_url, state }
-```
-
-#### `getConnectionStatus(serverId)`
-Get connection status for a server.
-
-```typescript
-const status = await sdk.getConnectionStatus('server-uuid');
-// Returns: 'available' | 'pending' | 'connected'
-```
-
-#### `disconnectServer(serverId)`
-Disconnect from a specific MCP server.
-
-```typescript
-await sdk.disconnectServer('server-uuid');
-// Returns: Promise<void>
-```
-
-This will remove the connection record and clean up any stored OAuth credentials. The user will need to reconnect to use this server again.
-
-### Quick-start Helpers
-
-#### `loginInteractive(options?)`
-Perform interactive OAuth login and return initialized SDK.
-
-```typescript
-// Uses env vars by default (AGENT_CLIENT_ID, AGENT_CLIENT_SECRET)
-const sdk = await loginInteractive();
-
-// Or pass credentials explicitly
-const sdk = await loginInteractive({
-  clientId: 'your-client-id',
-  clientSecret: 'your-client-secret',
-  port: 52765
+```ts
+createClient({
+  auth: {
+    clientId: process.env.BARNDOOR_CLIENT_ID!,
+    clientSecret: process.env.BARNDOOR_CLIENT_SECRET!,
+  },
 });
 ```
 
-#### `ensureServerConnected(sdk, serverSlug, options?)`
-Ensure a server is connected, launching OAuth if needed.
+**Your own token provider**, called on every request — for a token you source
+from somewhere else, such as a secrets manager or an inbound request:
 
-```typescript
-await ensureServerConnected(sdk, 'notion', { timeout: 90 });
+```ts
+createClient({ auth: async () => fetchTokenFromVault() });
 ```
 
-#### `makeMcpConnectionParams(sdk, serverSlugOrId, options?)`
-Generate MCP connection parameters for AI frameworks. Accepts server slug or UUID.
+For a user-facing login there is also an authorization-code flow:
+`startAuthorizationCode` and `completeAuthorizationCode`.
 
-```typescript
-// Using slug
-const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion');
+## API surface
 
-// Using UUID
-const [params, publicUrl] = await makeMcpConnectionParams(sdk, '123e4567-...');
+The client exposes one namespace per service:
 
-// Or via options
-const [params, publicUrl] = await makeMcpConnectionParams(sdk, 'notion', {
-  serverId: '123e4567-...',  // alternative: pass UUID in options
-  serverSlug: 'notion'        // alternative: pass slug in options
+| Namespace | Covers |
+|---|---|
+| `client.registry` | MCP servers, agents, connections, the directory |
+| `client.policy` | Policies, rules, impact analysis |
+| `client.identity` | Organizations, users, groups, identity providers |
+| `client.notification` | Channels, alerts, subscriptions |
+| `client.dlp` | Detection rules, findings, redaction |
+| `client.llmGateway` | Models, budgets, API keys, usage |
+| `client.systemManagement` | Operational endpoints |
+
+The full surface — every operation, parameter and model — is the OpenAPI
+specification the client is generated from, published in this repository as
+[openapi.yaml](./openapi.yaml). Types for all of it ship with the package, so
+your editor is usually the fastest reference.
+
+## Connecting to MCP
+
+The platform serves MCP as well as REST. `createMcpClient` returns a connected
+[Model Context Protocol](https://modelcontextprotocol.io) client, authenticated
+with the same credentials:
+
+```ts
+import { createClient, createMcpClient } from '@barndoor-ai/sdk';
+
+const client = createClient({ auth: process.env.BARNDOOR_API_KEY! });
+const mcp = await createMcpClient(client, 'acme');
+
+const { tools } = await mcp.listTools();
+```
+
+If you would rather pass connection details to another framework than use the
+client directly, `mcpConnectionParams` returns the `url` and `headers` without
+opening a connection.
+
+## Reliability
+
+Requests are retried by default, with backoff. Pass `retry` to tune it, or
+`retry: false` to turn it off:
+
+```ts
+createClient({ auth, retry: { retries: 5, timeoutMs: 30_000 } });
+```
+
+The SDK logs nothing. To see requests, add middleware — this is the extension
+point for logging, tracing and metrics:
+
+```ts
+createClient({
+  auth,
+  middleware: [{ pre: async (ctx) => { console.log(ctx.init.method, ctx.url); } }],
 });
-
-// params: { url, transport, headers }
 ```
 
-## Error Handling
+## Non-production environments
 
-The SDK provides a comprehensive error hierarchy:
+Production is the default and needs no configuration. For other environments:
 
-```typescript
-import {
-  BarndoorError,
-  HTTPError,
-  ConnectionError,
-  TokenError,
-  ConfigurationError
-} from '@barndoor-ai/sdk';
+```ts
+import { createClient, DEV } from '@barndoor-ai/sdk';
 
-try {
-  await sdk.listServers();
-} catch (error) {
-  if (error instanceof HTTPError) {
-    console.error('HTTP Error:', error.statusCode, error.message);
-  } else if (error instanceof TokenError) {
-    console.error('Token Error:', error.message);
-    // Re-authenticate
-  } else if (error instanceof ConnectionError) {
-    console.error('Connection Error:', error.message);
-    // Check network
-  }
-}
+const client = createClient({ auth, env: DEV });
 ```
 
-## Browser Support
-
-The SDK works in both Node.js and browser environments:
-
-```typescript
-// Browser usage
-import { BarndoorSDK } from '@barndoor-ai/sdk';
-
-// Token storage uses localStorage in browsers
-const sdk = new BarndoorSDK('https://api.barndoor.ai', {
-  token: 'your-token'
-});
-```
-
-When running in the browser you can also create the SDK first and later call `await sdk.authenticate(token)` once your SPA receives a JWT.
-
-**Note:** Interactive login (`loginInteractive`) requires Node.js for the local callback server.
+`environmentFromEnv()` reads the same from `BARNDOOR_ENV`. Credentials inherit
+the environment's issuer, so pointing at dev cannot leave you calling dev with a
+production token.
 
 ## Examples
 
-See the `examples/` directory for complete working examples:
+Runnable examples are in [examples/](./examples).
 
-- `openai-integration.js` - OpenAI + MCP function calling integration
-- `basic-mcp-client.js` - Direct MCP client without AI framework
+## Versioning
 
-## TypeScript Support
+The version is the version of the **API contract**, so which SDK speaks to which
+API needs no lookup table. It is independent of the Barndoor platform's own
+release version.
 
-The SDK is written in TypeScript and includes full type definitions:
+| Part | Changes when |
+|---|---|
+| MAJOR | the API breaks — an operation removed, a field made required |
+| MINOR | the API gains something — a new operation or optional field |
+| PATCH | the SDK changes on its own — a fix, a dependency bump |
 
-```typescript
-import { BarndoorSDK, ServerSummary } from '@barndoor-ai/sdk';
+Versions on the `dev` dist-tag are prereleases built from unreleased platform
+work and carry a `-dev.<commit>` suffix. `npm install @barndoor-ai/sdk` gives
+you the latest formal release.
 
-const sdk = new BarndoorSDK('https://api.barndoor.ai', {
-  token: 'your-token'
-});
+## This repository is generated
 
-const servers: ServerSummary[] = await sdk.listServers();
-```
+The client, this README and the examples are generated or maintained in
+Barndoor's platform monorepo and pushed here, which is where the package is
+published from. **Pull requests against generated files here will be
+overwritten.** Open an issue instead, or contact your Barndoor representative.
 
-## Contributing
+## License
 
-1. Clone the repository
-2. Install node `nvm install 22 && nvm use 22`
-3. Install dependencies: `npm install`
-4. Build the project: `npm run build`
-5. Run tests: `npm test`
-6. Run linting: `npm run lint`
-7. Run type checking: `npm run type-check`
+MIT — see [LICENSE](./LICENSE).
