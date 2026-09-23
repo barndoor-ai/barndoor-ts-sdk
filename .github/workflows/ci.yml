@@ -95,8 +95,20 @@ jobs:
           fi
           npm --version
 
+      # Every push here is a regeneration, but not every regeneration changes the
+      # package. A commit touching only CI, RELEASE.md, examples/ or the spec
+      # copy cannot alter the tarball, and publishing anyway burns an npm
+      # version permanently on byte-identical contents — which is exactly what
+      # 2.0.0-dev.g37b8897 was. Fails open: see the script.
+      - name: Does this push change the package?
+        id: pkg
+        env:
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: .github/scripts/package-changed.py >> "$GITHUB_OUTPUT"
+
       - name: Resolve the prerelease version
         id: v
+        if: steps.pkg.outputs.changed == 'true'
         env:
           SHA: ${{ github.sha }}
         run: |
@@ -120,6 +132,7 @@ jobs:
       # what makes a re-run safe.
       - name: Skip if already published
         id: published
+        if: steps.pkg.outputs.changed == 'true'
         env:
           VERSION: ${{ steps.v.outputs.version }}
         run: |
@@ -132,20 +145,20 @@ jobs:
           fi
 
       - name: Set the prerelease version
-        if: steps.published.outputs.already != 'true'
+        if: steps.pkg.outputs.changed == 'true' && steps.published.outputs.already != 'true'
         env:
           VERSION: ${{ steps.v.outputs.version }}
         run: npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - run: npm ci
-        if: steps.published.outputs.already != 'true'
+        if: steps.pkg.outputs.changed == 'true' && steps.published.outputs.already != 'true'
       - run: npm run build
-        if: steps.published.outputs.already != 'true'
+        if: steps.pkg.outputs.changed == 'true' && steps.published.outputs.already != 'true'
 
       # `--tag dev`, never `latest`: a bare `npm install @barndoor-ai/sdk` must
       # keep resolving to the last formal release.
       - name: Publish
-        if: steps.published.outputs.already != 'true'
+        if: steps.pkg.outputs.changed == 'true' && steps.published.outputs.already != 'true'
         run: npm publish --provenance --access public --tag dev
 
       # `npm publish` returns success and then processes the upload
@@ -154,7 +167,7 @@ jobs:
       # therefore not evidence that anything was published, which is exactly how
       # this pipeline's rollout produced a success that served nothing.
       - name: Confirm the registry serves it
-        if: steps.published.outputs.already != 'true'
+        if: steps.pkg.outputs.changed == 'true' && steps.published.outputs.already != 'true'
         env:
           VERSION: ${{ steps.v.outputs.version }}
         run: .github/scripts/verify-published.sh '@barndoor-ai/sdk' "$VERSION" dev
