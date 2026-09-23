@@ -70,9 +70,10 @@ The client exposes one namespace per service:
 | `client.llmGateway` | Models, budgets, API keys, usage |
 | `client.systemManagement` | Operational endpoints |
 
-Every method, parameter and model is listed in [API.md](./API.md), which is
-generated from the OpenAPI specification alongside the client. The spec itself
-is in this repository as [openapi.yaml](./openapi.yaml).
+The full surface — every operation, parameter and model — is the OpenAPI
+specification the client is generated from, published in this repository as
+[openapi.yaml](./openapi.yaml). Types for all of it ship with the package, so
+your editor is usually the fastest reference.
 
 ## Connecting to MCP
 
