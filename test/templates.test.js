@@ -137,3 +137,30 @@ describe('importFileExtension — the ESM build actually loads', () => {
     assert.equal(typeof cjs.createClient, 'function');
   });
 });
+
+describe('package.mustache — repository.url is the repo that publishes', () => {
+  // npm mints provenance in the repo the publish runs from and then REJECTS the
+  // tarball if package.json points anywhere else:
+  //
+  //   422 Failed to validate repository information: package.json
+  //   "repository.url" is "git+https://github.com/barndoor-ai/bdai-platform.git",
+  //   expected to match "https://github.com/barndoor-ai/barndoor-ts-sdk"
+  //
+  // That fires at the very last step, after the tarball is built and the
+  // attestation is signed and written to a public transparency log — so it is
+  // worth catching here instead. It shipped once: gen-config.yaml named the repo
+  // the client is GENERATED in, which reads as obviously correct in a monorepo.
+  const PUBLISHED_FROM = 'barndoor-ai/barndoor-ts-sdk';
+
+  test('it names the publishing repo, not the monorepo', () => {
+    const { repository } = JSON.parse(read('package.json'));
+    assert.match(repository.url, new RegExp(`github\\.com/${PUBLISHED_FROM}(\\.git)?$`));
+  });
+
+  test('it is a URL a customer can open', () => {
+    // The link npmjs.com renders. bdai-platform is private, so pointing there
+    // gives every reader a 404 even when provenance is switched off.
+    const { repository } = JSON.parse(read('package.json'));
+    assert.doesNotMatch(repository.url, /bdai-platform/);
+  });
+});

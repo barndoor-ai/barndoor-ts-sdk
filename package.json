@@ -9,12 +9,11 @@
   },
   "files": [
     "dist/**/*",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/barndoor-ai/bdai-platform.git"
+    "url": "https://github.com/barndoor-ai/barndoor-ts-sdk.git"
   },
   "license": "MIT",
   "main": "./dist/index.js",
