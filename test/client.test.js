@@ -1,512 +1,144 @@
 /**
- * Tests for the main BarndoorSDK client.
+ * Client assembly, MCP URL composition, and environment selection.
  */
+import { strict as assert } from 'node:assert';
+import { test, describe } from 'node:test';
 
-import * as SDK from '../dist/index.esm.js';
-const { BarndoorSDK, ServerSummary, ServerDetail, HTTPError, ConfigurationError, TokenError } = SDK;
+import {
+  createClient,
+  environmentFromEnv,
+  mcpConnectionParams,
+  DEV,
+  LOCAL,
+} from '../dist/esm/index.js';
+import { BASE_PATH } from '../dist/esm/runtime.js';
 
-// Mock fetch with proper queue support for multiple responses
-const mockFetch = {
-  responseQueue: [],
-  fn: () => {},
-  mockResolvedValueOnce: value => {
-    mockFetch.responseQueue.push({ type: 'resolve', value });
-    return mockFetch;
-  },
-  mockRejectedValueOnce: error => {
-    mockFetch.responseQueue.push({ type: 'reject', value: error });
-    return mockFetch;
-  },
-  mockClear: () => {
-    mockFetch.fn = () => {};
-    mockFetch.calls = [];
-    mockFetch.responseQueue = [];
-  },
-  calls: [],
-};
+const ORG = 'acme';
 
-global.fetch = (...args) => {
-  mockFetch.calls.push(args);
-
-  // If there are queued responses, use them in order
-  if (mockFetch.responseQueue.length > 0) {
-    const response = mockFetch.responseQueue.shift();
-    if (response.type === 'resolve') {
-      return Promise.resolve(response.value);
-    } else {
-      return Promise.reject(response.value);
+describe('createClient', () => {
+  test('exposes every generated API class', () => {
+    const bd = createClient({ auth: 'tok' });
+    for (const name of ['registry', 'policy', 'identity', 'notification', 'dlp', 'llmGateway', 'systemManagement']) {
+      assert.ok(bd[name], `${name} is missing`);
     }
-  }
-
-  // Fallback to the default fn
-  return mockFetch.fn(...args);
-};
-
-beforeEach(() => {
-  mockFetch.mockClear();
-});
-
-describe('BarndoorSDK Constructor', () => {
-  const validToken =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-
-  test('creates SDK with valid parameters', () => {
-    const sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
-
-    expect(sdk.base).toBe('https://api.example.com');
-    expect(sdk.token).toBe(validToken);
-    expect(sdk._closed).toBe(false);
   });
 
-  test('strips trailing slash from base URL', () => {
-    const sdk = new BarndoorSDK('https://api.example.com/', { token: validToken });
-    expect(sdk.base).toBe('https://api.example.com');
+  test('production needs no base URL — the generated default is used', () => {
+    const bd = createClient({ auth: 'tok' });
+    assert.equal(bd.configuration.basePath, BASE_PATH);
   });
 
-  test.skip('methods throw when token not provided', async () => {
-    const sdk = new BarndoorSDK('https://api.example.com');
-    await expect(sdk.listServers()).rejects.toThrow(
-      'No token available. Call authenticate() first or provide token in constructor.'
-    );
+  test('an environment overrides the base URL', () => {
+    assert.equal(createClient({ auth: 'tok', env: DEV }).configuration.basePath, DEV.baseUrl);
+    assert.equal(createClient({ auth: 'tok', env: LOCAL }).configuration.basePath, LOCAL.baseUrl);
   });
 
-  test('throws when empty token is provided', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { token: '' })).toThrow(TokenError);
+  test('a token string becomes a provider the generated hook can call', async () => {
+    const bd = createClient({ auth: 'bdai_abc' });
+    assert.equal(await bd.configuration.accessToken('ApiKey', []), 'bdai_abc');
   });
 
-  test('validates URL format', () => {
-    expect(() => new BarndoorSDK('invalid-url', { token: validToken })).toThrow(ConfigurationError);
-
-    expect(() => new BarndoorSDK('', { token: validToken })).toThrow(ConfigurationError);
+  test('a caller-supplied provider is used as given', async () => {
+    const bd = createClient({ auth: async () => 'from-provider' });
+    assert.equal(await bd.configuration.accessToken('ApiKey', []), 'from-provider');
   });
 
-  test('validates token format', () => {
-    expect(() => new BarndoorSDK('https://api.example.com', { token: '' })).toThrow(TokenError);
-
-    expect(() => new BarndoorSDK('https://api.example.com', { token: 'invalid-jwt' })).toThrow(
-      TokenError
-    );
+  test('retries are on by default and can be switched off', () => {
+    // Forgetting fetchApi fails invisibly — the client just gets less
+    // resilient — so the default must be on.
+    assert.ok(createClient({ auth: 'tok' }).configuration.fetchApi, 'retries should default on');
+    assert.equal(createClient({ auth: 'tok', retry: false }).configuration.fetchApi, undefined);
   });
 
-  test('validates timeout parameter', () => {
-    expect(
-      () =>
-        new BarndoorSDK('https://api.example.com', {
-          token: validToken,
-          timeout: -1,
-        })
-    ).toThrow(ConfigurationError);
+  test('middleware and headers reach the configuration', () => {
+    // These are the extension points that stand in for a built-in logger.
+    const middleware = [{ pre: async () => undefined }];
+    const bd = createClient({ auth: 'tok', middleware, headers: { 'x-test': '1' } });
 
-    expect(
-      () =>
-        new BarndoorSDK('https://api.example.com', {
-          token: validToken,
-          timeout: 'invalid',
-        })
-    ).toThrow(ConfigurationError);
-  });
-
-  test('validates maxRetries parameter', () => {
-    expect(
-      () =>
-        new BarndoorSDK('https://api.example.com', {
-          token: validToken,
-          maxRetries: -1,
-        })
-    ).toThrow(ConfigurationError);
-
-    expect(
-      () =>
-        new BarndoorSDK('https://api.example.com', {
-          token: validToken,
-          maxRetries: 1.5,
-        })
-    ).toThrow(ConfigurationError);
+    assert.deepEqual(bd.configuration.middleware, middleware);
+    assert.equal(bd.configuration.headers['x-test'], '1');
   });
 });
 
-describe('BarndoorSDK Methods', () => {
-  const validToken =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-  let sdk;
+describe('MCP connection parameters', () => {
+  const bd = createClient({ auth: 'tok' });
 
-  beforeEach(() => {
-    // Mock environment to skip token validation
-    process.env.BARNDOOR_ENV = 'test';
-    sdk = new BarndoorSDK('https://api.example.com', { token: validToken });
+  test('omitting a server gives the universal endpoint', async () => {
+    const { url } = await mcpConnectionParams(bd, ORG);
+    assert.equal(url, `https://${ORG}.platform.barndoor.ai/mcp`);
   });
 
-  afterEach(async () => {
-    if (sdk && typeof sdk.close === 'function') {
-      await sdk.close();
-    }
-    delete process.env.BARNDOOR_ENV;
+  test('naming a server gives the direct endpoint', async () => {
+    const { url } = await mcpConnectionParams(bd, ORG, 'slack-user');
+    assert.equal(url, `https://${ORG}.platform.barndoor.ai/mcp/slack-user`);
   });
 
-  describe('listServers', () => {
-    test('returns array of ServerSummary objects', async () => {
-      const mockServers = [
-        {
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          name: 'Test Server 1',
-          slug: 'test-server-1',
-          provider: 'github',
-          connection_status: 'connected',
-        },
-        {
-          id: '123e4567-e89b-12d3-a456-426614174001',
-          name: 'Test Server 2',
-          slug: 'test-server-2',
-          provider: null,
-          connection_status: 'available',
-        },
-      ];
-
-      const mockPaginatedResponse = {
-        data: mockServers,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 2,
-          pages: 1,
-          previous_page: null,
-          next_page: null,
-        },
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockPaginatedResponse),
-      });
-
-      const servers = await sdk.listServers();
-
-      expect(servers).toHaveLength(2);
-      expect(servers[0]).toBeInstanceOf(ServerSummary);
-      expect(servers[0].id).toBe(mockServers[0].id);
-      expect(servers[1]).toBeInstanceOf(ServerSummary);
-      expect(servers[1].provider).toBeNull();
-
-      expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/api/servers');
-      expect(mockFetch.calls[0][1]).toEqual(
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            Authorization: `Bearer ${validToken}`,
-          }),
-        })
-      );
-    });
-
-    test('handles empty server list', async () => {
-      const mockEmptyResponse = {
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0,
-          previous_page: null,
-          next_page: null,
-        },
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockEmptyResponse),
-      });
-
-      const servers = await sdk.listServers();
-      expect(servers).toEqual([]);
-    });
-
-    test('automatically fetches all pages when paginated', async () => {
-      // Page 1 response
-      const mockPage1 = {
-        data: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174000',
-            name: 'Server 1',
-            slug: 'server-1',
-            provider: 'github',
-            connection_status: 'connected',
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174001',
-            name: 'Server 2',
-            slug: 'server-2',
-            provider: 'notion',
-            connection_status: 'connected',
-          },
-        ],
-        pagination: {
-          page: 1,
-          limit: 2,
-          total: 5,
-          pages: 3,
-          previous_page: null,
-          next_page: 2,
-        },
-      };
-
-      // Page 2 response
-      const mockPage2 = {
-        data: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            name: 'Server 3',
-            slug: 'server-3',
-            provider: 'salesforce',
-            connection_status: 'available',
-          },
-          {
-            id: '123e4567-e89b-12d3-a456-426614174003',
-            name: 'Server 4',
-            slug: 'server-4',
-            provider: 'slack',
-            connection_status: 'pending',
-          },
-        ],
-        pagination: {
-          page: 2,
-          limit: 2,
-          total: 5,
-          pages: 3,
-          previous_page: 1,
-          next_page: 3,
-        },
-      };
-
-      // Page 3 response
-      const mockPage3 = {
-        data: [
-          {
-            id: '123e4567-e89b-12d3-a456-426614174004',
-            name: 'Server 5',
-            slug: 'server-5',
-            provider: 'jira',
-            connection_status: 'connected',
-          },
-        ],
-        pagination: {
-          page: 3,
-          limit: 2,
-          total: 5,
-          pages: 3,
-          previous_page: 2,
-          next_page: null,
-        },
-      };
-
-      // Mock all three page requests
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockPage1),
-      });
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockPage2),
-      });
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockPage3),
-      });
-
-      const servers = await sdk.listServers();
-
-      // Should return all 5 servers across all pages
-      expect(servers).toHaveLength(5);
-      expect(servers[0].slug).toBe('server-1');
-      expect(servers[1].slug).toBe('server-2');
-      expect(servers[2].slug).toBe('server-3');
-      expect(servers[3].slug).toBe('server-4');
-      expect(servers[4].slug).toBe('server-5');
-
-      // Should have made 3 requests (one for each page)
-      expect(mockFetch.calls.length).toBe(3);
-      expect(mockFetch.calls[0][0]).toBe('https://api.example.com/api/servers');
-      expect(mockFetch.calls[1][0]).toBe('https://api.example.com/api/servers?page=2');
-      expect(mockFetch.calls[2][0]).toBe('https://api.example.com/api/servers?page=3');
-    });
+  test('the organization becomes a subdomain of the API host', async () => {
+    const bdDev = createClient({ auth: 'tok', env: DEV });
+    const { url } = await mcpConnectionParams(bdDev, ORG);
+    assert.equal(new URL(url).hostname, `${ORG}.${new URL(DEV.baseUrl).hostname}`);
   });
 
-  describe('getServer', () => {
-    test('returns ServerDetail object', async () => {
-      const serverId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockServer = {
-        id: serverId,
-        name: 'Test Server',
-        slug: 'test-server',
-        provider: 'github',
-        connection_status: 'connected',
-        url: 'https://api.example.com/mcp',
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockServer),
-      });
-
-      const server = await sdk.getServer(serverId);
-
-      expect(server).toBeInstanceOf(ServerDetail);
-      expect(server.id).toBe(serverId);
-      expect(server.url).toBe(mockServer.url);
-
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/${serverId}`);
-      expect(mockFetch.calls[0][1]).toEqual(expect.objectContaining({ method: 'GET' }));
-    });
-
-    test('validates server ID format', async () => {
-      await expect(sdk.getServer('invalid_uuid!')).rejects.toThrow(
-        'Server ID must be a valid UUID or slug'
-      );
-
-      await expect(sdk.getServer('')).rejects.toThrow('Server ID must be a non-empty string');
-    });
+  test('an explicit baseUrl overrides the client host', async () => {
+    const { url } = await mcpConnectionParams(bd, ORG, undefined, { baseUrl: 'https://mcp.elsewhere.test' });
+    assert.equal(url, `https://${ORG}.mcp.elsewhere.test/mcp`);
   });
 
-  describe('initiateConnection', () => {
-    const serverId = '123e4567-e89b-12d3-a456-426614174000';
-
-    test('initiates connection without return URL', async () => {
-      const mockResponse = {
-        connection_id: 'conn-123',
-        auth_url: 'https://auth.example.com/oauth/authorize?...',
-        state: 'random-state',
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const result = await sdk.initiateConnection(serverId);
-
-      expect(result).toEqual(mockResponse);
-      expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(`https://api.example.com/api/servers/${serverId}/connect`);
-      expect(mockFetch.calls[0][1]).toEqual(
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({}),
-        })
-      );
-    });
-
-    test('initiates connection with return URL', async () => {
-      const returnUrl = 'https://app.example.com/callback';
-      const mockResponse = { auth_url: 'https://auth.example.com/...' };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      await sdk.initiateConnection(serverId, returnUrl);
-
-      expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(
-        `https://api.example.com/api/servers/${serverId}/connect?return_url=${encodeURIComponent(returnUrl)}`
-      );
-      expect(mockFetch.calls[0][1]).toEqual(expect.any(Object));
-    });
-
-    test('handles OAuth configuration error', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        text: () => Promise.resolve('OAuth server configuration not found'),
-      });
-
-      await expect(sdk.initiateConnection(serverId)).rejects.toThrow(
-        'Server is missing OAuth configuration'
-      );
-    });
+  test('a missing organization is rejected rather than producing a bare host', async () => {
+    await assert.rejects(() => mcpConnectionParams(bd, ''), /organization slug is required/);
   });
 
-  describe('getConnectionStatus', () => {
-    test('returns connection status', async () => {
-      const serverId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockResponse = { status: 'connected' };
+  test('headers carry a prefixed bearer, a session id and the SSE accept type', async () => {
+    const { headers } = await mcpConnectionParams(bd, ORG, 'slack-user');
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const status = await sdk.getConnectionStatus(serverId);
-
-      expect(status).toBe('connected');
-      expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(
-        `https://api.example.com/api/servers/${serverId}/connection`
-      );
-      expect(mockFetch.calls[0][1]).toEqual(
-        expect.objectContaining({
-          method: 'GET',
-        })
-      );
-    });
+    assert.equal(headers.Authorization, 'Bearer tok');
+    assert.equal(headers.Accept, 'application/json, text/event-stream');
+    assert.ok(headers['x-barndoor-session-id']);
   });
 
-  describe('disconnectServer', () => {
-    const serverId = '123e4567-e89b-12d3-a456-426614174000';
-
-    test('successfully disconnects from server', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 204,
-      });
-
-      await sdk.disconnectServer(serverId);
-
-      expect(mockFetch.calls.length).toBe(1);
-      expect(mockFetch.calls[0][0]).toBe(
-        `https://api.example.com/api/servers/${serverId}/connection`
-      );
-      expect(mockFetch.calls[0][1]).toEqual(
-        expect.objectContaining({
-          method: 'DELETE',
-        })
-      );
-    });
-
-    test('throws error when connection not found', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        json: () =>
-          Promise.resolve({
-            error: 'ConnectionNotFound',
-            message: 'Connection not found',
-          }),
-      });
-
-      await expect(sdk.disconnectServer(serverId)).rejects.toThrow(/Connection not found/i);
-    });
-
-    test('validates server ID format', async () => {
-      await expect(sdk.disconnectServer('invalid_server_id!')).rejects.toThrow(
-        'Server ID must be a valid UUID or slug'
-      );
-    });
+  test('a caller-supplied session id is used verbatim', async () => {
+    const { headers } = await mcpConnectionParams(bd, ORG, undefined, { sessionId: 'fixed-session' });
+    assert.equal(headers['x-barndoor-session-id'], 'fixed-session');
   });
 
-  describe('cleanup', () => {
-    test.skip('close() prevents further requests - edge case', async () => {
-      await sdk.close();
+  test('each session gets its own id by default', async () => {
+    const a = await mcpConnectionParams(bd, ORG);
+    const b = await mcpConnectionParams(bd, ORG);
+    assert.notEqual(a.headers['x-barndoor-session-id'], b.headers['x-barndoor-session-id']);
+  });
 
-      await expect(sdk.listServers()).rejects.toThrow(
-        'SDK has been closed. Create a new instance or use as context manager.'
-      );
-    });
+  test('a slug is passed through without an API call', async () => {
+    // Only a UUID needs exchanging, so a slug must not cost a round trip. This
+    // client has no working transport, so a request would throw.
+    const { url } = await mcpConnectionParams(bd, ORG, 'not-a-uuid');
+    assert.match(url, /\/mcp\/not-a-uuid$/);
+  });
+});
 
-    test('aclose() is alias for close()', async () => {
-      await sdk.aclose();
-      expect(sdk._closed).toBe(true);
-    });
+describe('environmentFromEnv', () => {
+  test('unset means production, which is undefined', () => {
+    assert.equal(environmentFromEnv({}), undefined);
+  });
+
+  test('named environments resolve', () => {
+    assert.deepEqual(environmentFromEnv({ BARNDOOR_ENV: 'dev' }), DEV);
+    assert.deepEqual(environmentFromEnv({ BARNDOOR_ENV: 'LOCAL' }), LOCAL);
+    assert.deepEqual(environmentFromEnv({ BARNDOOR_ENV: ' dev ' }), DEV);
+  });
+
+  test('an unknown name falls back to production rather than throwing', () => {
+    assert.equal(environmentFromEnv({ BARNDOOR_ENV: 'staging' }), undefined);
+  });
+
+  test('a URL override keeps the matching issuer', () => {
+    const env = environmentFromEnv({ BARNDOOR_ENV: 'dev', BARNDOOR_API_URL: 'https://other.test' });
+    assert.equal(env.baseUrl, 'https://other.test');
+    assert.equal(env.issuer, DEV.issuer, 'the issuer must follow the named environment');
+  });
+
+  test('a URL override alone uses the production issuer', () => {
+    const env = environmentFromEnv({ BARNDOOR_API_URL: 'https://other.test' });
+    assert.equal(env.baseUrl, 'https://other.test');
+    assert.ok(env.issuer.startsWith('https://'), 'a bare override still needs an issuer');
   });
 });

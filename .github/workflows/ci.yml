@@ -1,3 +1,26 @@
+# =============================================================================
+# THIS FILE LIVES IN barndoor-ai/barndoor-ts-sdk, at .github/workflows/ci.yml.
+#
+# The copy here is the reviewable source. It cannot be delivered by the push
+# from bdai-platform: the octo-sts `platform-publish` token carries contents +
+# pull_requests and NOT `workflows`, and GitHub refuses any App push that
+# touches .github/workflows/. Land changes in that repo by hand and update this
+# copy in the same PR — see sdk/README.md -> Publishing.
+#
+# Two publish channels, ONE file on purpose. npm's trusted publisher for
+# @barndoor-ai/sdk is pinned to this repo, THIS FILENAME, and the `release`
+# environment. A second workflow file would need its own binding, and an
+# existing binding cannot be edited — only deleted and recreated. Keeping both
+# jobs here means the binding that already works keeps working, untouched.
+#
+#   push to main    -> prerelease  <version>-dev.g<sha>  at dist-tag `dev`
+#   GitHub Release  -> release     <version>             at dist-tag `latest`
+#
+# Pushes to main come from bdai-platform's sdk_publish.yml, which regenerates
+# the client whenever the OpenAPI spec or the SDK's own sources change there.
+# The formal release is unchanged and still manual: tag vX.Y.Z, cut a Release.
+# =============================================================================
+
 name: CI
 
 on:
@@ -10,7 +33,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run that might publish: interrupting between `npm publish`
+  # and the registry's acknowledgement burns a version permanently.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -27,8 +52,101 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm run lint
-      - run: npm run type-check
+
+      # `--if-present` because the generated package.json defines only `build`,
+      # `prepare` and `test`. The hand-written SDK had lint and type-check
+      # scripts; without this guard, `npm run lint` fails with "missing script"
+      # the moment the generated package lands, and nothing ever publishes.
+      # A build that already runs `tsc` twice also makes type-check redundant.
+      - run: npm run lint --if-present
+      - run: npm run type-check --if-present
+
+  # Every push to main is a publishable state, so each one gets a `dev` build.
+  # That is what makes an API change installable the moment it merges, without
+  # waiting for whoever cuts the next formal release.
+  publish-prerelease:
+    name: Publish prerelease
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    environment: release
+    needs: build
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing landed in npm 11.5.1. Node 24 ships a new enough npm
+      # today, but the runner image moves on its own schedule, and the failure
+      # if it ever regresses is an auth error rather than a version error.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          set -euo pipefail
+          have="$(npm --version)"
+          if [ "$(printf '%s\n11.5.1\n' "$have" | sort -V | head -1)" != "11.5.1" ]; then
+            echo "npm $have predates trusted publishing; upgrading"
+            npm install -g npm@11
+          fi
+          npm --version
+
+      - name: Resolve the prerelease version
+        id: v
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base="$(node -p "require('./package.json').version")"
+
+          # package.json holds the CLEAN version this line is building toward,
+          # so the formal release publishes exactly what is committed with no
+          # suffix to strip. The suffix is applied here and never committed.
+          #
+          # `g` prefix, git-describe style, and not decoration: a short sha that
+          # happens to be all digits with a leading zero — 0062630 — is an
+          # invalid semver prerelease identifier, and npm would reject the
+          # package for a reason nobody would connect to the commit they pushed.
+          version="${base}-dev.g$(echo "$SHA" | cut -c1-7)"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing $version at dist-tag dev"
+
+      # A version already on the registry is a no-op, not a failure — which is
+      # what makes a re-run safe.
+      - name: Skip if already published
+        id: published
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          if npm view "@barndoor-ai/sdk@${VERSION}" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::@barndoor-ai/sdk@${VERSION} is already published."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set the prerelease version
+        if: steps.published.outputs.already != 'true'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - run: npm ci
+        if: steps.published.outputs.already != 'true'
+      - run: npm run build
+        if: steps.published.outputs.already != 'true'
+
+      # `--tag dev`, never `latest`: a bare `npm install @barndoor-ai/sdk` must
+      # keep resolving to the last formal release.
+      - name: Publish
+        if: steps.published.outputs.already != 'true'
+        run: npm publish --provenance --access public --tag dev
 
   publish:
     name: Publish
