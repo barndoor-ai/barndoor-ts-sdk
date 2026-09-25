@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.1.0
+  version: 2.2.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4772,6 +4772,8 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
     put:
       tags:
       - llm-gateway
@@ -4798,6 +4800,8 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
   /api/llm-gateway/admin/model-access:
     get:
       tags:
@@ -4955,6 +4959,8 @@ paths:
           description: No such resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
   /api/llm-gateway/admin/model-mappings/reorder:
     put:
       tags:
@@ -5029,6 +5035,8 @@ paths:
             this provider
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
     delete:
       tags:
       - llm-gateway

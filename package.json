@@ -1,6 +1,6 @@
 {
   "name": "@barndoor-ai/sdk",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "TypeScript client for the Barndoor Platform API",
   "author": "Barndoor AI, Inc. (https://barndoor.ai)",
   "homepage": "https://barndoor.ai",
