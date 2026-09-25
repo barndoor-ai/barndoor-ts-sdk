@@ -41,6 +41,42 @@ export interface CreateModelMappingRequest {
      */
     changeNote?: string | null;
     /**
+     * Cooldown on an upstream 429 that carries no usable `Retry-After`
+     * (a `Retry-After` sets the window instead). Range 1-3600, and at most
+     * `cooldown_max_secs`; default 30.
+     */
+    cooldown429DefaultSecs?: number | null;
+    /**
+     * First cooldown window once the threshold trips, doubled on each failed
+     * recovery probe up to `cooldown_max_secs`. Range 1-3600, and at most
+     * `cooldown_max_secs`; default 30.
+     */
+    cooldownBaseSecs?: number | null;
+    /**
+     * Gateway failures (5xx, timeouts, connection errors, managed-key 401/403)
+     * within `cooldown_window_secs` that cool the route. `0` disables every
+     * cooldown of the shared route (rolling failures, 429 and 529); per-user
+     * credential cooldowns on passthrough routes still apply. Range 0-100;
+     * default 10.
+     */
+    cooldownFailureThreshold?: number | null;
+    /**
+     * Cap on every cooldown window: doubling, 429 and 529. Range 1-86400;
+     * default 300.
+     */
+    cooldownMaxSecs?: number | null;
+    /**
+     * Flat cooldown on an upstream 529 "overloaded" with no usable
+     * `Retry-After`; it does not spend the failure budget. `0` counts a 529 as
+     * an ordinary gateway failure instead. Range 0-3600, and at most
+     * `cooldown_max_secs` unless 0; default 10.
+     */
+    cooldownOverloadedSecs?: number | null;
+    /**
+     * Width of the rolling failure window, seconds. Range 1-3600; default 60.
+     */
+    cooldownWindowSecs?: number | null;
+    /**
      * 
      */
     enabled?: boolean;
@@ -129,6 +165,12 @@ export function CreateModelMappingRequestFromJSONTyped(json: any, ignoreDiscrimi
         
         'bareAlias': json['bare_alias'] === undefined ? undefined : json['bare_alias'] === null ? null : json['bare_alias'],
         'changeNote': json['change_note'] === undefined ? undefined : json['change_note'] === null ? null : json['change_note'],
+        'cooldown429DefaultSecs': json['cooldown_429_default_secs'] === undefined ? undefined : json['cooldown_429_default_secs'] === null ? null : json['cooldown_429_default_secs'],
+        'cooldownBaseSecs': json['cooldown_base_secs'] === undefined ? undefined : json['cooldown_base_secs'] === null ? null : json['cooldown_base_secs'],
+        'cooldownFailureThreshold': json['cooldown_failure_threshold'] === undefined ? undefined : json['cooldown_failure_threshold'] === null ? null : json['cooldown_failure_threshold'],
+        'cooldownMaxSecs': json['cooldown_max_secs'] === undefined ? undefined : json['cooldown_max_secs'] === null ? null : json['cooldown_max_secs'],
+        'cooldownOverloadedSecs': json['cooldown_overloaded_secs'] === undefined ? undefined : json['cooldown_overloaded_secs'] === null ? null : json['cooldown_overloaded_secs'],
+        'cooldownWindowSecs': json['cooldown_window_secs'] === undefined ? undefined : json['cooldown_window_secs'] === null ? null : json['cooldown_window_secs'],
         'enabled': json['enabled'] == null ? undefined : json['enabled'],
         'modelAlias': json['model_alias'],
         'priority': json['priority'] == null ? undefined : json['priority'],
@@ -155,6 +197,12 @@ export function CreateModelMappingRequestToJSONTyped(value?: CreateModelMappingR
         
         'bare_alias': value['bareAlias'],
         'change_note': value['changeNote'],
+        'cooldown_429_default_secs': value['cooldown429DefaultSecs'],
+        'cooldown_base_secs': value['cooldownBaseSecs'],
+        'cooldown_failure_threshold': value['cooldownFailureThreshold'],
+        'cooldown_max_secs': value['cooldownMaxSecs'],
+        'cooldown_overloaded_secs': value['cooldownOverloadedSecs'],
+        'cooldown_window_secs': value['cooldownWindowSecs'],
         'enabled': value['enabled'],
         'model_alias': value['modelAlias'],
         'priority': value['priority'],

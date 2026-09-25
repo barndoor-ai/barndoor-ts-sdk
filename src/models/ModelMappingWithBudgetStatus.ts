@@ -67,6 +67,33 @@ import {
  */
 export interface ModelMappingWithBudgetStatus {
     /**
+     * Cooldown on a 429 with no usable `Retry-After`, seconds.
+     */
+    cooldown429DefaultSecs: number;
+    /**
+     * First cooldown window, doubled on each failed recovery probe up to
+     * `cooldown_max_secs`.
+     */
+    cooldownBaseSecs: number;
+    /**
+     * Gateway failures within `cooldown_window_secs` that cool the route.
+     * `0` disables every cooldown of the shared route.
+     */
+    cooldownFailureThreshold: number;
+    /**
+     * Cap on every cooldown window.
+     */
+    cooldownMaxSecs: number;
+    /**
+     * Flat cooldown on a 529 "overloaded" with no usable `Retry-After`,
+     * seconds. `0` counts a 529 as an ordinary gateway failure instead.
+     */
+    cooldownOverloadedSecs: number;
+    /**
+     * Width of the rolling failure window, seconds.
+     */
+    cooldownWindowSecs: number;
+    /**
      * 
      */
     createdByEmail?: string;
@@ -230,6 +257,12 @@ export interface ModelMappingWithBudgetStatus {
  * Check if a given object implements the ModelMappingWithBudgetStatus interface.
  */
 export function instanceOfModelMappingWithBudgetStatus(value: object): value is ModelMappingWithBudgetStatus {
+    if ((!('cooldown429DefaultSecs' in (value as Record<string, any>)) && !('cooldown_429_default_secs' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldown429DefaultSecs'] === undefined && (value as Record<string, any>)['cooldown_429_default_secs'] === undefined)) return false;
+    if ((!('cooldownBaseSecs' in (value as Record<string, any>)) && !('cooldown_base_secs' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldownBaseSecs'] === undefined && (value as Record<string, any>)['cooldown_base_secs'] === undefined)) return false;
+    if ((!('cooldownFailureThreshold' in (value as Record<string, any>)) && !('cooldown_failure_threshold' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldownFailureThreshold'] === undefined && (value as Record<string, any>)['cooldown_failure_threshold'] === undefined)) return false;
+    if ((!('cooldownMaxSecs' in (value as Record<string, any>)) && !('cooldown_max_secs' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldownMaxSecs'] === undefined && (value as Record<string, any>)['cooldown_max_secs'] === undefined)) return false;
+    if ((!('cooldownOverloadedSecs' in (value as Record<string, any>)) && !('cooldown_overloaded_secs' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldownOverloadedSecs'] === undefined && (value as Record<string, any>)['cooldown_overloaded_secs'] === undefined)) return false;
+    if ((!('cooldownWindowSecs' in (value as Record<string, any>)) && !('cooldown_window_secs' in (value as Record<string, any>))) || ((value as Record<string, any>)['cooldownWindowSecs'] === undefined && (value as Record<string, any>)['cooldown_window_secs'] === undefined)) return false;
     if ((!('bareAlias' in (value as Record<string, any>)) && !('bare_alias' in (value as Record<string, any>))) || ((value as Record<string, any>)['bareAlias'] === undefined && (value as Record<string, any>)['bare_alias'] === undefined)) return false;
     if (!('enabled' in value) || value['enabled'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
@@ -254,6 +287,12 @@ export function ModelMappingWithBudgetStatusFromJSONTyped(json: any, ignoreDiscr
     }
     return {
         
+        'cooldown429DefaultSecs': json['cooldown_429_default_secs'],
+        'cooldownBaseSecs': json['cooldown_base_secs'],
+        'cooldownFailureThreshold': json['cooldown_failure_threshold'],
+        'cooldownMaxSecs': json['cooldown_max_secs'],
+        'cooldownOverloadedSecs': json['cooldown_overloaded_secs'],
+        'cooldownWindowSecs': json['cooldown_window_secs'],
         'createdByEmail': json['created_by_email'] == null ? undefined : json['created_by_email'],
         'createdByName': json['created_by_name'] == null ? undefined : json['created_by_name'],
         'createdByUserId': json['created_by_user_id'] == null ? undefined : json['created_by_user_id'],
@@ -293,6 +332,12 @@ export function ModelMappingWithBudgetStatusToJSONTyped(value?: ModelMappingWith
 
     return {
         
+        'cooldown_429_default_secs': value['cooldown429DefaultSecs'],
+        'cooldown_base_secs': value['cooldownBaseSecs'],
+        'cooldown_failure_threshold': value['cooldownFailureThreshold'],
+        'cooldown_max_secs': value['cooldownMaxSecs'],
+        'cooldown_overloaded_secs': value['cooldownOverloadedSecs'],
+        'cooldown_window_secs': value['cooldownWindowSecs'],
         'created_by_email': value['createdByEmail'],
         'created_by_name': value['createdByName'],
         'created_by_user_id': value['createdByUserId'],

@@ -7781,6 +7781,58 @@ components:
         from the user''s perspective, taking into account server configuration,
 
         Bao registration, and user connections.'
+    CooldownPolicy:
+      type: object
+      description: 'A route''s cooldown policy, one field per column.
+
+
+        Route-health *state* is keyed by `(provider_id, upstream_model)`, so an
+
+        enablement row and an alias row that target the same upstream share one
+
+        failure window and ejection deadline; each request judges that shared
+
+        state by the policy of the row it resolved.'
+      required:
+      - cooldown_failure_threshold
+      - cooldown_window_secs
+      - cooldown_base_secs
+      - cooldown_max_secs
+      - cooldown_429_default_secs
+      - cooldown_overloaded_secs
+      properties:
+        cooldown_429_default_secs:
+          type: integer
+          format: int32
+          description: Cooldown on a 429 with no usable `Retry-After`, seconds.
+        cooldown_base_secs:
+          type: integer
+          format: int32
+          description: 'First cooldown window, doubled on each failed recovery probe
+            up to
+
+            `cooldown_max_secs`.'
+        cooldown_failure_threshold:
+          type: integer
+          format: int32
+          description: 'Gateway failures within `cooldown_window_secs` that cool the
+            route.
+
+            `0` disables every cooldown of the shared route.'
+        cooldown_max_secs:
+          type: integer
+          format: int32
+          description: Cap on every cooldown window.
+        cooldown_overloaded_secs:
+          type: integer
+          format: int32
+          description: 'Flat cooldown on a 529 "overloaded" with no usable `Retry-After`,
+
+            seconds. `0` counts a 529 as an ordinary gateway failure instead.'
+        cooldown_window_secs:
+          type: integer
+          format: int32
+          description: Width of the rolling failure window, seconds.
     CreateAllowListEntryRequest:
       type: object
       required:
@@ -8157,6 +8209,71 @@ components:
           description: 'Optional free-text note explaining why this route was added
 
             (BCP-3998). Surfaced on the row and mirrored into the audit event.'
+        cooldown_429_default_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cooldown on an upstream 429 that carries no usable `Retry-After`
+
+            (a `Retry-After` sets the window instead). Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.'
+        cooldown_base_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'First cooldown window once the threshold trips, doubled on
+            each failed
+
+            recovery probe up to `cooldown_max_secs`. Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.'
+        cooldown_failure_threshold:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Gateway failures (5xx, timeouts, connection errors, managed-key
+            401/403)
+
+            within `cooldown_window_secs` that cool the route. `0` disables every
+
+            cooldown of the shared route (rolling failures, 429 and 529); per-user
+
+            credential cooldowns on passthrough routes still apply. Range 0-100;
+
+            default 10.'
+        cooldown_max_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cap on every cooldown window: doubling, 429 and 529. Range
+            1-86400;
+
+            default 300.'
+        cooldown_overloaded_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Flat cooldown on an upstream 529 "overloaded" with no usable
+
+            `Retry-After`; it does not spend the failure budget. `0` counts a 529
+            as
+
+            an ordinary gateway failure instead. Range 0-3600, and at most
+
+            `cooldown_max_secs` unless 0; default 10.'
+        cooldown_window_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Width of the rolling failure window, seconds. Range 1-3600;
+            default 60.
         enabled:
           type: boolean
         model_alias:
@@ -10604,6 +10721,11 @@ components:
         \ resolves to\n`gpt-4o-mini`)."
     ModelMapping:
       allOf:
+      - $ref: '#/components/schemas/CooldownPolicy'
+        description: 'The route''s passive cooldown policy (BCP-2671 H5), serialized
+          as six
+
+          flat `cooldown_*` fields.'
       - $ref: '#/components/schemas/ChangeAttribution'
         description: 'Who created and last changed this route, and why (BCP-3998).
 
@@ -10776,6 +10898,8 @@ components:
         that ignore `budget_status` keep working unchanged."
     ModelMappingWithProvider:
       allOf:
+      - $ref: '#/components/schemas/CooldownPolicy'
+        description: See [`ModelMapping::cooldown`].
       - $ref: '#/components/schemas/ChangeAttribution'
         description: See [`ModelMapping::attribution`].
       - type: object
@@ -13831,6 +13955,89 @@ components:
             change and an unrelated later edit must not inherit an explanation
 
             written for a different one.'
+        cooldown_429_default_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cooldown on an upstream 429 that carries no usable `Retry-After`
+
+            (a `Retry-After` sets the window instead). Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_base_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'First cooldown window once the threshold trips, doubled on
+            each failed
+
+            recovery probe up to `cooldown_max_secs`. Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_failure_threshold:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Gateway failures (5xx, timeouts, connection errors, managed-key
+            401/403)
+
+            within `cooldown_window_secs` that cool the route. `0` disables every
+
+            cooldown of the shared route (rolling failures, 429 and 529); per-user
+
+            credential cooldowns on passthrough routes still apply. Range 0-100;
+
+            default 10.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_max_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cap on every cooldown window: doubling, 429 and 529. Range
+            1-86400;
+
+            default 300.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_overloaded_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Flat cooldown on an upstream 529 "overloaded" with no usable
+
+            `Retry-After`; it does not spend the failure budget. `0` counts a 529
+            as
+
+            an ordinary gateway failure instead. Range 0-3600, and at most
+
+            `cooldown_max_secs` unless 0; default 10.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_window_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Width of the rolling failure window, seconds. Range 1-3600;
+            default 60.
+
+
+            Omitted (or `null`) keeps the stored value.'
         enabled:
           type:
           - boolean
