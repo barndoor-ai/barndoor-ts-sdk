@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.0.0
+  version: 2.1.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -12986,6 +12986,16 @@ components:
             format: date-time
           - type: 'null'
           title: Last Accessed At
+        connected_by_user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Connected By User Id
+        account_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Account Email
       type: object
       required:
       - id
