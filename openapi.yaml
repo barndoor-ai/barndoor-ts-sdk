@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.3.0
+  version: 2.4.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -1661,6 +1661,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PolicyRevisionDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/v2/policy-revisions:
+    get:
+      tags:
+      - policy
+      summary: List Server Policy Revisions
+      description: 'List policy revisions across every policy scoped to `mcp_server_id`
+        in the
+
+        caller''s organization, newest first, cursor-paginated (BCP-4458).
+
+
+        Replaces the client''s old per-policy revisions fan-out (one call per
+
+        policy, capped at 20 policies): this is one server-scoped call whose
+
+        `version_number` values are computed over each policy''s whole revision
+
+        history before `since`/`cursor` filtering, so they stay stable across
+
+        pages.'
+      operationId: list_server_policy_revisions
+      parameters:
+      - name: mcp_server_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: MCP server to scope revisions to
+          title: Mcp Server Id
+        description: MCP server to scope revisions to
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Max items per page
+          default: 20
+          title: Limit
+        description: Max items per page
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Opaque cursor from a previous response's next_cursor
+          title: Cursor
+        description: Opaque cursor from a previous response's next_cursor
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          description: Inclusive lower bound on revised_at
+          title: Since
+        description: Inclusive lower bound on revised_at
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerPolicyRevisionsPage'
         '422':
           description: Validation Error
           content:
@@ -13313,6 +13388,28 @@ components:
         for a single server, sourced from Bao, and is only served by the
 
         single-server GET endpoints.'
+    ServerPolicyRevisionsPage:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/PolicyRevisionSummary'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Opaque cursor for the next page; null when there are no more
+            results.
+      type: object
+      required:
+      - data
+      title: ServerPolicyRevisionsPage
+      description: "Cursor-paged page of policy revisions scoped to one MCP server\
+        \ (BCP-4458).\n\nBacks ``GET /admin/v2/policy-revisions`` \u2014 one source\
+        \ instead of the\nper-policy fan-out the client used to do. No ``total``/``pages``:\
+        \ this is\nkeyset, not offset, pagination, so there is deliberately no ``COUNT``."
     ServerResponse:
       properties:
         id:

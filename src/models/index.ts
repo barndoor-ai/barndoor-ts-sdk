@@ -224,6 +224,7 @@ export * from './ScopeJson.js';
 export * from './ScopeType.js';
 export * from './ServerConnectionResponse.js';
 export * from './ServerListResponse.js';
+export * from './ServerPolicyRevisionsPage.js';
 export * from './ServerResponse.js';
 export * from './ServerSource.js';
 export * from './SetApiKeyDisabledRequest.js';
