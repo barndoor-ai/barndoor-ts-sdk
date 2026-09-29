@@ -11196,8 +11196,8 @@ components:
         \ catalog or typed a name into the \"Custom Model\" box \u2014\nand deliberately\
         \ never changes afterwards. It is not a claim about whether\nthe catalog still\
         \ lists the model today: that is live state, drifts as\nvendors retire models,\
-        \ and belongs to BCP-3038's stale-route detection.\nKeeping the two apart\
-        \ is what lets a retired-from-catalog model avoid\nrendering as a deliberate\
+        \ and belongs to the Stale annotation (BCP-3812).\nKeeping the two apart is\
+        \ what lets a retired-from-catalog model avoid\nrendering as a deliberate\
         \ custom choice. See migration V61 for the full\nrationale."
       enum:
       - catalog

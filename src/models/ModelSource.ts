@@ -21,7 +21,7 @@
  * out of the provider catalog or typed a name into the "Custom Model" box —
  * and deliberately never changes afterwards. It is not a claim about whether
  * the catalog still lists the model today: that is live state, drifts as
- * vendors retire models, and belongs to BCP-3038's stale-route detection.
+ * vendors retire models, and belongs to the Stale annotation (BCP-3812).
  * Keeping the two apart is what lets a retired-from-catalog model avoid
  * rendering as a deliberate custom choice. See migration V61 for the full
  * rationale.
