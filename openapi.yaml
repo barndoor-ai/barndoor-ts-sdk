@@ -438,7 +438,8 @@ paths:
         \ server registered with managed credentials so no secret passes through the\
         \ caller at all, and never solicit one in a chat transcript.\n\n`as_service:\
         \ true` connects the tenant's shared service account rather than the calling\
-        \ user, which is what a server needs before it can be published."
+        \ user, which is what a server needs before it can be published, and requires\
+        \ an organization admin."
       operationId: connect_mcp_server
       parameters:
       - name: server_id
