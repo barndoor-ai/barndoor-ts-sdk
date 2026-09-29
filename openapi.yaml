@@ -15324,9 +15324,16 @@ security:
   - email
 tags:
 - name: dlp
+  x-group: Data Control Center
 - name: identity
+  x-group: Identity
 - name: llm-gateway
+  x-group: LLM Gateway
 - name: notification
+  x-group: Notifications
 - name: policy
+  x-group: Policies
 - name: registry
+  x-group: MCP Gateway
 - name: system-management
+  x-group: Log Exports
