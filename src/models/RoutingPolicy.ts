@@ -51,9 +51,11 @@ export interface RoutingPolicy {
      */
     description?: string | null;
     /**
-     * The LLM that picks a slot. Optional because a policy may be saved before
+     * The model that picks a slot. Optional because a policy may be saved before
      * one is chosen; the picker falls back to the context-size floor when it
-     * is absent.
+     * is absent. Either a chat model that supports JSON-mode output, or a Jev
+     * classifier model (TypeSafe, or OpenRouter's `typesafe/` models), which
+     * is asked on System One instead of prompted for JSON.
      */
     determinerModelAlias?: string | null;
     /**
@@ -61,7 +63,8 @@ export interface RoutingPolicy {
      * (or empty) falls back to the built-in default (see `routing::determiner`).
      * The slot catalog, request-metadata block, and JSON-output schema are
      * always appended by the gateway so the structured-output contract holds
-     * regardless of what an admin writes here.
+     * regardless of what an admin writes here. Not used by a Jev determiner,
+     * whose questions carry their own instructions.
      */
     determinerPrompt?: string | null;
     /**

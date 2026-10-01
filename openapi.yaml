@@ -12849,12 +12849,16 @@ components:
           type:
           - string
           - 'null'
-          description: 'The LLM that picks a slot. Optional because a policy may be
-            saved before
+          description: 'The model that picks a slot. Optional because a policy may
+            be saved before
 
             one is chosen; the picker falls back to the context-size floor when it
 
-            is absent.'
+            is absent. Either a chat model that supports JSON-mode output, or a Jev
+
+            classifier model (TypeSafe, or OpenRouter''s `typesafe/` models), which
+
+            is asked on System One instead of prompted for JSON.'
         determiner_prompt:
           type:
           - string
@@ -12868,7 +12872,9 @@ components:
 
             always appended by the gateway so the structured-output contract holds
 
-            regardless of what an admin writes here.'
+            regardless of what an admin writes here. Not used by a Jev determiner,
+
+            whose questions carry their own instructions.'
         enabled:
           type: boolean
         id:
