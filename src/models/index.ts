@@ -8,6 +8,8 @@ export * from './AffectedPolicyPreview.js';
 export * from './AgentPolicyCounts.js';
 export * from './AgentRuntimeCapabilities.js';
 export * from './AgentRuntimeProfile.js';
+export * from './AgentScopeRequest.js';
+export * from './AgentScopeResponse.js';
 export * from './AgentType.js';
 export * from './AlertType.js';
 export * from './AlertTypeOption.js';

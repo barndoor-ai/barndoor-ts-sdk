@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.6.0
+  version: 2.7.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -3504,7 +3504,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
-          description: Caller lacks a tenant-admin role
+          description: Caller lacks a tenant-admin role, or selected-agent scope is
+            not enabled for the organization
           content:
             application/json:
               schema:
@@ -3516,7 +3517,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid target, action, principal or detector selection
+          description: Invalid target, action, principal, agent or detector selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
           content:
             application/json:
               schema:
@@ -3591,7 +3599,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
-          description: Caller lacks a tenant-admin role
+          description: Caller lacks a tenant-admin role, or selected-agent scope is
+            not enabled for the organization
           content:
             application/json:
               schema:
@@ -3603,7 +3612,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid target, action, principal or detector selection
+          description: Invalid target, action, principal, agent or detector selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
           content:
             application/json:
               schema:
@@ -3887,6 +3903,16 @@ paths:
           type:
           - string
           - 'null'
+      - name: agent_id
+        in: query
+        description: 'Resolve as this AI agent. Omitted = no agent: only All-agents
+          policies apply.'
+        required: false
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
       responses:
         '200':
           description: The resolved rule set, with per-rule attribution
@@ -6348,6 +6374,37 @@ components:
           type: integer
           format: int32
           description: The immutable version whose `config` is loaded below.
+    AgentScopeRequest:
+      type: object
+      description: Which AI agents a policy applies to, ANDed with its principals.
+      required:
+      - mode
+      properties:
+        agent_ids:
+          type: array
+          items:
+            type: string
+          description: 'Registry agent (application) ids: 1 to 200 unique UUIDs when
+            `mode` is `SELECTED`, empty for `ALL`.'
+        mode:
+          type: string
+          description: '`ALL` (every agent, including agents created later) or `SELECTED`.'
+      additionalProperties: false
+    AgentScopeResponse:
+      type: object
+      required:
+      - mode
+      - agent_ids
+      properties:
+        agent_ids:
+          type: array
+          items:
+            type: string
+          description: Selected agent ids. Can include agents deleted since the save,
+            which no longer match any request.
+        mode:
+          type: string
+          description: '`ALL` or `SELECTED`.'
     AgentType:
       type: string
       enum:
@@ -8198,6 +8255,11 @@ components:
       properties:
         action:
           type: string
+        agent_scope:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/AgentScopeRequest'
+            description: Omitted = all agents.
         detection_engine_ids:
           type: array
           items:
@@ -9400,6 +9462,7 @@ components:
       - dry_run
       - mcp_targets
       - principals
+      - agent_scope
       - detection_engine_ids
       - created_by
       - updated_by
@@ -9408,6 +9471,8 @@ components:
       properties:
         action:
           type: string
+        agent_scope:
+          $ref: '#/components/schemas/AgentScopeResponse'
         created_at:
           type: string
         created_by:
@@ -13776,6 +13841,12 @@ components:
       - plaintext
       - runtime_stage
       properties:
+        agent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Test as this AI agent. Omitted = no agent.
         plaintext:
           type: string
         runtime_stage:
@@ -14002,6 +14073,11 @@ components:
           type:
           - string
           - 'null'
+        agent_scope:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/AgentScopeRequest'
+            description: Omitted = unchanged.
         detection_engine_ids:
           type:
           - array
