@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.4.0
+  version: 2.5.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -10261,6 +10261,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10346,6 +10362,9 @@ components:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -10381,6 +10400,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10479,6 +10514,9 @@ components:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -10516,6 +10554,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10621,6 +10675,9 @@ components:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -13232,6 +13289,14 @@ components:
           type: string
           format: date-time
           title: Updated At
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        configuration:
+          additionalProperties: true
+          type: object
+          title: Configuration
         name:
           type: string
           title: Name
@@ -13357,6 +13422,8 @@ components:
       - id
       - created_at
       - updated_at
+      - enabled
+      - configuration
       - name
       - slug
       - oauth_base_url_override
@@ -13431,6 +13498,14 @@ components:
           type: string
           format: date-time
           title: Updated At
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        configuration:
+          additionalProperties: true
+          type: object
+          title: Configuration
         name:
           type: string
           title: Name
@@ -13563,6 +13638,8 @@ components:
       - id
       - created_at
       - updated_at
+      - enabled
+      - configuration
       - name
       - slug
       - oauth_base_url_override
