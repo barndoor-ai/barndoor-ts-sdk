@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.5.0
+  version: 2.6.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -138,6 +138,21 @@ paths:
           \ (a flag-eval outage must not silently serve the unfiltered listing); the\
           \ rollout gate is whether a surface sends the parameter at all (BCP-3735).\
           \ Fails closed with HTTP 503 when the visible set cannot be resolved."
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: 'BCP-4300: include servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Default true, so existing callers keep
+            every server; the admin MCP Servers page sends false while local MCP management
+            is not rolled out to the org.'
+          default: true
+          title: Include Local
+        description: 'BCP-4300: include servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Default true, so existing callers keep
+          every server; the admin MCP Servers page sends false while local MCP management
+          is not rolled out to the org.'
       - name: page
         in: query
         required: false
