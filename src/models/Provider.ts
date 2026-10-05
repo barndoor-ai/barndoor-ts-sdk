@@ -147,7 +147,7 @@ export interface Provider {
      */
     healthCheckedAt?: Date | null;
     /**
-     * Human-readable reason for the last `unhealthy` probe (NULL otherwise).
+     * Reason for the last `unhealthy` or `unverified` probe (NULL if healthy or never probed).
      */
     healthDetail?: string | null;
     /**

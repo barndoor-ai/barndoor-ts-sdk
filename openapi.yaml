@@ -12632,8 +12632,8 @@ components:
             type:
             - string
             - 'null'
-            description: Human-readable reason for the last `unhealthy` probe (NULL
-              otherwise).
+            description: Reason for the last `unhealthy` or `unverified` probe (NULL
+              if healthy or never probed).
           health_status:
             type: string
             description: 'Observed upstream reachability, recorded separately from
