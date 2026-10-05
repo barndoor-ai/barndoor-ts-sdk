@@ -22,19 +22,11 @@ export interface ProviderConnectionResponseOneOf {
     /**
      * 
      */
-    analyzerUrl: string;
-    /**
-     * 
-     */
-    anonymizerUrl: string;
+    endpoint: string;
     /**
      * Whether a bearer token is configured. The token value is never returned.
      */
     hasBearerToken: boolean;
-    /**
-     * 
-     */
-    language: string;
     /**
      * 
      */
@@ -50,7 +42,7 @@ export interface ProviderConnectionResponseOneOf {
  * @export
  */
 export const ProviderConnectionResponseOneOfProviderEnum = {
-    Presidio: 'presidio',
+    Tokenization: 'tokenization',
 } as const;
 export type ProviderConnectionResponseOneOfProviderEnum = typeof ProviderConnectionResponseOneOfProviderEnum[keyof typeof ProviderConnectionResponseOneOfProviderEnum];
 
@@ -59,13 +51,11 @@ export type ProviderConnectionResponseOneOfProviderEnum = typeof ProviderConnect
  * Check if a given object implements the ProviderConnectionResponseOneOf interface.
  */
 export function instanceOfProviderConnectionResponseOneOf(value: object): value is ProviderConnectionResponseOneOf {
-    if ((!('analyzerUrl' in (value as Record<string, any>)) && !('analyzer_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['analyzerUrl'] === undefined && (value as Record<string, any>)['analyzer_url'] === undefined)) return false;
-    if ((!('anonymizerUrl' in (value as Record<string, any>)) && !('anonymizer_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['anonymizerUrl'] === undefined && (value as Record<string, any>)['anonymizer_url'] === undefined)) return false;
+    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if ((!('hasBearerToken' in (value as Record<string, any>)) && !('has_bearer_token' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasBearerToken'] === undefined && (value as Record<string, any>)['has_bearer_token'] === undefined)) return false;
-    if (!('language' in value) || value['language'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'presidio') return false;
+    if (value['provider'] !== 'tokenization') return false;
     
     return true;
 }
@@ -80,10 +70,8 @@ export function ProviderConnectionResponseOneOfFromJSONTyped(json: any, ignoreDi
     }
     return {
         
-        'analyzerUrl': json['analyzer_url'],
-        'anonymizerUrl': json['anonymizer_url'],
+        'endpoint': json['endpoint'],
         'hasBearerToken': json['has_bearer_token'],
-        'language': json['language'],
         'orgId': json['org_id'],
         'provider': json['provider'],
     };
@@ -100,10 +88,8 @@ export function ProviderConnectionResponseOneOfToJSONTyped(value?: ProviderConne
 
     return {
         
-        'analyzer_url': value['analyzerUrl'],
-        'anonymizer_url': value['anonymizerUrl'],
+        'endpoint': value['endpoint'],
         'has_bearer_token': value['hasBearerToken'],
-        'language': value['language'],
         'org_id': value['orgId'],
         'provider': value['provider'],
     };

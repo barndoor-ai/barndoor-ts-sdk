@@ -4030,7 +4030,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4067,7 +4067,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4122,7 +4122,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4165,7 +4165,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -12431,27 +12431,6 @@ components:
       - savings
       - balanced
       - quality
-    PresidioConnectionResponse:
-      type: object
-      required:
-      - org_id
-      - analyzer_url
-      - anonymizer_url
-      - language
-      - has_bearer_token
-      properties:
-        analyzer_url:
-          type: string
-        anonymizer_url:
-          type: string
-        has_bearer_token:
-          type: boolean
-          description: Whether a bearer token is configured. The token value is never
-            returned.
-        language:
-          type: string
-        org_id:
-          type: string
     PricingChangeSource:
       type: string
       description: 'How a `model_pricing` version was produced. Persisted as a
@@ -12710,16 +12689,6 @@ components:
             format: date-time
     ProviderConnectionResponse:
       oneOf:
-      - allOf:
-        - $ref: '#/components/schemas/PresidioConnectionResponse'
-        - type: object
-          required:
-          - provider
-          properties:
-            provider:
-              type: string
-              enum:
-              - presidio
       - allOf:
         - $ref: '#/components/schemas/TokenizationConnectionResponse'
         - type: object
@@ -14879,16 +14848,6 @@ components:
     UpsertConnectionRequest:
       oneOf:
       - allOf:
-        - $ref: '#/components/schemas/UpsertPresidioRequest'
-        - type: object
-          required:
-          - provider
-          properties:
-            provider:
-              type: string
-              enum:
-              - presidio
-      - allOf:
         - $ref: '#/components/schemas/UpsertTokenizationRequest'
         - type: object
           required:
@@ -14984,24 +14943,6 @@ components:
         location:
           type: string
         project_id:
-          type: string
-    UpsertPresidioRequest:
-      type: object
-      required:
-      - analyzer_url
-      properties:
-        analyzer_url:
-          type: string
-        anonymizer_url:
-          type:
-          - string
-          - 'null'
-        bearer_token:
-          type:
-          - string
-          - 'null'
-          description: Supply to set or rotate the token; omit to leave unchanged.
-        language:
           type: string
     UpsertTokenizationRequest:
       type: object

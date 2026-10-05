@@ -34,11 +34,11 @@ export interface ProviderConnectionResponseOneOf5 {
     /**
      * 
      */
-    language: string;
+    orgId: string;
     /**
      * 
      */
-    orgId: string;
+    severityThreshold: number;
     /**
      * 
      */
@@ -50,7 +50,7 @@ export interface ProviderConnectionResponseOneOf5 {
  * @export
  */
 export const ProviderConnectionResponseOneOf5ProviderEnum = {
-    AzureAiLanguagePii: 'azure_ai_language_pii',
+    AzureContentSafety: 'azure_content_safety',
 } as const;
 export type ProviderConnectionResponseOneOf5ProviderEnum = typeof ProviderConnectionResponseOneOf5ProviderEnum[keyof typeof ProviderConnectionResponseOneOf5ProviderEnum];
 
@@ -62,10 +62,10 @@ export function instanceOfProviderConnectionResponseOneOf5(value: object): value
     if ((!('apiVersion' in (value as Record<string, any>)) && !('api_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['apiVersion'] === undefined && (value as Record<string, any>)['api_version'] === undefined)) return false;
     if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if ((!('hasApiKey' in (value as Record<string, any>)) && !('has_api_key' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasApiKey'] === undefined && (value as Record<string, any>)['has_api_key'] === undefined)) return false;
-    if (!('language' in value) || value['language'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
+    if ((!('severityThreshold' in (value as Record<string, any>)) && !('severity_threshold' in (value as Record<string, any>))) || ((value as Record<string, any>)['severityThreshold'] === undefined && (value as Record<string, any>)['severity_threshold'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'azure_ai_language_pii') return false;
+    if (value['provider'] !== 'azure_content_safety') return false;
     
     return true;
 }
@@ -83,8 +83,8 @@ export function ProviderConnectionResponseOneOf5FromJSONTyped(json: any, ignoreD
         'apiVersion': json['api_version'],
         'endpoint': json['endpoint'],
         'hasApiKey': json['has_api_key'],
-        'language': json['language'],
         'orgId': json['org_id'],
+        'severityThreshold': json['severity_threshold'],
         'provider': json['provider'],
     };
 }
@@ -103,8 +103,8 @@ export function ProviderConnectionResponseOneOf5ToJSONTyped(value?: ProviderConn
         'api_version': value['apiVersion'],
         'endpoint': value['endpoint'],
         'has_api_key': value['hasApiKey'],
-        'language': value['language'],
         'org_id': value['orgId'],
+        'severity_threshold': value['severityThreshold'],
         'provider': value['provider'],
     };
 }

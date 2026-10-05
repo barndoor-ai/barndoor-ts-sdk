@@ -22,43 +22,23 @@ export interface ProviderConnectionResponseOneOf4 {
     /**
      * 
      */
-    accessKeyId?: string;
+    apiVersion: string;
     /**
      * 
      */
-    authType: string;
+    endpoint: string;
     /**
      * 
      */
-    endpoint?: string;
+    hasApiKey: boolean;
     /**
      * 
      */
-    externalId?: string;
-    /**
-     * 
-     */
-    guardrailIdentifier: string;
-    /**
-     * 
-     */
-    guardrailVersion: string;
-    /**
-     * 
-     */
-    hasCredentials: boolean;
-    /**
-     * 
-     */
-    iamRoleArn?: string;
+    language: string;
     /**
      * 
      */
     orgId: string;
-    /**
-     * 
-     */
-    region: string;
     /**
      * 
      */
@@ -70,7 +50,7 @@ export interface ProviderConnectionResponseOneOf4 {
  * @export
  */
 export const ProviderConnectionResponseOneOf4ProviderEnum = {
-    AwsBedrockGuardrails: 'aws_bedrock_guardrails',
+    AzureAiLanguagePii: 'azure_ai_language_pii',
 } as const;
 export type ProviderConnectionResponseOneOf4ProviderEnum = typeof ProviderConnectionResponseOneOf4ProviderEnum[keyof typeof ProviderConnectionResponseOneOf4ProviderEnum];
 
@@ -79,14 +59,13 @@ export type ProviderConnectionResponseOneOf4ProviderEnum = typeof ProviderConnec
  * Check if a given object implements the ProviderConnectionResponseOneOf4 interface.
  */
 export function instanceOfProviderConnectionResponseOneOf4(value: object): value is ProviderConnectionResponseOneOf4 {
-    if ((!('authType' in (value as Record<string, any>)) && !('auth_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['authType'] === undefined && (value as Record<string, any>)['auth_type'] === undefined)) return false;
-    if ((!('guardrailIdentifier' in (value as Record<string, any>)) && !('guardrail_identifier' in (value as Record<string, any>))) || ((value as Record<string, any>)['guardrailIdentifier'] === undefined && (value as Record<string, any>)['guardrail_identifier'] === undefined)) return false;
-    if ((!('guardrailVersion' in (value as Record<string, any>)) && !('guardrail_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['guardrailVersion'] === undefined && (value as Record<string, any>)['guardrail_version'] === undefined)) return false;
-    if ((!('hasCredentials' in (value as Record<string, any>)) && !('has_credentials' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasCredentials'] === undefined && (value as Record<string, any>)['has_credentials'] === undefined)) return false;
+    if ((!('apiVersion' in (value as Record<string, any>)) && !('api_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['apiVersion'] === undefined && (value as Record<string, any>)['api_version'] === undefined)) return false;
+    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
+    if ((!('hasApiKey' in (value as Record<string, any>)) && !('has_api_key' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasApiKey'] === undefined && (value as Record<string, any>)['has_api_key'] === undefined)) return false;
+    if (!('language' in value) || value['language'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
-    if (!('region' in value) || value['region'] === undefined) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'aws_bedrock_guardrails') return false;
+    if (value['provider'] !== 'azure_ai_language_pii') return false;
     
     return true;
 }
@@ -101,16 +80,11 @@ export function ProviderConnectionResponseOneOf4FromJSONTyped(json: any, ignoreD
     }
     return {
         
-        'accessKeyId': json['access_key_id'] == null ? undefined : json['access_key_id'],
-        'authType': json['auth_type'],
-        'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
-        'externalId': json['external_id'] == null ? undefined : json['external_id'],
-        'guardrailIdentifier': json['guardrail_identifier'],
-        'guardrailVersion': json['guardrail_version'],
-        'hasCredentials': json['has_credentials'],
-        'iamRoleArn': json['iam_role_arn'] == null ? undefined : json['iam_role_arn'],
+        'apiVersion': json['api_version'],
+        'endpoint': json['endpoint'],
+        'hasApiKey': json['has_api_key'],
+        'language': json['language'],
         'orgId': json['org_id'],
-        'region': json['region'],
         'provider': json['provider'],
     };
 }
@@ -126,16 +100,11 @@ export function ProviderConnectionResponseOneOf4ToJSONTyped(value?: ProviderConn
 
     return {
         
-        'access_key_id': value['accessKeyId'],
-        'auth_type': value['authType'],
+        'api_version': value['apiVersion'],
         'endpoint': value['endpoint'],
-        'external_id': value['externalId'],
-        'guardrail_identifier': value['guardrailIdentifier'],
-        'guardrail_version': value['guardrailVersion'],
-        'has_credentials': value['hasCredentials'],
-        'iam_role_arn': value['iamRoleArn'],
+        'has_api_key': value['hasApiKey'],
+        'language': value['language'],
         'org_id': value['orgId'],
-        'region': value['region'],
         'provider': value['provider'],
     };
 }

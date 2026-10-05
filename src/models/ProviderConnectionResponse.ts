@@ -55,20 +55,13 @@ import {
     ProviderConnectionResponseOneOf5FromJSONTyped,
     ProviderConnectionResponseOneOf5ToJSON,
 } from './ProviderConnectionResponseOneOf5.js';
-import type { ProviderConnectionResponseOneOf6 } from './ProviderConnectionResponseOneOf6.js';
-import {
-    instanceOfProviderConnectionResponseOneOf6,
-    ProviderConnectionResponseOneOf6FromJSON,
-    ProviderConnectionResponseOneOf6FromJSONTyped,
-    ProviderConnectionResponseOneOf6ToJSON,
-} from './ProviderConnectionResponseOneOf6.js';
 
 /**
  * @type ProviderConnectionResponse
  * Tagged response — the `"provider"` field in JSON identifies the variant.
  * @export
  */
-export type ProviderConnectionResponse = ProviderConnectionResponseOneOf | ProviderConnectionResponseOneOf1 | ProviderConnectionResponseOneOf2 | ProviderConnectionResponseOneOf3 | ProviderConnectionResponseOneOf4 | ProviderConnectionResponseOneOf5 | ProviderConnectionResponseOneOf6;
+export type ProviderConnectionResponse = ProviderConnectionResponseOneOf | ProviderConnectionResponseOneOf1 | ProviderConnectionResponseOneOf2 | ProviderConnectionResponseOneOf3 | ProviderConnectionResponseOneOf4 | ProviderConnectionResponseOneOf5;
 
 export function ProviderConnectionResponseFromJSON(json: any): ProviderConnectionResponse {
     return ProviderConnectionResponseFromJSONTyped(json, false);
@@ -98,9 +91,6 @@ export function ProviderConnectionResponseFromJSONTyped(json: any, ignoreDiscrim
     }
     if (instanceOfProviderConnectionResponseOneOf5(json)) {
         return ProviderConnectionResponseOneOf5FromJSONTyped(json, true);
-    }
-    if (instanceOfProviderConnectionResponseOneOf6(json)) {
-        return ProviderConnectionResponseOneOf6FromJSONTyped(json, true);
     }
     return {} as any;
 }
@@ -133,9 +123,6 @@ export function ProviderConnectionResponseToJSONTyped(value?: ProviderConnection
     }
     if (instanceOfProviderConnectionResponseOneOf5(value)) {
         return ProviderConnectionResponseOneOf5ToJSON(value as ProviderConnectionResponseOneOf5);
-    }
-    if (instanceOfProviderConnectionResponseOneOf6(value)) {
-        return ProviderConnectionResponseOneOf6ToJSON(value as ProviderConnectionResponseOneOf6);
     }
     return {};
 }

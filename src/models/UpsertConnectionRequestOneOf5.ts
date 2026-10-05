@@ -34,7 +34,7 @@ export interface UpsertConnectionRequestOneOf5 {
     /**
      * 
      */
-    language?: string;
+    severityThreshold?: number;
     /**
      * 
      */
@@ -46,7 +46,7 @@ export interface UpsertConnectionRequestOneOf5 {
  * @export
  */
 export const UpsertConnectionRequestOneOf5ProviderEnum = {
-    AzureAiLanguagePii: 'azure_ai_language_pii',
+    AzureContentSafety: 'azure_content_safety',
 } as const;
 export type UpsertConnectionRequestOneOf5ProviderEnum = typeof UpsertConnectionRequestOneOf5ProviderEnum[keyof typeof UpsertConnectionRequestOneOf5ProviderEnum];
 
@@ -57,7 +57,7 @@ export type UpsertConnectionRequestOneOf5ProviderEnum = typeof UpsertConnectionR
 export function instanceOfUpsertConnectionRequestOneOf5(value: object): value is UpsertConnectionRequestOneOf5 {
     if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'azure_ai_language_pii') return false;
+    if (value['provider'] !== 'azure_content_safety') return false;
     
     return true;
 }
@@ -75,7 +75,7 @@ export function UpsertConnectionRequestOneOf5FromJSONTyped(json: any, ignoreDisc
         'apiKey': json['api_key'] == null ? undefined : json['api_key'],
         'apiVersion': json['api_version'] == null ? undefined : json['api_version'],
         'endpoint': json['endpoint'],
-        'language': json['language'] == null ? undefined : json['language'],
+        'severityThreshold': json['severity_threshold'] == null ? undefined : json['severity_threshold'],
         'provider': json['provider'],
     };
 }
@@ -94,7 +94,7 @@ export function UpsertConnectionRequestOneOf5ToJSONTyped(value?: UpsertConnectio
         'api_key': value['apiKey'],
         'api_version': value['apiVersion'],
         'endpoint': value['endpoint'],
-        'language': value['language'],
+        'severity_threshold': value['severityThreshold'],
         'provider': value['provider'],
     };
 }

@@ -22,15 +22,31 @@ export interface ProviderConnectionResponseOneOf2 {
     /**
      * 
      */
-    endpoint: string;
-    /**
-     * Whether a bearer token is configured. The token value is never returned.
-     */
-    hasBearerToken: boolean;
+    accessKeyId?: string;
     /**
      * 
      */
-    location: string;
+    authType: string;
+    /**
+     * 
+     */
+    endpoint?: string;
+    /**
+     * 
+     */
+    externalId?: string;
+    /**
+     * 
+     */
+    hasCredentials: boolean;
+    /**
+     * 
+     */
+    iamRoleArn?: string;
+    /**
+     * 
+     */
+    language: string;
     /**
      * 
      */
@@ -38,7 +54,7 @@ export interface ProviderConnectionResponseOneOf2 {
     /**
      * 
      */
-    projectId: string;
+    region: string;
     /**
      * 
      */
@@ -50,7 +66,7 @@ export interface ProviderConnectionResponseOneOf2 {
  * @export
  */
 export const ProviderConnectionResponseOneOf2ProviderEnum = {
-    GoogleDlp: 'google_dlp',
+    AwsComprehendPii: 'aws_comprehend_pii',
 } as const;
 export type ProviderConnectionResponseOneOf2ProviderEnum = typeof ProviderConnectionResponseOneOf2ProviderEnum[keyof typeof ProviderConnectionResponseOneOf2ProviderEnum];
 
@@ -59,13 +75,13 @@ export type ProviderConnectionResponseOneOf2ProviderEnum = typeof ProviderConnec
  * Check if a given object implements the ProviderConnectionResponseOneOf2 interface.
  */
 export function instanceOfProviderConnectionResponseOneOf2(value: object): value is ProviderConnectionResponseOneOf2 {
-    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
-    if ((!('hasBearerToken' in (value as Record<string, any>)) && !('has_bearer_token' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasBearerToken'] === undefined && (value as Record<string, any>)['has_bearer_token'] === undefined)) return false;
-    if (!('location' in value) || value['location'] === undefined) return false;
+    if ((!('authType' in (value as Record<string, any>)) && !('auth_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['authType'] === undefined && (value as Record<string, any>)['auth_type'] === undefined)) return false;
+    if ((!('hasCredentials' in (value as Record<string, any>)) && !('has_credentials' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasCredentials'] === undefined && (value as Record<string, any>)['has_credentials'] === undefined)) return false;
+    if (!('language' in value) || value['language'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
-    if ((!('projectId' in (value as Record<string, any>)) && !('project_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['projectId'] === undefined && (value as Record<string, any>)['project_id'] === undefined)) return false;
+    if (!('region' in value) || value['region'] === undefined) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'google_dlp') return false;
+    if (value['provider'] !== 'aws_comprehend_pii') return false;
     
     return true;
 }
@@ -80,11 +96,15 @@ export function ProviderConnectionResponseOneOf2FromJSONTyped(json: any, ignoreD
     }
     return {
         
-        'endpoint': json['endpoint'],
-        'hasBearerToken': json['has_bearer_token'],
-        'location': json['location'],
+        'accessKeyId': json['access_key_id'] == null ? undefined : json['access_key_id'],
+        'authType': json['auth_type'],
+        'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
+        'externalId': json['external_id'] == null ? undefined : json['external_id'],
+        'hasCredentials': json['has_credentials'],
+        'iamRoleArn': json['iam_role_arn'] == null ? undefined : json['iam_role_arn'],
+        'language': json['language'],
         'orgId': json['org_id'],
-        'projectId': json['project_id'],
+        'region': json['region'],
         'provider': json['provider'],
     };
 }
@@ -100,11 +120,15 @@ export function ProviderConnectionResponseOneOf2ToJSONTyped(value?: ProviderConn
 
     return {
         
+        'access_key_id': value['accessKeyId'],
+        'auth_type': value['authType'],
         'endpoint': value['endpoint'],
-        'has_bearer_token': value['hasBearerToken'],
-        'location': value['location'],
+        'external_id': value['externalId'],
+        'has_credentials': value['hasCredentials'],
+        'iam_role_arn': value['iamRoleArn'],
+        'language': value['language'],
         'org_id': value['orgId'],
-        'project_id': value['projectId'],
+        'region': value['region'],
         'provider': value['provider'],
     };
 }

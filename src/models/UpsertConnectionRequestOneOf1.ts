@@ -26,7 +26,15 @@ export interface UpsertConnectionRequestOneOf1 {
     /**
      * 
      */
-    endpoint: string;
+    endpoint?: string;
+    /**
+     * 
+     */
+    location?: string;
+    /**
+     * 
+     */
+    projectId: string;
     /**
      * 
      */
@@ -38,7 +46,7 @@ export interface UpsertConnectionRequestOneOf1 {
  * @export
  */
 export const UpsertConnectionRequestOneOf1ProviderEnum = {
-    Tokenization: 'tokenization',
+    GoogleDlp: 'google_dlp',
 } as const;
 export type UpsertConnectionRequestOneOf1ProviderEnum = typeof UpsertConnectionRequestOneOf1ProviderEnum[keyof typeof UpsertConnectionRequestOneOf1ProviderEnum];
 
@@ -47,9 +55,9 @@ export type UpsertConnectionRequestOneOf1ProviderEnum = typeof UpsertConnectionR
  * Check if a given object implements the UpsertConnectionRequestOneOf1 interface.
  */
 export function instanceOfUpsertConnectionRequestOneOf1(value: object): value is UpsertConnectionRequestOneOf1 {
-    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
+    if ((!('projectId' in (value as Record<string, any>)) && !('project_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['projectId'] === undefined && (value as Record<string, any>)['project_id'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'tokenization') return false;
+    if (value['provider'] !== 'google_dlp') return false;
     
     return true;
 }
@@ -65,7 +73,9 @@ export function UpsertConnectionRequestOneOf1FromJSONTyped(json: any, ignoreDisc
     return {
         
         'bearerToken': json['bearer_token'] == null ? undefined : json['bearer_token'],
-        'endpoint': json['endpoint'],
+        'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
+        'location': json['location'] == null ? undefined : json['location'],
+        'projectId': json['project_id'],
         'provider': json['provider'],
     };
 }
@@ -83,6 +93,8 @@ export function UpsertConnectionRequestOneOf1ToJSONTyped(value?: UpsertConnectio
         
         'bearer_token': value['bearerToken'],
         'endpoint': value['endpoint'],
+        'location': value['location'],
+        'project_id': value['projectId'],
         'provider': value['provider'],
     };
 }

@@ -234,7 +234,7 @@ export interface DeleteFieldControlPolicyRequest {
 
 export interface DeleteProviderConnectionRequest {
     /**
-     * Provider name, e.g. `presidio`
+     * Provider name, e.g. `google_dlp`
      */
     name: string;
 }
@@ -269,7 +269,7 @@ export interface GetFieldControlPolicyRequest {
 
 export interface GetProviderConnectionRequest {
     /**
-     * Provider name, e.g. `presidio`
+     * Provider name, e.g. `google_dlp`
      */
     name: string | null;
 }
@@ -310,7 +310,7 @@ export interface ListAllowListRequest {
 
 export interface ProviderConnectionAwsTrustInfoRequest {
     /**
-     * Provider name, e.g. `presidio`
+     * Provider name, e.g. `google_dlp`
      */
     name: string;
 }
@@ -375,7 +375,7 @@ export interface UpdateFieldControlPolicyOperationRequest {
 
 export interface UpsertConnectionOperationRequest {
     /**
-     * Provider name, e.g. `presidio`
+     * Provider name, e.g. `google_dlp`
      */
     name: string;
     /**

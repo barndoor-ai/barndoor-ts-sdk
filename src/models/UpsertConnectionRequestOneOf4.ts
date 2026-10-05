@@ -20,45 +20,21 @@ import { mapValues } from '../runtime.js';
  */
 export interface UpsertConnectionRequestOneOf4 {
     /**
-     * 
+     * Supply to set or rotate the API key; omit to leave unchanged.
      */
-    accessKeyId?: string;
+    apiKey?: string;
     /**
      * 
      */
-    authType?: string;
+    apiVersion?: string;
     /**
      * 
      */
-    endpoint?: string;
+    endpoint: string;
     /**
      * 
      */
-    externalId?: string;
-    /**
-     * 
-     */
-    guardrailIdentifier: string;
-    /**
-     * 
-     */
-    guardrailVersion?: string;
-    /**
-     * 
-     */
-    iamRoleArn?: string;
-    /**
-     * 
-     */
-    region?: string;
-    /**
-     * Supply to set or rotate the AWS secret; omit to leave unchanged.
-     */
-    secretAccessKey?: string;
-    /**
-     * Optional AWS session token stored with the secret access key.
-     */
-    sessionToken?: string;
+    language?: string;
     /**
      * 
      */
@@ -70,7 +46,7 @@ export interface UpsertConnectionRequestOneOf4 {
  * @export
  */
 export const UpsertConnectionRequestOneOf4ProviderEnum = {
-    AwsBedrockGuardrails: 'aws_bedrock_guardrails',
+    AzureAiLanguagePii: 'azure_ai_language_pii',
 } as const;
 export type UpsertConnectionRequestOneOf4ProviderEnum = typeof UpsertConnectionRequestOneOf4ProviderEnum[keyof typeof UpsertConnectionRequestOneOf4ProviderEnum];
 
@@ -79,9 +55,9 @@ export type UpsertConnectionRequestOneOf4ProviderEnum = typeof UpsertConnectionR
  * Check if a given object implements the UpsertConnectionRequestOneOf4 interface.
  */
 export function instanceOfUpsertConnectionRequestOneOf4(value: object): value is UpsertConnectionRequestOneOf4 {
-    if ((!('guardrailIdentifier' in (value as Record<string, any>)) && !('guardrail_identifier' in (value as Record<string, any>))) || ((value as Record<string, any>)['guardrailIdentifier'] === undefined && (value as Record<string, any>)['guardrail_identifier'] === undefined)) return false;
+    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'aws_bedrock_guardrails') return false;
+    if (value['provider'] !== 'azure_ai_language_pii') return false;
     
     return true;
 }
@@ -96,16 +72,10 @@ export function UpsertConnectionRequestOneOf4FromJSONTyped(json: any, ignoreDisc
     }
     return {
         
-        'accessKeyId': json['access_key_id'] == null ? undefined : json['access_key_id'],
-        'authType': json['auth_type'] == null ? undefined : json['auth_type'],
-        'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
-        'externalId': json['external_id'] == null ? undefined : json['external_id'],
-        'guardrailIdentifier': json['guardrail_identifier'],
-        'guardrailVersion': json['guardrail_version'] == null ? undefined : json['guardrail_version'],
-        'iamRoleArn': json['iam_role_arn'] == null ? undefined : json['iam_role_arn'],
-        'region': json['region'] == null ? undefined : json['region'],
-        'secretAccessKey': json['secret_access_key'] == null ? undefined : json['secret_access_key'],
-        'sessionToken': json['session_token'] == null ? undefined : json['session_token'],
+        'apiKey': json['api_key'] == null ? undefined : json['api_key'],
+        'apiVersion': json['api_version'] == null ? undefined : json['api_version'],
+        'endpoint': json['endpoint'],
+        'language': json['language'] == null ? undefined : json['language'],
         'provider': json['provider'],
     };
 }
@@ -121,16 +91,10 @@ export function UpsertConnectionRequestOneOf4ToJSONTyped(value?: UpsertConnectio
 
     return {
         
-        'access_key_id': value['accessKeyId'],
-        'auth_type': value['authType'],
+        'api_key': value['apiKey'],
+        'api_version': value['apiVersion'],
         'endpoint': value['endpoint'],
-        'external_id': value['externalId'],
-        'guardrail_identifier': value['guardrailIdentifier'],
-        'guardrail_version': value['guardrailVersion'],
-        'iam_role_arn': value['iamRoleArn'],
-        'region': value['region'],
-        'secret_access_key': value['secretAccessKey'],
-        'session_token': value['sessionToken'],
+        'language': value['language'],
         'provider': value['provider'],
     };
 }

@@ -38,11 +38,15 @@ export interface UpsertConnectionRequestOneOf3 {
     /**
      * 
      */
-    iamRoleArn?: string;
+    guardrailIdentifier: string;
     /**
      * 
      */
-    language?: string;
+    guardrailVersion?: string;
+    /**
+     * 
+     */
+    iamRoleArn?: string;
     /**
      * 
      */
@@ -66,7 +70,7 @@ export interface UpsertConnectionRequestOneOf3 {
  * @export
  */
 export const UpsertConnectionRequestOneOf3ProviderEnum = {
-    AwsComprehendPii: 'aws_comprehend_pii',
+    AwsBedrockGuardrails: 'aws_bedrock_guardrails',
 } as const;
 export type UpsertConnectionRequestOneOf3ProviderEnum = typeof UpsertConnectionRequestOneOf3ProviderEnum[keyof typeof UpsertConnectionRequestOneOf3ProviderEnum];
 
@@ -75,8 +79,9 @@ export type UpsertConnectionRequestOneOf3ProviderEnum = typeof UpsertConnectionR
  * Check if a given object implements the UpsertConnectionRequestOneOf3 interface.
  */
 export function instanceOfUpsertConnectionRequestOneOf3(value: object): value is UpsertConnectionRequestOneOf3 {
+    if ((!('guardrailIdentifier' in (value as Record<string, any>)) && !('guardrail_identifier' in (value as Record<string, any>))) || ((value as Record<string, any>)['guardrailIdentifier'] === undefined && (value as Record<string, any>)['guardrail_identifier'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'aws_comprehend_pii') return false;
+    if (value['provider'] !== 'aws_bedrock_guardrails') return false;
     
     return true;
 }
@@ -95,8 +100,9 @@ export function UpsertConnectionRequestOneOf3FromJSONTyped(json: any, ignoreDisc
         'authType': json['auth_type'] == null ? undefined : json['auth_type'],
         'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
         'externalId': json['external_id'] == null ? undefined : json['external_id'],
+        'guardrailIdentifier': json['guardrail_identifier'],
+        'guardrailVersion': json['guardrail_version'] == null ? undefined : json['guardrail_version'],
         'iamRoleArn': json['iam_role_arn'] == null ? undefined : json['iam_role_arn'],
-        'language': json['language'] == null ? undefined : json['language'],
         'region': json['region'] == null ? undefined : json['region'],
         'secretAccessKey': json['secret_access_key'] == null ? undefined : json['secret_access_key'],
         'sessionToken': json['session_token'] == null ? undefined : json['session_token'],
@@ -119,8 +125,9 @@ export function UpsertConnectionRequestOneOf3ToJSONTyped(value?: UpsertConnectio
         'auth_type': value['authType'],
         'endpoint': value['endpoint'],
         'external_id': value['externalId'],
+        'guardrail_identifier': value['guardrailIdentifier'],
+        'guardrail_version': value['guardrailVersion'],
         'iam_role_arn': value['iamRoleArn'],
-        'language': value['language'],
         'region': value['region'],
         'secret_access_key': value['secretAccessKey'],
         'session_token': value['sessionToken'],

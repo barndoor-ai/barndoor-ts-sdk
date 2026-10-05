@@ -20,9 +20,13 @@ import { mapValues } from '../runtime.js';
  */
 export interface UpsertConnectionRequestOneOf2 {
     /**
-     * Supply to set or rotate the token; omit to leave unchanged.
+     * 
      */
-    bearerToken?: string;
+    accessKeyId?: string;
+    /**
+     * 
+     */
+    authType?: string;
     /**
      * 
      */
@@ -30,11 +34,27 @@ export interface UpsertConnectionRequestOneOf2 {
     /**
      * 
      */
-    location?: string;
+    externalId?: string;
     /**
      * 
      */
-    projectId: string;
+    iamRoleArn?: string;
+    /**
+     * 
+     */
+    language?: string;
+    /**
+     * 
+     */
+    region?: string;
+    /**
+     * Supply to set or rotate the AWS secret; omit to leave unchanged.
+     */
+    secretAccessKey?: string;
+    /**
+     * Optional AWS session token stored with the secret access key.
+     */
+    sessionToken?: string;
     /**
      * 
      */
@@ -46,7 +66,7 @@ export interface UpsertConnectionRequestOneOf2 {
  * @export
  */
 export const UpsertConnectionRequestOneOf2ProviderEnum = {
-    GoogleDlp: 'google_dlp',
+    AwsComprehendPii: 'aws_comprehend_pii',
 } as const;
 export type UpsertConnectionRequestOneOf2ProviderEnum = typeof UpsertConnectionRequestOneOf2ProviderEnum[keyof typeof UpsertConnectionRequestOneOf2ProviderEnum];
 
@@ -55,9 +75,8 @@ export type UpsertConnectionRequestOneOf2ProviderEnum = typeof UpsertConnectionR
  * Check if a given object implements the UpsertConnectionRequestOneOf2 interface.
  */
 export function instanceOfUpsertConnectionRequestOneOf2(value: object): value is UpsertConnectionRequestOneOf2 {
-    if ((!('projectId' in (value as Record<string, any>)) && !('project_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['projectId'] === undefined && (value as Record<string, any>)['project_id'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'google_dlp') return false;
+    if (value['provider'] !== 'aws_comprehend_pii') return false;
     
     return true;
 }
@@ -72,10 +91,15 @@ export function UpsertConnectionRequestOneOf2FromJSONTyped(json: any, ignoreDisc
     }
     return {
         
-        'bearerToken': json['bearer_token'] == null ? undefined : json['bearer_token'],
+        'accessKeyId': json['access_key_id'] == null ? undefined : json['access_key_id'],
+        'authType': json['auth_type'] == null ? undefined : json['auth_type'],
         'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
-        'location': json['location'] == null ? undefined : json['location'],
-        'projectId': json['project_id'],
+        'externalId': json['external_id'] == null ? undefined : json['external_id'],
+        'iamRoleArn': json['iam_role_arn'] == null ? undefined : json['iam_role_arn'],
+        'language': json['language'] == null ? undefined : json['language'],
+        'region': json['region'] == null ? undefined : json['region'],
+        'secretAccessKey': json['secret_access_key'] == null ? undefined : json['secret_access_key'],
+        'sessionToken': json['session_token'] == null ? undefined : json['session_token'],
         'provider': json['provider'],
     };
 }
@@ -91,10 +115,15 @@ export function UpsertConnectionRequestOneOf2ToJSONTyped(value?: UpsertConnectio
 
     return {
         
-        'bearer_token': value['bearerToken'],
+        'access_key_id': value['accessKeyId'],
+        'auth_type': value['authType'],
         'endpoint': value['endpoint'],
-        'location': value['location'],
-        'project_id': value['projectId'],
+        'external_id': value['externalId'],
+        'iam_role_arn': value['iamRoleArn'],
+        'language': value['language'],
+        'region': value['region'],
+        'secret_access_key': value['secretAccessKey'],
+        'session_token': value['sessionToken'],
         'provider': value['provider'],
     };
 }

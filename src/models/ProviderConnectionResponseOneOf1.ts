@@ -30,7 +30,15 @@ export interface ProviderConnectionResponseOneOf1 {
     /**
      * 
      */
+    location: string;
+    /**
+     * 
+     */
     orgId: string;
+    /**
+     * 
+     */
+    projectId: string;
     /**
      * 
      */
@@ -42,7 +50,7 @@ export interface ProviderConnectionResponseOneOf1 {
  * @export
  */
 export const ProviderConnectionResponseOneOf1ProviderEnum = {
-    Tokenization: 'tokenization',
+    GoogleDlp: 'google_dlp',
 } as const;
 export type ProviderConnectionResponseOneOf1ProviderEnum = typeof ProviderConnectionResponseOneOf1ProviderEnum[keyof typeof ProviderConnectionResponseOneOf1ProviderEnum];
 
@@ -53,9 +61,11 @@ export type ProviderConnectionResponseOneOf1ProviderEnum = typeof ProviderConnec
 export function instanceOfProviderConnectionResponseOneOf1(value: object): value is ProviderConnectionResponseOneOf1 {
     if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if ((!('hasBearerToken' in (value as Record<string, any>)) && !('has_bearer_token' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasBearerToken'] === undefined && (value as Record<string, any>)['has_bearer_token'] === undefined)) return false;
+    if (!('location' in value) || value['location'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
+    if ((!('projectId' in (value as Record<string, any>)) && !('project_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['projectId'] === undefined && (value as Record<string, any>)['project_id'] === undefined)) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'tokenization') return false;
+    if (value['provider'] !== 'google_dlp') return false;
     
     return true;
 }
@@ -72,7 +82,9 @@ export function ProviderConnectionResponseOneOf1FromJSONTyped(json: any, ignoreD
         
         'endpoint': json['endpoint'],
         'hasBearerToken': json['has_bearer_token'],
+        'location': json['location'],
         'orgId': json['org_id'],
+        'projectId': json['project_id'],
         'provider': json['provider'],
     };
 }
@@ -90,7 +102,9 @@ export function ProviderConnectionResponseOneOf1ToJSONTyped(value?: ProviderConn
         
         'endpoint': value['endpoint'],
         'has_bearer_token': value['hasBearerToken'],
+        'location': value['location'],
         'org_id': value['orgId'],
+        'project_id': value['projectId'],
         'provider': value['provider'],
     };
 }

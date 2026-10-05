@@ -55,20 +55,13 @@ import {
     UpsertConnectionRequestOneOf5FromJSONTyped,
     UpsertConnectionRequestOneOf5ToJSON,
 } from './UpsertConnectionRequestOneOf5.js';
-import type { UpsertConnectionRequestOneOf6 } from './UpsertConnectionRequestOneOf6.js';
-import {
-    instanceOfUpsertConnectionRequestOneOf6,
-    UpsertConnectionRequestOneOf6FromJSON,
-    UpsertConnectionRequestOneOf6FromJSONTyped,
-    UpsertConnectionRequestOneOf6ToJSON,
-} from './UpsertConnectionRequestOneOf6.js';
 
 /**
  * @type UpsertConnectionRequest
  * Tagged request body — the `"provider"` field selects the variant.
  * @export
  */
-export type UpsertConnectionRequest = UpsertConnectionRequestOneOf | UpsertConnectionRequestOneOf1 | UpsertConnectionRequestOneOf2 | UpsertConnectionRequestOneOf3 | UpsertConnectionRequestOneOf4 | UpsertConnectionRequestOneOf5 | UpsertConnectionRequestOneOf6;
+export type UpsertConnectionRequest = UpsertConnectionRequestOneOf | UpsertConnectionRequestOneOf1 | UpsertConnectionRequestOneOf2 | UpsertConnectionRequestOneOf3 | UpsertConnectionRequestOneOf4 | UpsertConnectionRequestOneOf5;
 
 export function UpsertConnectionRequestFromJSON(json: any): UpsertConnectionRequest {
     return UpsertConnectionRequestFromJSONTyped(json, false);
@@ -98,9 +91,6 @@ export function UpsertConnectionRequestFromJSONTyped(json: any, ignoreDiscrimina
     }
     if (instanceOfUpsertConnectionRequestOneOf5(json)) {
         return UpsertConnectionRequestOneOf5FromJSONTyped(json, true);
-    }
-    if (instanceOfUpsertConnectionRequestOneOf6(json)) {
-        return UpsertConnectionRequestOneOf6FromJSONTyped(json, true);
     }
     return {} as any;
 }
@@ -133,9 +123,6 @@ export function UpsertConnectionRequestToJSONTyped(value?: UpsertConnectionReque
     }
     if (instanceOfUpsertConnectionRequestOneOf5(value)) {
         return UpsertConnectionRequestOneOf5ToJSON(value as UpsertConnectionRequestOneOf5);
-    }
-    if (instanceOfUpsertConnectionRequestOneOf6(value)) {
-        return UpsertConnectionRequestOneOf6ToJSON(value as UpsertConnectionRequestOneOf6);
     }
     return {};
 }

@@ -20,21 +20,13 @@ import { mapValues } from '../runtime.js';
  */
 export interface UpsertConnectionRequestOneOf {
     /**
-     * 
-     */
-    analyzerUrl: string;
-    /**
-     * 
-     */
-    anonymizerUrl?: string;
-    /**
      * Supply to set or rotate the token; omit to leave unchanged.
      */
     bearerToken?: string;
     /**
      * 
      */
-    language?: string;
+    endpoint: string;
     /**
      * 
      */
@@ -46,7 +38,7 @@ export interface UpsertConnectionRequestOneOf {
  * @export
  */
 export const UpsertConnectionRequestOneOfProviderEnum = {
-    Presidio: 'presidio',
+    Tokenization: 'tokenization',
 } as const;
 export type UpsertConnectionRequestOneOfProviderEnum = typeof UpsertConnectionRequestOneOfProviderEnum[keyof typeof UpsertConnectionRequestOneOfProviderEnum];
 
@@ -55,9 +47,9 @@ export type UpsertConnectionRequestOneOfProviderEnum = typeof UpsertConnectionRe
  * Check if a given object implements the UpsertConnectionRequestOneOf interface.
  */
 export function instanceOfUpsertConnectionRequestOneOf(value: object): value is UpsertConnectionRequestOneOf {
-    if ((!('analyzerUrl' in (value as Record<string, any>)) && !('analyzer_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['analyzerUrl'] === undefined && (value as Record<string, any>)['analyzer_url'] === undefined)) return false;
+    if (!('endpoint' in value) || value['endpoint'] === undefined) return false;
     if (!('provider' in value) || value['provider'] === undefined) return false;
-    if (value['provider'] !== 'presidio') return false;
+    if (value['provider'] !== 'tokenization') return false;
     
     return true;
 }
@@ -72,10 +64,8 @@ export function UpsertConnectionRequestOneOfFromJSONTyped(json: any, ignoreDiscr
     }
     return {
         
-        'analyzerUrl': json['analyzer_url'],
-        'anonymizerUrl': json['anonymizer_url'] == null ? undefined : json['anonymizer_url'],
         'bearerToken': json['bearer_token'] == null ? undefined : json['bearer_token'],
-        'language': json['language'] == null ? undefined : json['language'],
+        'endpoint': json['endpoint'],
         'provider': json['provider'],
     };
 }
@@ -91,10 +81,8 @@ export function UpsertConnectionRequestOneOfToJSONTyped(value?: UpsertConnection
 
     return {
         
-        'analyzer_url': value['analyzerUrl'],
-        'anonymizer_url': value['anonymizerUrl'],
         'bearer_token': value['bearerToken'],
-        'language': value['language'],
+        'endpoint': value['endpoint'],
         'provider': value['provider'],
     };
 }
