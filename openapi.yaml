@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.7.0
+  version: 2.8.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -13404,6 +13404,10 @@ components:
           - type: boolean
           - type: 'null'
           title: Uses Managed Credentials
+        ema_enabled:
+          type: boolean
+          title: Ema Enabled
+          default: false
         scopes:
           anyOf:
           - items:
@@ -13510,6 +13514,7 @@ components:
       - client_id
       - client_secret
       - uses_managed_credentials
+      - ema_enabled
       - scopes
       - organization_id
       - mcp_server_directory_id
@@ -13613,6 +13618,10 @@ components:
           - type: boolean
           - type: 'null'
           title: Uses Managed Credentials
+        ema_enabled:
+          type: boolean
+          title: Ema Enabled
+          default: false
         scopes:
           anyOf:
           - items:
@@ -13726,6 +13735,7 @@ components:
       - client_id
       - client_secret
       - uses_managed_credentials
+      - ema_enabled
       - scopes
       - organization_id
       - mcp_server_directory_id
