@@ -1476,6 +1476,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates an active profile at version 1. If the organization has no usable default profile for the profile\'s client yet, the new profile also becomes that client\'s organization default; an existing default is never changed.
      * Create an agent runtime profile
      */
     async createProfileRaw(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
@@ -1486,6 +1487,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates an active profile at version 1. If the organization has no usable default profile for the profile\'s client yet, the new profile also becomes that client\'s organization default; an existing default is never changed.
      * Create an agent runtime profile
      */
     async createProfile(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
