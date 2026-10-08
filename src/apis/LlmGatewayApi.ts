@@ -109,6 +109,16 @@ import {
     DefaultPricingEntryToJSON,
 } from '../models/DefaultPricingEntry.js';
 import {
+    type DefaultSetupRequest,
+    DefaultSetupRequestFromJSON,
+    DefaultSetupRequestToJSON,
+} from '../models/DefaultSetupRequest.js';
+import {
+    type DefaultSetupResponse,
+    DefaultSetupResponseFromJSON,
+    DefaultSetupResponseToJSON,
+} from '../models/DefaultSetupResponse.js';
+import {
     type DeletedResponse,
     DeletedResponseFromJSON,
     DeletedResponseToJSON,
@@ -323,6 +333,13 @@ export interface CreateConnectionOperationRequest {
      * 
      */
     createConnectionRequest: CreateConnectionRequest;
+}
+
+export interface CreateDefaultSetupRequest {
+    /**
+     * 
+     */
+    defaultSetupRequest: DefaultSetupRequest;
 }
 
 export interface CreateModelAccessOperationRequest {
@@ -1206,6 +1223,77 @@ export class LlmGatewayApi extends runtime.BaseAPI {
      */
     async createConnection(requestParameters: CreateConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Connection> {
         const response = await this.createConnectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for createDefaultSetup without sending the request
+     */
+    async createDefaultSetupRequestOpts(requestParameters: CreateDefaultSetupRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['defaultSetupRequest'] == null) {
+            throw new runtime.RequiredError(
+                'defaultSetupRequest',
+                'Required parameter "defaultSetupRequest" was null or undefined when calling createDefaultSetup().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/llm-gateway/admin/agent-runtime-profiles/default-setup`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: DefaultSetupRequestToJSON(requestParameters['defaultSetupRequest']),
+        };
+    }
+
+    /**
+     * Create the safe default Claude launch setup for a login provider
+     */
+    async createDefaultSetupRaw(requestParameters: CreateDefaultSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DefaultSetupResponse>> {
+        const requestOptions = await this.createDefaultSetupRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DefaultSetupResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Create the safe default Claude launch setup for a login provider
+     */
+    async createDefaultSetup(requestParameters: CreateDefaultSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DefaultSetupResponse> {
+        const response = await this.createDefaultSetupRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

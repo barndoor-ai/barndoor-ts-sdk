@@ -4302,6 +4302,35 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '409':
           description: Another profile in this organization already uses this slug
+  /api/llm-gateway/admin/agent-runtime-profiles/default-setup:
+    post:
+      tags:
+      - llm-gateway
+      summary: Create the safe default Claude launch setup for a login provider
+      operationId: create_default_setup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefaultSetupRequest'
+        required: true
+      responses:
+        '200':
+          description: The routes and launch profile created or already present
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultSetupResponse'
+        '400':
+          description: The provider or its enabled models cannot support the default
+            setup, or a model alias is already routed on another provider; nothing
+            is changed
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such provider in this organization
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}:
     get:
       tags:
@@ -9098,6 +9127,57 @@ components:
           type: string
         source:
           type: string
+    DefaultSetupProfile:
+      type: object
+      required:
+      - slug
+      - created
+      - is_org_default
+      properties:
+        created:
+          type: boolean
+        is_org_default:
+          type: boolean
+        slug:
+          type: string
+    DefaultSetupRequest:
+      type: object
+      required:
+      - provider_id
+      - client
+      properties:
+        client:
+          type: string
+        provider_id:
+          type: string
+          format: uuid
+    DefaultSetupResponse:
+      type: object
+      required:
+      - routes
+      - profile
+      - policies_needing_update
+      properties:
+        policies_needing_update:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyNeedingUpdate'
+        profile:
+          $ref: '#/components/schemas/DefaultSetupProfile'
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DefaultSetupRoute'
+    DefaultSetupRoute:
+      type: object
+      required:
+      - alias
+      - created
+      properties:
+        alias:
+          type: string
+        created:
+          type: boolean
     DeletedResponse:
       type: object
       description: "The acknowledgement every admin `DELETE` returns.\n\nShared by\
@@ -11923,6 +12003,17 @@ components:
         \ off the ORM\nrow \u2014 the field set below is a straight projection of\n\
         ``policy_service.db.policy_impact.PolicyImpact``, so there is no hand-mapping\n\
         to drift out of sync."
+    PolicyNeedingUpdate:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     PolicyRevisionCompareResponse:
       properties:
         before:
