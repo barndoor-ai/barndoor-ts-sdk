@@ -13,6 +13,13 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
+import type { MappingKind } from './MappingKind.js';
+import {
+    MappingKindFromJSON,
+    MappingKindFromJSONTyped,
+    MappingKindToJSON,
+    MappingKindToJSONTyped,
+} from './MappingKind.js';
 import type { AutoDisabledReason } from './AutoDisabledReason.js';
 import {
     AutoDisabledReasonFromJSON,
@@ -121,12 +128,9 @@ export interface ModelMapping {
     autoDisabledReason?: AutoDisabledReason | null;
     /**
      * When `true` the row participates in bare-name resolution
-     * (`POST /v1/chat/completions {"model": "<alias>"}`). When `false` the
-     * row is enablement-only — addressable solely via the explicit
-     * `<provider>/<upstream>` form. Custom-alias rows
-     * (`model_alias != upstream_model`) are always `true`; 1:1 rows
-     * default to `false` and admins opt in by creating an explicit Route
-     * on the Model Routes tab.
+     * (`POST /v1/chat/completions {"model": "<alias>"}`). Route targets are
+     * `true`; enablements (`kind = model`) are always `false` and are
+     * addressable solely via the explicit `<provider>/<upstream>` form.
      */
     bareAlias: boolean;
     /**
@@ -137,6 +141,12 @@ export interface ModelMapping {
      * 
      */
     id: string;
+    /**
+     * Whether this row is the model's enablement or a route target — see
+     * [`MappingKind`]. Never inferred from `model_alias == upstream_model`:
+     * a route may carry its upstream's name (migration V84).
+     */
+    kind: MappingKind;
     /**
      * 
      */
@@ -152,10 +162,10 @@ export interface ModelMapping {
     /**
      * Per-mapping (route-tier / model-tier) total-request timeout for
      * non-streaming requests (streaming responses have no total timeout).
-     * Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a
-     * custom-alias row this is the *route* tier; on the 1:1 enablement
-     * (anchor) row it is the *model* tier consulted by the resolver for
-     * every alias of that model. The range is fixed platform policy
+     * Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a route
+     * target this is the *route* tier; on the enablement (`kind = model`)
+     * it is the *model* tier consulted by the resolver for every route
+     * target of that model. The range is fixed platform policy
      * (`TOTAL_REQUEST_TIMEOUT_MIN_SECS..=TOTAL_REQUEST_TIMEOUT_MAX_SECS`),
      * enforced by the column CHECK.
      */
@@ -205,6 +215,7 @@ export function instanceOfModelMapping(value: object): value is ModelMapping {
     if ((!('bareAlias' in (value as Record<string, any>)) && !('bare_alias' in (value as Record<string, any>))) || ((value as Record<string, any>)['bareAlias'] === undefined && (value as Record<string, any>)['bare_alias'] === undefined)) return false;
     if (!('enabled' in value) || value['enabled'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
+    if (!('kind' in value) || value['kind'] === undefined) return false;
     if ((!('modelAlias' in (value as Record<string, any>)) && !('model_alias' in (value as Record<string, any>))) || ((value as Record<string, any>)['modelAlias'] === undefined && (value as Record<string, any>)['model_alias'] === undefined)) return false;
     if (!('priority' in value) || value['priority'] === undefined) return false;
     if ((!('providerId' in (value as Record<string, any>)) && !('provider_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['providerId'] === undefined && (value as Record<string, any>)['provider_id'] === undefined)) return false;
@@ -243,6 +254,7 @@ export function ModelMappingFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'bareAlias': json['bare_alias'],
         'enabled': json['enabled'],
         'id': json['id'],
+        'kind': MappingKindFromJSON(json['kind']),
         'modelAlias': json['model_alias'],
         'priority': json['priority'],
         'providerId': json['provider_id'],
@@ -284,6 +296,7 @@ export function ModelMappingToJSONTyped(value?: ModelMapping | null, ignoreDiscr
         'bare_alias': value['bareAlias'],
         'enabled': value['enabled'],
         'id': value['id'],
+        'kind': MappingKindToJSON(value['kind']),
         'model_alias': value['modelAlias'],
         'priority': value['priority'],
         'provider_id': value['providerId'],

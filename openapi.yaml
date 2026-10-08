@@ -5129,6 +5129,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReorderedResponse'
+        '400':
+          description: An entry is a model enablement, which belongs to no route
         '401':
           description: Missing or invalid credentials
         '403':
@@ -5617,6 +5619,44 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such resource in this organization
+  /api/llm-gateway/admin/model-routes/rename:
+    post:
+      tags:
+      - llm-gateway
+      summary: Rename a model route
+      description: 'Renames a route in one transaction: every target, and the route''s
+
+        route-group memberships (BCP-4580). Renaming target by target through
+
+        `PUT /admin/model-mappings/{id}` still works, but leaves the route split
+
+        across two names until the last PUT lands, and moves the memberships on the
+
+        first one.'
+      operationId: rename_model_route
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameModelRouteRequest'
+        required: true
+      responses:
+        '200':
+          description: The route was renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenameModelRouteResponse'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No route has this name in this organization
+        '409':
+          description: Another route already has the new name
   /api/llm-gateway/admin/providers:
     get:
       tags:
@@ -8382,11 +8422,12 @@ components:
           type:
           - boolean
           - 'null'
-          description: "Whether this row should participate in bare-name resolution.\
-            \ The\nadmin handler treats `None` as \"infer from alias shape\" \u2014\
-            \ custom\naliases imply `true`, 1:1 enablement rows imply `false`. Pass\n\
-            `Some(true)` explicitly from the Model Routes tab to opt a 1:1\nrow into\
-            \ bare resolution."
+          description: 'Whether a route target participates in bare-name resolution.
+            Defaults
+
+            to `true` for a route and is always `false` for an enablement, which is
+
+            reachable only as `<provider>/<model>`.'
         change_note:
           type:
           - string
@@ -8461,6 +8502,25 @@ components:
             default 60.
         enabled:
           type: boolean
+        kind:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/MappingKind'
+            description: '`model` enables the model on the provider; `route` adds
+              a target to the
+
+              route named `model_alias`, which may be the upstream''s own name.
+
+
+              Omitted, it is inferred the way callers predating the field meant it
+
+              (see [`MappingKind::infer`]): `model_alias == upstream_model` without
+
+              `bare_alias: true` is an enablement, anything else a route. A route
+
+              named after its upstream with no enablement yet on the provider is
+
+              accepted only in that legacy form, which enables the model first.'
         model_alias:
           type: string
         priority:
@@ -10865,6 +10925,27 @@ components:
       - active_server_ids
       - registered_mcp_servers
       title: MCPServerDirectoryReadWithServers
+    MappingKind:
+      type: string
+      description: 'What a `model_mappings` row is (BCP-4580, migration V84). Persisted
+        as a
+
+        `VARCHAR(8)` constrained to `model | route`.
+
+
+        The table holds two different things, and they used to be told apart only
+
+        by `model_alias = upstream_model`. That made a route named after its own
+
+        upstream indistinguishable from the model''s enablement, so the two shared
+        a
+
+        row and every route operation on it had to tiptoe around the enablement.
+
+        The kind is now stated, never inferred from a name.'
+      enum:
+      - model
+      - route
     MaskFormat:
       type: object
       description: 'The `mask_format` object stored on `dlp.enforcement_policies.mask_format`
@@ -11040,6 +11121,7 @@ components:
         - retry_on_429_count
         - retry_on_429_max_wait_secs
         - bare_alias
+        - kind
         - source
         properties:
           auto_disabled_reason:
@@ -11061,17 +11143,23 @@ components:
                 \ the\ncatalog\"), not a bug \u2014 see\n`model_sync::tests::re_enabling_a_dropped_model_is_retired_again_on_the_next_tick`."
           bare_alias:
             type: boolean
-            description: "When `true` the row participates in bare-name resolution\n\
-              (`POST /v1/chat/completions {\"model\": \"<alias>\"}`). When `false`\
-              \ the\nrow is enablement-only \u2014 addressable solely via the explicit\n\
-              `<provider>/<upstream>` form. Custom-alias rows\n(`model_alias != upstream_model`)\
-              \ are always `true`; 1:1 rows\ndefault to `false` and admins opt in\
-              \ by creating an explicit Route\non the Model Routes tab."
+            description: 'When `true` the row participates in bare-name resolution
+
+              (`POST /v1/chat/completions {"model": "<alias>"}`). Route targets are
+
+              `true`; enablements (`kind = model`) are always `false` and are
+
+              addressable solely via the explicit `<provider>/<upstream>` form.'
           enabled:
             type: boolean
           id:
             type: string
             format: uuid
+          kind:
+            $ref: '#/components/schemas/MappingKind'
+            description: "Whether this row is the model's enablement or a route target\
+              \ \u2014 see\n[`MappingKind`]. Never inferred from `model_alias == upstream_model`:\n\
+              a route may carry its upstream's name (migration V84)."
           model_alias:
             type: string
           priority:
@@ -11090,13 +11178,13 @@ components:
 
               non-streaming requests (streaming responses have no total timeout).
 
-              Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a
+              Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a route
 
-              custom-alias row this is the *route* tier; on the 1:1 enablement
+              target this is the *route* tier; on the enablement (`kind = model`)
 
-              (anchor) row it is the *model* tier consulted by the resolver for
+              it is the *model* tier consulted by the resolver for every route
 
-              every alias of that model. The range is fixed platform policy
+              target of that model. The range is fixed platform policy
 
               (`TOTAL_REQUEST_TIMEOUT_MIN_SECS..=TOTAL_REQUEST_TIMEOUT_MAX_SECS`),
 
@@ -11211,6 +11299,7 @@ components:
         - retry_on_429_count
         - retry_on_429_max_wait_secs
         - bare_alias
+        - kind
         - created_at
         - source
         properties:
@@ -11231,6 +11320,9 @@ components:
           id:
             type: string
             format: uuid
+          kind:
+            $ref: '#/components/schemas/MappingKind'
+            description: See [`ModelMapping::kind`].
           model_alias:
             type: string
           priority:
@@ -12854,6 +12946,48 @@ components:
       description: "BCP-3815 \u2014 why ``POST /servers/{id}/publish`` would currently\
         \ 422.\n\nOne value per gate the publish route enforces, in the order it checks\
         \ them."
+    RenameModelRouteRequest:
+      type: object
+      description: "`POST /admin/model-routes/rename`: rename a route in one step\
+        \ \u2014 every\ntarget, and the route's route-group memberships with it (BCP-4580)."
+      required:
+      - model_alias
+      - new_model_alias
+      properties:
+        change_note:
+          type:
+          - string
+          - 'null'
+          description: Optional note explaining the rename (BCP-3998), stamped on
+            every target.
+        model_alias:
+          type: string
+          description: The route's current name.
+        new_model_alias:
+          type: string
+          description: 'The new name. Any name no other route uses, including the
+            name of a
+
+            model one of its targets points at.'
+    RenameModelRouteResponse:
+      type: object
+      required:
+      - model_alias
+      - targets_renamed
+      - route_group_memberships_moved
+      properties:
+        model_alias:
+          type: string
+        route_group_memberships_moved:
+          type: integer
+          format: int64
+          description: How many route-group memberships moved to the new name.
+          minimum: 0
+        targets_renamed:
+          type: integer
+          format: int64
+          description: How many route targets were renamed.
+          minimum: 0
     ReorderEntry:
       type: object
       required:

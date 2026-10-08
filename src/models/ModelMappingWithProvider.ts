@@ -13,6 +13,13 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime.js';
+import type { MappingKind } from './MappingKind.js';
+import {
+    MappingKindFromJSON,
+    MappingKindFromJSONTyped,
+    MappingKindToJSON,
+    MappingKindToJSONTyped,
+} from './MappingKind.js';
 import type { AutoDisabledReason } from './AutoDisabledReason.js';
 import {
     AutoDisabledReasonFromJSON,
@@ -124,6 +131,10 @@ export interface ModelMappingWithProvider {
      */
     id: string;
     /**
+     * See [`ModelMapping::kind`].
+     */
+    kind: MappingKind;
+    /**
      * 
      */
     modelAlias: string;
@@ -185,6 +196,7 @@ export function instanceOfModelMappingWithProvider(value: object): value is Mode
     if ((!('createdAt' in (value as Record<string, any>)) && !('created_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['createdAt'] === undefined && (value as Record<string, any>)['created_at'] === undefined)) return false;
     if (!('enabled' in value) || value['enabled'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
+    if (!('kind' in value) || value['kind'] === undefined) return false;
     if ((!('modelAlias' in (value as Record<string, any>)) && !('model_alias' in (value as Record<string, any>))) || ((value as Record<string, any>)['modelAlias'] === undefined && (value as Record<string, any>)['model_alias'] === undefined)) return false;
     if (!('priority' in value) || value['priority'] === undefined) return false;
     if ((!('providerAuthType' in (value as Record<string, any>)) && !('provider_auth_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['providerAuthType'] === undefined && (value as Record<string, any>)['provider_auth_type'] === undefined)) return false;
@@ -226,6 +238,7 @@ export function ModelMappingWithProviderFromJSONTyped(json: any, ignoreDiscrimin
         'createdAt': (json['created_at'] == null ? json['created_at'] : parseDateTime(json['created_at'])),
         'enabled': json['enabled'],
         'id': json['id'],
+        'kind': MappingKindFromJSON(json['kind']),
         'modelAlias': json['model_alias'],
         'priority': json['priority'],
         'providerAuthType': json['provider_auth_type'],
@@ -270,6 +283,7 @@ export function ModelMappingWithProviderToJSONTyped(value?: ModelMappingWithProv
         'created_at': value['createdAt'] == null ? value['createdAt'] : serializeDateTime(value['createdAt']),
         'enabled': value['enabled'],
         'id': value['id'],
+        'kind': MappingKindToJSON(value['kind']),
         'model_alias': value['modelAlias'],
         'priority': value['priority'],
         'provider_auth_type': value['providerAuthType'],

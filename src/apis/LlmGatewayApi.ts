@@ -184,6 +184,16 @@ import {
     ProviderToJSON,
 } from '../models/Provider.js';
 import {
+    type RenameModelRouteRequest,
+    RenameModelRouteRequestFromJSON,
+    RenameModelRouteRequestToJSON,
+} from '../models/RenameModelRouteRequest.js';
+import {
+    type RenameModelRouteResponse,
+    RenameModelRouteResponseFromJSON,
+    RenameModelRouteResponseToJSON,
+} from '../models/RenameModelRouteResponse.js';
+import {
     type ReorderModelMappingsRequest,
     ReorderModelMappingsRequestFromJSON,
     ReorderModelMappingsRequestToJSON,
@@ -566,6 +576,13 @@ export interface RemoveRouteGroupMemberRequest {
      * Model alias
      */
     alias: string | null;
+}
+
+export interface RenameModelRouteOperationRequest {
+    /**
+     * 
+     */
+    renameModelRouteRequest: RenameModelRouteRequest;
 }
 
 export interface ReorderModelMappingsOperationRequest {
@@ -4215,6 +4232,79 @@ export class LlmGatewayApi extends runtime.BaseAPI {
      */
     async removeRouteGroupMember(requestParameters: RemoveRouteGroupMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ModelRouteGroup> {
         const response = await this.removeRouteGroupMemberRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for renameModelRoute without sending the request
+     */
+    async renameModelRouteRequestOpts(requestParameters: RenameModelRouteOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['renameModelRouteRequest'] == null) {
+            throw new runtime.RequiredError(
+                'renameModelRouteRequest',
+                'Required parameter "renameModelRouteRequest" was null or undefined when calling renameModelRoute().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/llm-gateway/admin/model-routes/rename`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: RenameModelRouteRequestToJSON(requestParameters['renameModelRouteRequest']),
+        };
+    }
+
+    /**
+     * Renames a route in one transaction: every target, and the route\'s route-group memberships (BCP-4580). Renaming target by target through `PUT /admin/model-mappings/{id}` still works, but leaves the route split across two names until the last PUT lands, and moves the memberships on the first one.
+     * Rename a model route
+     */
+    async renameModelRouteRaw(requestParameters: RenameModelRouteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RenameModelRouteResponse>> {
+        const requestOptions = await this.renameModelRouteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RenameModelRouteResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Renames a route in one transaction: every target, and the route\'s route-group memberships (BCP-4580). Renaming target by target through `PUT /admin/model-mappings/{id}` still works, but leaves the route split across two names until the last PUT lands, and moves the memberships on the first one.
+     * Rename a model route
+     */
+    async renameModelRoute(requestParameters: RenameModelRouteOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RenameModelRouteResponse> {
+        const response = await this.renameModelRouteRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

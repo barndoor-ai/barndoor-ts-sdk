@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime.js';
+import type { MappingKind } from './MappingKind.js';
+import {
+    MappingKindFromJSON,
+    MappingKindFromJSONTyped,
+    MappingKindToJSON,
+    MappingKindToJSONTyped,
+} from './MappingKind.js';
 import type { ModelSource } from './ModelSource.js';
 import {
     ModelSourceFromJSON,
@@ -28,11 +35,9 @@ import {
  */
 export interface CreateModelMappingRequest {
     /**
-     * Whether this row should participate in bare-name resolution. The
-     * admin handler treats `None` as "infer from alias shape" — custom
-     * aliases imply `true`, 1:1 enablement rows imply `false`. Pass
-     * `Some(true)` explicitly from the Model Routes tab to opt a 1:1
-     * row into bare resolution.
+     * Whether a route target participates in bare-name resolution. Defaults
+     * to `true` for a route and is always `false` for an enablement, which is
+     * reachable only as `<provider>/<model>`.
      */
     bareAlias?: boolean | null;
     /**
@@ -80,6 +85,17 @@ export interface CreateModelMappingRequest {
      * 
      */
     enabled?: boolean;
+    /**
+     * `model` enables the model on the provider; `route` adds a target to the
+     * route named `model_alias`, which may be the upstream's own name.
+     * 
+     * Omitted, it is inferred the way callers predating the field meant it
+     * (see [`MappingKind::infer`]): `model_alias == upstream_model` without
+     * `bare_alias: true` is an enablement, anything else a route. A route
+     * named after its upstream with no enablement yet on the provider is
+     * accepted only in that legacy form, which enables the model first.
+     */
+    kind?: MappingKind | null;
     /**
      * 
      */
@@ -172,6 +188,7 @@ export function CreateModelMappingRequestFromJSONTyped(json: any, ignoreDiscrimi
         'cooldownOverloadedSecs': json['cooldown_overloaded_secs'] === undefined ? undefined : json['cooldown_overloaded_secs'] === null ? null : json['cooldown_overloaded_secs'],
         'cooldownWindowSecs': json['cooldown_window_secs'] === undefined ? undefined : json['cooldown_window_secs'] === null ? null : json['cooldown_window_secs'],
         'enabled': json['enabled'] == null ? undefined : json['enabled'],
+        'kind': json['kind'] === undefined ? undefined : json['kind'] === null ? null : MappingKindFromJSON(json['kind']),
         'modelAlias': json['model_alias'],
         'priority': json['priority'] == null ? undefined : json['priority'],
         'providerId': json['provider_id'],
@@ -204,6 +221,7 @@ export function CreateModelMappingRequestToJSONTyped(value?: CreateModelMappingR
         'cooldown_overloaded_secs': value['cooldownOverloadedSecs'],
         'cooldown_window_secs': value['cooldownWindowSecs'],
         'enabled': value['enabled'],
+        'kind': MappingKindToJSON(value['kind']),
         'model_alias': value['modelAlias'],
         'priority': value['priority'],
         'provider_id': value['providerId'],
