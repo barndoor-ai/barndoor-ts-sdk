@@ -328,9 +328,9 @@ export interface ListMcpServersRequest {
      */
     audienceScoped?: boolean;
     /**
-     * BCP-4300: include servers that run locally through the Barndoor CLI (embedded and local catalogs). Default true, so existing callers keep every server; the admin MCP Servers page sends false while local MCP management is not rolled out to the org.
+     * BCP-4300: include servers that run locally through the Barndoor CLI (embedded and local catalogs). Omitted, the registry resolves it from the org's `local-cli-mcp-tooling` flag (fail-closed); an explicit value is always honoured.
      */
-    includeLocal?: boolean;
+    includeLocal?: boolean | null;
     /**
      * Page number (1-based)
      */

@@ -142,17 +142,18 @@ paths:
         in: query
         required: false
         schema:
-          type: boolean
+          anyOf:
+          - type: boolean
+          - type: 'null'
           description: 'BCP-4300: include servers that run locally through the Barndoor
-            CLI (embedded and local catalogs). Default true, so existing callers keep
-            every server; the admin MCP Servers page sends false while local MCP management
-            is not rolled out to the org.'
-          default: true
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured.'
           title: Include Local
         description: 'BCP-4300: include servers that run locally through the Barndoor
-          CLI (embedded and local catalogs). Default true, so existing callers keep
-          every server; the admin MCP Servers page sends false while local MCP management
-          is not rolled out to the org.'
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured.'
       - name: page
         in: query
         required: false
