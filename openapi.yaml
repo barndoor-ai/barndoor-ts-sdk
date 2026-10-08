@@ -12975,9 +12975,33 @@ components:
       - model_alias
       - targets_renamed
       - route_group_memberships_moved
+      - token_budgets_retargeted
+      - rate_limit_policies_retargeted
+      - model_access_policies_retargeted
+      - governance_targets_kept
       properties:
+        governance_targets_kept:
+          type: integer
+          format: int64
+          description: 'Budgets, rate limits and model-access policies that stayed
+            on the old
+
+            name, because a model enablement or routing policy still answers to
+
+            it. Nonzero means those rows no longer apply to this route.'
+          minimum: 0
+        model_access_policies_retargeted:
+          type: integer
+          format: int64
+          description: How many model-access policies had a target renamed.
+          minimum: 0
         model_alias:
           type: string
+        rate_limit_policies_retargeted:
+          type: integer
+          format: int64
+          description: How many rate-limit policies now target the new name.
+          minimum: 0
         route_group_memberships_moved:
           type: integer
           format: int64
@@ -12987,6 +13011,14 @@ components:
           type: integer
           format: int64
           description: How many route targets were renamed.
+          minimum: 0
+        token_budgets_retargeted:
+          type: integer
+          format: int64
+          description: 'How many token budgets now target the new name. Their usage
+            so far
+
+            this period moved with them.'
           minimum: 0
     ReorderEntry:
       type: object

@@ -20,9 +20,23 @@ import { mapValues } from '../runtime.js';
  */
 export interface RenameModelRouteResponse {
     /**
+     * Budgets, rate limits and model-access policies that stayed on the old
+     * name, because a model enablement or routing policy still answers to
+     * it. Nonzero means those rows no longer apply to this route.
+     */
+    governanceTargetsKept: number;
+    /**
+     * How many model-access policies had a target renamed.
+     */
+    modelAccessPoliciesRetargeted: number;
+    /**
      * 
      */
     modelAlias: string;
+    /**
+     * How many rate-limit policies now target the new name.
+     */
+    rateLimitPoliciesRetargeted: number;
     /**
      * How many route-group memberships moved to the new name.
      */
@@ -31,15 +45,24 @@ export interface RenameModelRouteResponse {
      * How many route targets were renamed.
      */
     targetsRenamed: number;
+    /**
+     * How many token budgets now target the new name. Their usage so far
+     * this period moved with them.
+     */
+    tokenBudgetsRetargeted: number;
 }
 
 /**
  * Check if a given object implements the RenameModelRouteResponse interface.
  */
 export function instanceOfRenameModelRouteResponse(value: object): value is RenameModelRouteResponse {
+    if ((!('governanceTargetsKept' in (value as Record<string, any>)) && !('governance_targets_kept' in (value as Record<string, any>))) || ((value as Record<string, any>)['governanceTargetsKept'] === undefined && (value as Record<string, any>)['governance_targets_kept'] === undefined)) return false;
+    if ((!('modelAccessPoliciesRetargeted' in (value as Record<string, any>)) && !('model_access_policies_retargeted' in (value as Record<string, any>))) || ((value as Record<string, any>)['modelAccessPoliciesRetargeted'] === undefined && (value as Record<string, any>)['model_access_policies_retargeted'] === undefined)) return false;
     if ((!('modelAlias' in (value as Record<string, any>)) && !('model_alias' in (value as Record<string, any>))) || ((value as Record<string, any>)['modelAlias'] === undefined && (value as Record<string, any>)['model_alias'] === undefined)) return false;
+    if ((!('rateLimitPoliciesRetargeted' in (value as Record<string, any>)) && !('rate_limit_policies_retargeted' in (value as Record<string, any>))) || ((value as Record<string, any>)['rateLimitPoliciesRetargeted'] === undefined && (value as Record<string, any>)['rate_limit_policies_retargeted'] === undefined)) return false;
     if ((!('routeGroupMembershipsMoved' in (value as Record<string, any>)) && !('route_group_memberships_moved' in (value as Record<string, any>))) || ((value as Record<string, any>)['routeGroupMembershipsMoved'] === undefined && (value as Record<string, any>)['route_group_memberships_moved'] === undefined)) return false;
     if ((!('targetsRenamed' in (value as Record<string, any>)) && !('targets_renamed' in (value as Record<string, any>))) || ((value as Record<string, any>)['targetsRenamed'] === undefined && (value as Record<string, any>)['targets_renamed'] === undefined)) return false;
+    if ((!('tokenBudgetsRetargeted' in (value as Record<string, any>)) && !('token_budgets_retargeted' in (value as Record<string, any>))) || ((value as Record<string, any>)['tokenBudgetsRetargeted'] === undefined && (value as Record<string, any>)['token_budgets_retargeted'] === undefined)) return false;
     return true;
 }
 
@@ -53,9 +76,13 @@ export function RenameModelRouteResponseFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
         
+        'governanceTargetsKept': json['governance_targets_kept'],
+        'modelAccessPoliciesRetargeted': json['model_access_policies_retargeted'],
         'modelAlias': json['model_alias'],
+        'rateLimitPoliciesRetargeted': json['rate_limit_policies_retargeted'],
         'routeGroupMembershipsMoved': json['route_group_memberships_moved'],
         'targetsRenamed': json['targets_renamed'],
+        'tokenBudgetsRetargeted': json['token_budgets_retargeted'],
     };
 }
 
@@ -70,9 +97,13 @@ export function RenameModelRouteResponseToJSONTyped(value?: RenameModelRouteResp
 
     return {
         
+        'governance_targets_kept': value['governanceTargetsKept'],
+        'model_access_policies_retargeted': value['modelAccessPoliciesRetargeted'],
         'model_alias': value['modelAlias'],
+        'rate_limit_policies_retargeted': value['rateLimitPoliciesRetargeted'],
         'route_group_memberships_moved': value['routeGroupMembershipsMoved'],
         'targets_renamed': value['targetsRenamed'],
+        'token_budgets_retargeted': value['tokenBudgetsRetargeted'],
     };
 }
 
