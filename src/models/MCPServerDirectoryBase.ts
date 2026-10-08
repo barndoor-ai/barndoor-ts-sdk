@@ -135,7 +135,7 @@ export interface MCPServerDirectoryBase {
      */
     requiresAuth: boolean;
     /**
-     * 
+     * When requires_auth was last observed. NULL = not observed since the last URL change.
      */
     requiresAuthObservedAt: Date | null;
 }

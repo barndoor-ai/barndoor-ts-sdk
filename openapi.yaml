@@ -10580,6 +10580,8 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
       type: object
       required:
       - id
@@ -10719,6 +10721,8 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
         categories:
           items:
             $ref: '#/components/schemas/MCPServerCategory'
@@ -10873,6 +10877,8 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
         categories:
           items:
             $ref: '#/components/schemas/MCPServerCategory'
