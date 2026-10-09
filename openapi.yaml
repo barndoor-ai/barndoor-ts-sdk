@@ -10164,6 +10164,12 @@ components:
           - type: string
           - type: 'null'
           title: Domain
+        domains:
+          items:
+            type: string
+          type: array
+          title: Domains
+          default: []
       type: object
       title: IdpConnectionResponse
       description: Response containing current IdP connection configuration.

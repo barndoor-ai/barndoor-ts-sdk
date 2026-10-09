@@ -79,6 +79,10 @@ export interface IdpConnectionResponse {
      * 
      */
     domain?: string | null;
+    /**
+     * 
+     */
+    domains?: Array<string>;
 }
 
 /**
@@ -113,6 +117,7 @@ export function IdpConnectionResponseFromJSONTyped(json: any, ignoreDiscriminato
         'clientIdConfigured': json['client_id_configured'] == null ? undefined : json['client_id_configured'],
         'clientSecretConfigured': json['client_secret_configured'] == null ? undefined : json['client_secret_configured'],
         'domain': json['domain'] === undefined ? undefined : json['domain'] === null ? null : json['domain'],
+        'domains': json['domains'] == null ? undefined : json['domains'],
     };
 }
 
@@ -142,6 +147,7 @@ export function IdpConnectionResponseToJSONTyped(value?: IdpConnectionResponse |
         'client_id_configured': value['clientIdConfigured'],
         'client_secret_configured': value['clientSecretConfigured'],
         'domain': value['domain'],
+        'domains': value['domains'],
     };
 }
 
