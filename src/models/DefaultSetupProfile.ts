@@ -20,13 +20,19 @@ import { mapValues } from '../runtime.js';
  */
 export interface DefaultSetupProfile {
     /**
-     * 
+     * True when no settings row existed for the client and this run created it.
      */
     created: boolean;
     /**
      * 
      */
     isOrgDefault: boolean;
+    /**
+     * True when this run wrote the setup's models as the settings'
+     * preferences (a new row, or a row whose preferences were empty). False
+     * when existing preferences were left alone.
+     */
+    preferencesSeeded: boolean;
     /**
      * 
      */
@@ -39,6 +45,7 @@ export interface DefaultSetupProfile {
 export function instanceOfDefaultSetupProfile(value: object): value is DefaultSetupProfile {
     if (!('created' in value) || value['created'] === undefined) return false;
     if ((!('isOrgDefault' in (value as Record<string, any>)) && !('is_org_default' in (value as Record<string, any>))) || ((value as Record<string, any>)['isOrgDefault'] === undefined && (value as Record<string, any>)['is_org_default'] === undefined)) return false;
+    if ((!('preferencesSeeded' in (value as Record<string, any>)) && !('preferences_seeded' in (value as Record<string, any>))) || ((value as Record<string, any>)['preferencesSeeded'] === undefined && (value as Record<string, any>)['preferences_seeded'] === undefined)) return false;
     if (!('slug' in value) || value['slug'] === undefined) return false;
     return true;
 }
@@ -55,6 +62,7 @@ export function DefaultSetupProfileFromJSONTyped(json: any, ignoreDiscriminator:
         
         'created': json['created'],
         'isOrgDefault': json['is_org_default'],
+        'preferencesSeeded': json['preferences_seeded'],
         'slug': json['slug'],
     };
 }
@@ -72,6 +80,7 @@ export function DefaultSetupProfileToJSONTyped(value?: DefaultSetupProfile | nul
         
         'created': value['created'],
         'is_org_default': value['isOrgDefault'],
+        'preferences_seeded': value['preferencesSeeded'],
         'slug': value['slug'],
     };
 }

@@ -44,6 +44,11 @@ import {
     ArchivePricingResponseToJSON,
 } from '../models/ArchivePricingResponse.js';
 import {
+    type ClientSettings,
+    ClientSettingsFromJSON,
+    ClientSettingsToJSON,
+} from '../models/ClientSettings.js';
+import {
     type Connection,
     ConnectionFromJSON,
     ConnectionToJSON,
@@ -129,6 +134,11 @@ import {
     GovernanceConfigToJSON,
 } from '../models/GovernanceConfig.js';
 import {
+    type ListClientSettingsResponse,
+    ListClientSettingsResponseFromJSON,
+    ListClientSettingsResponseToJSON,
+} from '../models/ListClientSettingsResponse.js';
+import {
     type ListProfilesResponse,
     ListProfilesResponseFromJSON,
     ListProfilesResponseToJSON,
@@ -183,6 +193,11 @@ import {
     ProviderFromJSON,
     ProviderToJSON,
 } from '../models/Provider.js';
+import {
+    type PutClientSettingsRequest,
+    PutClientSettingsRequestFromJSON,
+    PutClientSettingsRequestToJSON,
+} from '../models/PutClientSettingsRequest.js';
 import {
     type RenameModelRouteRequest,
     RenameModelRouteRequestFromJSON,
@@ -496,6 +511,13 @@ export interface GetApiKeyRequest {
     id: string | null;
 }
 
+export interface GetClientSettingsRequest {
+    /**
+     * `claude` (Claude Code) or `codex` (Codex)
+     */
+    client: string | null;
+}
+
 export interface GetConnectionRequest {
     /**
      * Identifier, a UUID
@@ -565,6 +587,17 @@ export interface PatchProfileMetadataRequest {
      * 
      */
     metadataPatchRequest: MetadataPatchRequest;
+}
+
+export interface PutClientSettingsOperationRequest {
+    /**
+     * `claude` (Claude Code) or `codex` (Codex)
+     */
+    client: string;
+    /**
+     * 
+     */
+    putClientSettingsRequest: PutClientSettingsRequest;
 }
 
 export interface RemoveRouteGroupMemberRequest {
@@ -1529,6 +1562,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for createProfile without sending the request
+     * @deprecated
      */
     async createProfileRequestOpts(requestParameters: CreateProfileOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['createProfileRequest'] == null) {
@@ -1583,6 +1617,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Creates the client\'s settings at version 1. An organization has one settings object per client, so this is refused with 409 when the client already has one; edit it instead.
      * Create an agent runtime profile
+     * @deprecated
      */
     async createProfileRaw(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.createProfileRequestOpts(requestParameters);
@@ -1594,6 +1629,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Creates the client\'s settings at version 1. An organization has one settings object per client, so this is refused with 409 when the client already has one; edit it instead.
      * Create an agent runtime profile
+     * @deprecated
      */
     async createProfile(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.createProfileRaw(requestParameters, initOverrides);
@@ -2244,6 +2280,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for deleteProfile without sending the request
+     * @deprecated
      */
     async deleteProfileRequestOpts(requestParameters: DeleteProfileRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['slug'] == null) {
@@ -2295,6 +2332,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Delete an agent runtime profile
+     * @deprecated
      */
     async deleteProfileRaw(requestParameters: DeleteProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeletedResponse>> {
         const requestOptions = await this.deleteProfileRequestOpts(requestParameters);
@@ -2305,6 +2343,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Delete an agent runtime profile
+     * @deprecated
      */
     async deleteProfile(requestParameters: DeleteProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeletedResponse> {
         const response = await this.deleteProfileRaw(requestParameters, initOverrides);
@@ -2729,6 +2768,75 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getClientSettings without sending the request
+     */
+    async getClientSettingsRequestOpts(requestParameters: GetClientSettingsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['client'] == null) {
+            throw new runtime.RequiredError(
+                'client',
+                'Required parameter "client" was null or undefined when calling getClientSettings().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/llm-gateway/admin/client-settings/{client}`;
+        urlPath = urlPath.replace('{client}', encodeURIComponent(String(requestParameters['client'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Fetch one client\'s settings
+     */
+    async getClientSettingsRaw(requestParameters: GetClientSettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ClientSettings>> {
+        const requestOptions = await this.getClientSettingsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ClientSettingsFromJSON(jsonValue));
+    }
+
+    /**
+     * Fetch one client\'s settings
+     */
+    async getClientSettings(requestParameters: GetClientSettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ClientSettings> {
+        const response = await this.getClientSettingsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getConnection without sending the request
      */
     async getConnectionRequestOpts(requestParameters: GetConnectionRequest): Promise<runtime.RequestOpts> {
@@ -2860,6 +2968,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for getProfile without sending the request
+     * @deprecated
      */
     async getProfileRequestOpts(requestParameters: GetProfileRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['slug'] == null) {
@@ -2911,6 +3020,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Fetch one agent runtime profile
+     * @deprecated
      */
     async getProfileRaw(requestParameters: GetProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.getProfileRequestOpts(requestParameters);
@@ -2921,6 +3031,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Fetch one agent runtime profile
+     * @deprecated
      */
     async getProfile(requestParameters: GetProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.getProfileRaw(requestParameters, initOverrides);
@@ -3237,6 +3348,69 @@ export class LlmGatewayApi extends runtime.BaseAPI {
      */
     async listBudgets(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WithAttributionTokenBudget>> {
         const response = await this.listBudgetsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listClientSettings without sending the request
+     */
+    async listClientSettingsRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/llm-gateway/admin/client-settings`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Returns the settings for both clients, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
+     * List the organization\'s client settings
+     */
+    async listClientSettingsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListClientSettingsResponse>> {
+        const requestOptions = await this.listClientSettingsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ListClientSettingsResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns the settings for both clients, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
+     * List the organization\'s client settings
+     */
+    async listClientSettings(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListClientSettingsResponse> {
+        const response = await this.listClientSettingsRaw(initOverrides);
         return await response.value();
     }
 
@@ -3631,6 +3805,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for listProfiles without sending the request
+     * @deprecated
      */
     async listProfilesRequestOpts(requestParameters: ListProfilesRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
@@ -3678,6 +3853,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * List the organization\'s agent runtime profiles
+     * @deprecated
      */
     async listProfilesRaw(requestParameters: ListProfilesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListProfilesResponse>> {
         const requestOptions = await this.listProfilesRequestOpts(requestParameters);
@@ -3688,6 +3864,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * List the organization\'s agent runtime profiles
+     * @deprecated
      */
     async listProfiles(requestParameters: ListProfilesRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListProfilesResponse> {
         const response = await this.listProfilesRaw(requestParameters, initOverrides);
@@ -4081,6 +4258,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for patchProfileMetadata without sending the request
+     * @deprecated
      */
     async patchProfileMetadataRequestOpts(requestParameters: PatchProfileMetadataRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['slug'] == null) {
@@ -4143,6 +4321,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Changes the display name. `active` is accepted only when it restates the profile\'s current state: client settings can\'t be switched off, and an archived profile can\'t be switched back on (promote it instead).
      * Update a profile\'s display metadata
+     * @deprecated
      */
     async patchProfileMetadataRaw(requestParameters: PatchProfileMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.patchProfileMetadataRequestOpts(requestParameters);
@@ -4154,9 +4333,91 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Changes the display name. `active` is accepted only when it restates the profile\'s current state: client settings can\'t be switched off, and an archived profile can\'t be switched back on (promote it instead).
      * Update a profile\'s display metadata
+     * @deprecated
      */
     async patchProfileMetadata(requestParameters: PatchProfileMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.patchProfileMetadataRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for putClientSettings without sending the request
+     */
+    async putClientSettingsRequestOpts(requestParameters: PutClientSettingsOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['client'] == null) {
+            throw new runtime.RequiredError(
+                'client',
+                'Required parameter "client" was null or undefined when calling putClientSettings().'
+            );
+        }
+
+        if (requestParameters['putClientSettingsRequest'] == null) {
+            throw new runtime.RequiredError(
+                'putClientSettingsRequest',
+                'Required parameter "putClientSettingsRequest" was null or undefined when calling putClientSettings().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/llm-gateway/admin/client-settings/{client}`;
+        urlPath = urlPath.replace('{client}', encodeURIComponent(String(requestParameters['client'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PutClientSettingsRequestToJSON(requestParameters['putClientSettingsRequest']),
+        };
+    }
+
+    /**
+     * Replaces the client\'s capabilities and preferred models, appending a version; the first save creates the settings. Preferences are optional and advisory: Model Access decides which models each person can use, and a launch uses a preference only when the person is allowed that model.
+     * Save one client\'s settings
+     */
+    async putClientSettingsRaw(requestParameters: PutClientSettingsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ClientSettings>> {
+        const requestOptions = await this.putClientSettingsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ClientSettingsFromJSON(jsonValue));
+    }
+
+    /**
+     * Replaces the client\'s capabilities and preferred models, appending a version; the first save creates the settings. Preferences are optional and advisory: Model Access decides which models each person can use, and a launch uses a preference only when the person is allowed that model.
+     * Save one client\'s settings
+     */
+    async putClientSettings(requestParameters: PutClientSettingsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ClientSettings> {
+        const response = await this.putClientSettingsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -4531,6 +4792,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for setProfileDefault without sending the request
+     * @deprecated
      */
     async setProfileDefaultRequestOpts(requestParameters: SetProfileDefaultRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['slug'] == null) {
@@ -4583,6 +4845,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Promotes an archived profile to the client\'s settings and archives the current settings, in one transaction. Naming the current settings is a no-op.
      * Make this the organization\'s settings for its client
+     * @deprecated
      */
     async setProfileDefaultRaw(requestParameters: SetProfileDefaultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.setProfileDefaultRequestOpts(requestParameters);
@@ -4594,6 +4857,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     /**
      * Promotes an archived profile to the client\'s settings and archives the current settings, in one transaction. Naming the current settings is a no-op.
      * Make this the organization\'s settings for its client
+     * @deprecated
      */
     async setProfileDefault(requestParameters: SetProfileDefaultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.setProfileDefaultRaw(requestParameters, initOverrides);
@@ -5070,6 +5334,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for updateProfileContract without sending the request
+     * @deprecated
      */
     async updateProfileContractRequestOpts(requestParameters: UpdateProfileContractRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['slug'] == null) {
@@ -5131,6 +5396,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Replace a profile\'s capability contract
+     * @deprecated
      */
     async updateProfileContractRaw(requestParameters: UpdateProfileContractRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.updateProfileContractRequestOpts(requestParameters);
@@ -5141,6 +5407,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
 
     /**
      * Replace a profile\'s capability contract
+     * @deprecated
      */
     async updateProfileContract(requestParameters: UpdateProfileContractRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.updateProfileContractRaw(requestParameters, initOverrides);

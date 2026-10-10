@@ -4274,6 +4274,7 @@ paths:
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
+      deprecated: true
     post:
       tags:
       - llm-gateway
@@ -4304,6 +4305,7 @@ paths:
         '409':
           description: This organization already has settings for the client, or another
             profile already uses this slug
+      deprecated: true
   /api/llm-gateway/admin/agent-runtime-profiles/default-setup:
     post:
       tags:
@@ -4359,6 +4361,7 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+      deprecated: true
     put:
       tags:
       - llm-gateway
@@ -4394,6 +4397,7 @@ paths:
           description: No such profile in this organization
         '500':
           description: Unexpected server error
+      deprecated: true
     delete:
       tags:
       - llm-gateway
@@ -4426,6 +4430,7 @@ paths:
             than deleted, or is still referenced and cannot be removed
         '500':
           description: Unexpected server error
+      deprecated: true
     patch:
       tags:
       - llm-gateway
@@ -4465,6 +4470,7 @@ paths:
         '409':
           description: '`active` would switch the client''s settings off, or an archived
             profile on'
+      deprecated: true
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}/default:
     post:
       tags:
@@ -4494,6 +4500,7 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+      deprecated: true
   /api/llm-gateway/admin/api-keys:
     get:
       tags:
@@ -4732,6 +4739,94 @@ paths:
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/client-settings:
+    get:
+      tags:
+      - llm-gateway
+      summary: List the organization's client settings
+      description: 'Returns the settings for both clients, Claude Code first. A client
+        the organization has not configured is returned with `exists: false`, version
+        0 and the built-in defaults.'
+      operationId: list_client_settings
+      responses:
+        '200':
+          description: Settings for each client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListClientSettingsResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/client-settings/{client}:
+    get:
+      tags:
+      - llm-gateway
+      summary: Fetch one client's settings
+      operationId: get_client_settings
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code) or `codex` (Codex)'
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The client's settings (the built-in defaults when `exists`
+            is false)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSettings'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client
+    put:
+      tags:
+      - llm-gateway
+      summary: Save one client's settings
+      description: 'Replaces the client''s capabilities and preferred models, appending
+        a version; the first save creates the settings. Preferences are optional and
+        advisory: Model Access decides which models each person can use, and a launch
+        uses a preference only when the person is allowed that model.'
+      operationId: put_client_settings
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code) or `codex` (Codex)'
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutClientSettingsRequest'
+        required: true
+      responses:
+        '200':
+          description: The saved settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSettings'
+        '400':
+          description: Malformed request, or a preference a launch could never honour
+            (code `profile_guardrails` carries the findings)
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client
+        '503':
+          description: The first save kept losing a race with another first save;
+            retry
   /api/llm-gateway/admin/connections:
     get:
       tags:
@@ -7813,6 +7908,61 @@ components:
         - alert_type: break_glass_used
         type: webhook
         url: https://hooks.example.com/barndoor
+    ClientSettings:
+      type: object
+      description: 'One client''s settings, or the built-in defaults when the organization
+        has
+
+        not saved any.'
+      required:
+      - client
+      - exists
+      - id
+      - version
+      - capabilities
+      - preferences
+      properties:
+        capabilities:
+          $ref: '#/components/schemas/AgentRuntimeCapabilities'
+        client:
+          type: string
+          description: '`claude` (Claude Code) or `codex` (Codex).'
+        exists:
+          type: boolean
+          description: 'False until the organization first saves settings for the
+            client; the
+
+            other fields then describe the built-in defaults.'
+        id:
+          type: string
+          format: uuid
+          description: 'Stable settings id (deterministic per organization and client,
+            so it is
+
+            the same before and after the first save).'
+        preferences:
+          type: object
+          description: 'Preferred model per slot. Optional and advisory: a launch
+            uses a
+
+            preference only when the person is allowed that model; Model Access
+
+            decides who can use what.'
+          additionalProperties:
+            type: string
+          propertyNames:
+            type: string
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+          format: int32
+          description: Current version, 0 when `exists` is false. Each save appends
+            a version.
+          minimum: 0
     ConditionOf-Input:
       properties:
         of:
@@ -9250,11 +9400,21 @@ components:
       - slug
       - created
       - is_org_default
+      - preferences_seeded
       properties:
         created:
           type: boolean
+          description: True when no settings row existed for the client and this run
+            created it.
         is_org_default:
           type: boolean
+        preferences_seeded:
+          type: boolean
+          description: 'True when this run wrote the setup''s models as the settings''
+
+            preferences (a new row, or a row whose preferences were empty). False
+
+            when existing preferences were left alone.'
         slug:
           type: string
     DefaultSetupRequest:
@@ -10315,6 +10475,16 @@ components:
       - label
       title: LabeledOption
       description: An enum value paired with its display label.
+    ListClientSettingsResponse:
+      type: object
+      required:
+      - settings
+      properties:
+        settings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSettings'
+          description: Both clients, Claude Code first.
     ListProfilesResponse:
       type: object
       required:
@@ -13015,6 +13185,23 @@ components:
       description: "BCP-3815 \u2014 why ``POST /servers/{id}/publish`` would currently\
         \ 422.\n\nOne value per gate the publish route enforces, in the order it checks\
         \ them."
+    PutClientSettingsRequest:
+      type: object
+      required:
+      - capabilities
+      properties:
+        capabilities:
+          $ref: '#/components/schemas/AgentRuntimeCapabilities'
+        preferences:
+          type: object
+          description: 'Any subset of the client''s slot keys (possibly empty). Each
+            value is a
+
+            single Model Route or routing-policy alias.'
+          additionalProperties:
+            type: string
+          propertyNames:
+            type: string
     RenameModelRouteRequest:
       type: object
       description: "`POST /admin/model-routes/rename`: rename a route in one step\
