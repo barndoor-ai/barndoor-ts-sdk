@@ -4278,9 +4278,9 @@ paths:
       tags:
       - llm-gateway
       summary: Create an agent runtime profile
-      description: Creates an active profile at version 1. If the organization has
-        no usable default profile for the profile's client yet, the new profile also
-        becomes that client's organization default; an existing default is never changed.
+      description: Creates the client's settings at version 1. An organization has
+        one settings object per client, so this is refused with 409 when the client
+        already has one; edit it instead.
       operationId: create_profile
       requestBody:
         content:
@@ -4302,7 +4302,8 @@ paths:
         '403':
           description: Caller is not permitted to act on this resource in this organization
         '409':
-          description: Another profile in this organization already uses this slug
+          description: This organization already has settings for the client, or another
+            profile already uses this slug
   /api/llm-gateway/admin/agent-runtime-profiles/default-setup:
     post:
       tags:
@@ -4421,13 +4422,17 @@ paths:
         '404':
           description: No such profile in this organization
         '409':
-          description: The profile is still referenced and cannot be removed
+          description: The profile is the client's settings, which are edited rather
+            than deleted, or is still referenced and cannot be removed
         '500':
           description: Unexpected server error
     patch:
       tags:
       - llm-gateway
       summary: Update a profile's display metadata
+      description: 'Changes the display name. `active` is accepted only when it restates
+        the profile''s current state: client settings can''t be switched off, and
+        an archived profile can''t be switched back on (promote it instead).'
       operationId: patch_profile_metadata
       parameters:
       - name: slug
@@ -4457,11 +4462,17 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+        '409':
+          description: '`active` would switch the client''s settings off, or an archived
+            profile on'
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}/default:
     post:
       tags:
       - llm-gateway
-      summary: Make this the organization's default profile for its client
+      summary: Make this the organization's settings for its client
+      description: Promotes an archived profile to the client's settings and archives
+        the current settings, in one transaction. Naming the current settings is a
+        no-op.
       operationId: set_profile_default
       parameters:
       - name: slug
@@ -4472,13 +4483,11 @@ paths:
           type: string
       responses:
         '200':
-          description: The profile, now the default for its client
+          description: The profile, now the settings for its client
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgentRuntimeProfile'
-        '400':
-          description: The profile is inactive, so it cannot be made default
         '401':
           description: Missing or invalid credentials
         '403':
@@ -6415,12 +6424,27 @@ components:
       properties:
         active:
           type: boolean
+          description: True for the client's settings; false for an archived former
+            profile.
+        archived_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'When this former launch profile was archived; null for the
+            client''s
+
+            settings.'
         capabilities:
           $ref: '#/components/schemas/AgentRuntimeCapabilities'
         client:
           type: string
         config:
           type: object
+          description: 'Preferred model route per client slot. Advisory: a launch
+            uses a
+
+            preference only when the person is allowed that model.'
           additionalProperties:
             type: string
           propertyNames:
@@ -6435,6 +6459,8 @@ components:
           format: uuid
         is_org_default:
           type: boolean
+          description: True for the client's settings; false for an archived former
+            profile.
         org_id:
           type: string
           format: uuid
@@ -6446,7 +6472,7 @@ components:
         version:
           type: integer
           format: int32
-          description: The immutable version whose `config` is loaded below.
+          description: The immutable version whose preferences are loaded below.
     AgentScopeRequest:
       type: object
       description: Which AI agents a policy applies to, ANDed with its principals.

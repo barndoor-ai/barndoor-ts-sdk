@@ -1581,7 +1581,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates an active profile at version 1. If the organization has no usable default profile for the profile\'s client yet, the new profile also becomes that client\'s organization default; an existing default is never changed.
+     * Creates the client\'s settings at version 1. An organization has one settings object per client, so this is refused with 409 when the client already has one; edit it instead.
      * Create an agent runtime profile
      */
     async createProfileRaw(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
@@ -1592,7 +1592,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates an active profile at version 1. If the organization has no usable default profile for the profile\'s client yet, the new profile also becomes that client\'s organization default; an existing default is never changed.
+     * Creates the client\'s settings at version 1. An organization has one settings object per client, so this is refused with 409 when the client already has one; edit it instead.
      * Create an agent runtime profile
      */
     async createProfile(requestParameters: CreateProfileOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
@@ -4141,6 +4141,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
+     * Changes the display name. `active` is accepted only when it restates the profile\'s current state: client settings can\'t be switched off, and an archived profile can\'t be switched back on (promote it instead).
      * Update a profile\'s display metadata
      */
     async patchProfileMetadataRaw(requestParameters: PatchProfileMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
@@ -4151,6 +4152,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
+     * Changes the display name. `active` is accepted only when it restates the profile\'s current state: client settings can\'t be switched off, and an archived profile can\'t be switched back on (promote it instead).
      * Update a profile\'s display metadata
      */
     async patchProfileMetadata(requestParameters: PatchProfileMetadataRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
@@ -4579,7 +4581,8 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Make this the organization\'s default profile for its client
+     * Promotes an archived profile to the client\'s settings and archives the current settings, in one transaction. Naming the current settings is a no-op.
+     * Make this the organization\'s settings for its client
      */
     async setProfileDefaultRaw(requestParameters: SetProfileDefaultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AgentRuntimeProfile>> {
         const requestOptions = await this.setProfileDefaultRequestOpts(requestParameters);
@@ -4589,7 +4592,8 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Make this the organization\'s default profile for its client
+     * Promotes an archived profile to the client\'s settings and archives the current settings, in one transaction. Naming the current settings is a no-op.
+     * Make this the organization\'s settings for its client
      */
     async setProfileDefault(requestParameters: SetProfileDefaultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AgentRuntimeProfile> {
         const response = await this.setProfileDefaultRaw(requestParameters, initOverrides);

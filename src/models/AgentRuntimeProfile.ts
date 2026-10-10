@@ -28,9 +28,14 @@ import {
  */
 export interface AgentRuntimeProfile {
     /**
-     * 
+     * True for the client's settings; false for an archived former profile.
      */
     active: boolean;
+    /**
+     * When this former launch profile was archived; null for the client's
+     * settings.
+     */
+    archivedAt?: Date | null;
     /**
      * 
      */
@@ -40,7 +45,8 @@ export interface AgentRuntimeProfile {
      */
     client: string;
     /**
-     * 
+     * Preferred model route per client slot. Advisory: a launch uses a
+     * preference only when the person is allowed that model.
      */
     config: { [key: string]: string; };
     /**
@@ -56,7 +62,7 @@ export interface AgentRuntimeProfile {
      */
     id: string;
     /**
-     * 
+     * True for the client's settings; false for an archived former profile.
      */
     isOrgDefault: boolean;
     /**
@@ -72,7 +78,7 @@ export interface AgentRuntimeProfile {
      */
     updatedAt: Date;
     /**
-     * The immutable version whose `config` is loaded below.
+     * The immutable version whose preferences are loaded below.
      */
     version: number;
 }
@@ -107,6 +113,7 @@ export function AgentRuntimeProfileFromJSONTyped(json: any, ignoreDiscriminator:
     return {
         
         'active': json['active'],
+        'archivedAt': json['archived_at'] === undefined ? undefined : json['archived_at'] === null ? null : (parseDateTime(json['archived_at'])),
         'capabilities': AgentRuntimeCapabilitiesFromJSON(json['capabilities']),
         'client': json['client'],
         'config': json['config'],
@@ -133,6 +140,7 @@ export function AgentRuntimeProfileToJSONTyped(value?: AgentRuntimeProfile | nul
     return {
         
         'active': value['active'],
+        'archived_at': value['archivedAt'] == null ? value['archivedAt'] : serializeDateTime(value['archivedAt']),
         'capabilities': AgentRuntimeCapabilitiesToJSON(value['capabilities']),
         'client': value['client'],
         'config': value['config'],
