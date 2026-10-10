@@ -41,17 +41,30 @@ export interface CreateModelAccessRequest {
      */
     policyType: string;
     /**
-     * 
+     * Single-entity form of `scope_ids`, kept for existing clients. Send one
+     * or the other; when both are sent `scope_id` must be the first element
+     * of `scope_ids`.
      */
     scopeId?: string | null;
+    /**
+     * Every user / project / API key / agent the policy applies to
+     * (BCP-5001). The policy applies when any one of them matches the caller.
+     * Empty or omitted means not bound to a specific entity.
+     */
+    scopeIds?: Array<string> | null;
     /**
      * 
      */
     scopeType: string;
     /**
-     * 
+     * Single-entity form of `scope_values`; same rules as `scope_id`.
      */
     scopeValue?: string | null;
+    /**
+     * Every role / group name the policy applies to (BCP-5001). Same
+     * any-of semantics as `scope_ids`.
+     */
+    scopeValues?: Array<string> | null;
     /**
      * 
      */
@@ -87,8 +100,10 @@ export function CreateModelAccessRequestFromJSONTyped(json: any, ignoreDiscrimin
         'name': json['name'],
         'policyType': json['policy_type'],
         'scopeId': json['scope_id'] === undefined ? undefined : json['scope_id'] === null ? null : json['scope_id'],
+        'scopeIds': json['scope_ids'] === undefined ? undefined : json['scope_ids'] === null ? null : json['scope_ids'],
         'scopeType': json['scope_type'],
         'scopeValue': json['scope_value'] === undefined ? undefined : json['scope_value'] === null ? null : json['scope_value'],
+        'scopeValues': json['scope_values'] === undefined ? undefined : json['scope_values'] === null ? null : json['scope_values'],
         'targets': ((json['targets'] as Array<any>).map(ModelAccessTargetFromJSON)),
         'trafficType': json['traffic_type'] == null ? undefined : json['traffic_type'],
     };
@@ -109,8 +124,10 @@ export function CreateModelAccessRequestToJSONTyped(value?: CreateModelAccessReq
         'name': value['name'],
         'policy_type': value['policyType'],
         'scope_id': value['scopeId'],
+        'scope_ids': value['scopeIds'],
         'scope_type': value['scopeType'],
         'scope_value': value['scopeValue'],
+        'scope_values': value['scopeValues'],
         'targets': ((value['targets'] as Array<any>).map(ModelAccessTargetToJSON)),
         'traffic_type': value['trafficType'],
     };

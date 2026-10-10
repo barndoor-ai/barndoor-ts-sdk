@@ -8400,12 +8400,42 @@ components:
           - string
           - 'null'
           format: uuid
+          description: 'Single-entity form of `scope_ids`, kept for existing clients.
+            Send one
+
+            or the other; when both are sent `scope_id` must be the first element
+
+            of `scope_ids`.'
+        scope_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+            format: uuid
+          description: 'Every user / project / API key / agent the policy applies
+            to
+
+            (BCP-5001). The policy applies when any one of them matches the caller.
+
+            Empty or omitted means not bound to a specific entity.'
         scope_type:
           type: string
         scope_value:
           type:
           - string
           - 'null'
+          description: Single-entity form of `scope_values`; same rules as `scope_id`.
+        scope_values:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: 'Every role / group name the policy applies to (BCP-5001).
+            Same
+
+            any-of semantics as `scope_ids`.'
         targets:
           type: array
           items:
@@ -14439,6 +14469,17 @@ components:
             \ UI moves an\n`api_key`-scoped policy back to \"All API Keys\". A plain\
             \ `Option<Uuid>`\nmade that indistinguishable from omitting the field,\
             \ so the update\nsilently kept the old binding (BCP-3955)."
+        scope_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+            format: uuid
+          description: 'Replaces the whole UUID binding when present; `[]` unbinds.
+            Omitted
+
+            leaves it unchanged. See [`CreateModelAccessRequest::scope_ids`].'
         scope_type:
           type:
           - string
@@ -14447,6 +14488,14 @@ components:
           type:
           - string
           - 'null'
+        scope_values:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: Replaces the whole role / group binding when present; `[]`
+            unbinds.
         targets:
           type:
           - array
@@ -15348,6 +15397,8 @@ components:
         - org_id
         - name
         - scope_type
+        - scope_ids
+        - scope_values
         - policy_type
         - targets
         - traffic_type
@@ -15370,12 +15421,42 @@ components:
             - string
             - 'null'
             format: uuid
+            description: 'First element of [`Self::scope_ids`], kept for clients that
+              predate
+
+              multi-entity scopes (BCP-5001). Never read for matching when
+
+              `scope_ids` is non-empty -- see [`Self::bound_ids`].'
+          scope_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
+            description: 'Every UUID-keyed entity (user / project / api_key / agent)
+              the policy
+
+              is bound to (BCP-5001). Empty means unbound: the policy is not pinned
+              to
+
+              a specific entity of its scope type.'
           scope_type:
             type: string
           scope_value:
             type:
             - string
             - 'null'
+            description: 'First element of [`Self::scope_values`]; same compatibility
+              role as
+
+              `scope_id`.'
+          scope_values:
+            type: array
+            items:
+              type: string
+            description: 'Every role / group name the policy is bound to (BCP-5001).
+              Empty means
+
+              unbound.'
           targets:
             type: array
             items:

@@ -100,17 +100,31 @@ export interface WithAttributionModelAccessPolicy {
      */
     policyType: string;
     /**
-     * 
+     * First element of [`Self::scope_ids`], kept for clients that predate
+     * multi-entity scopes (BCP-5001). Never read for matching when
+     * `scope_ids` is non-empty -- see [`Self::bound_ids`].
      */
     scopeId?: string | null;
+    /**
+     * Every UUID-keyed entity (user / project / api_key / agent) the policy
+     * is bound to (BCP-5001). Empty means unbound: the policy is not pinned to
+     * a specific entity of its scope type.
+     */
+    scopeIds: Array<string>;
     /**
      * 
      */
     scopeType: string;
     /**
-     * 
+     * First element of [`Self::scope_values`]; same compatibility role as
+     * `scope_id`.
      */
     scopeValue?: string | null;
+    /**
+     * Every role / group name the policy is bound to (BCP-5001). Empty means
+     * unbound.
+     */
+    scopeValues: Array<string>;
     /**
      * 
      */
@@ -130,7 +144,9 @@ export function instanceOfWithAttributionModelAccessPolicy(value: object): value
     if (!('name' in value) || value['name'] === undefined) return false;
     if ((!('orgId' in (value as Record<string, any>)) && !('org_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orgId'] === undefined && (value as Record<string, any>)['org_id'] === undefined)) return false;
     if ((!('policyType' in (value as Record<string, any>)) && !('policy_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['policyType'] === undefined && (value as Record<string, any>)['policy_type'] === undefined)) return false;
+    if ((!('scopeIds' in (value as Record<string, any>)) && !('scope_ids' in (value as Record<string, any>))) || ((value as Record<string, any>)['scopeIds'] === undefined && (value as Record<string, any>)['scope_ids'] === undefined)) return false;
     if ((!('scopeType' in (value as Record<string, any>)) && !('scope_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['scopeType'] === undefined && (value as Record<string, any>)['scope_type'] === undefined)) return false;
+    if ((!('scopeValues' in (value as Record<string, any>)) && !('scope_values' in (value as Record<string, any>))) || ((value as Record<string, any>)['scopeValues'] === undefined && (value as Record<string, any>)['scope_values'] === undefined)) return false;
     if (!('targets' in value) || value['targets'] === undefined) return false;
     if ((!('trafficType' in (value as Record<string, any>)) && !('traffic_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['trafficType'] === undefined && (value as Record<string, any>)['traffic_type'] === undefined)) return false;
     return true;
@@ -160,8 +176,10 @@ export function WithAttributionModelAccessPolicyFromJSONTyped(json: any, ignoreD
         'orgId': json['org_id'],
         'policyType': json['policy_type'],
         'scopeId': json['scope_id'] === undefined ? undefined : json['scope_id'] === null ? null : json['scope_id'],
+        'scopeIds': json['scope_ids'],
         'scopeType': json['scope_type'],
         'scopeValue': json['scope_value'] === undefined ? undefined : json['scope_value'] === null ? null : json['scope_value'],
+        'scopeValues': json['scope_values'],
         'targets': ((json['targets'] as Array<any>).map(ModelAccessTargetFromJSON)),
         'trafficType': json['traffic_type'],
     };
@@ -192,8 +210,10 @@ export function WithAttributionModelAccessPolicyToJSONTyped(value?: WithAttribut
         'org_id': value['orgId'],
         'policy_type': value['policyType'],
         'scope_id': value['scopeId'],
+        'scope_ids': value['scopeIds'],
         'scope_type': value['scopeType'],
         'scope_value': value['scopeValue'],
+        'scope_values': value['scopeValues'],
         'targets': ((value['targets'] as Array<any>).map(ModelAccessTargetToJSON)),
         'traffic_type': value['trafficType'],
     };

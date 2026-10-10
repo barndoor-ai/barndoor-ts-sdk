@@ -55,6 +55,11 @@ export interface UpdateModelAccessRequest {
      */
     scopeId?: string | null;
     /**
+     * Replaces the whole UUID binding when present; `[]` unbinds. Omitted
+     * leaves it unchanged. See [`CreateModelAccessRequest::scope_ids`].
+     */
+    scopeIds?: Array<string> | null;
+    /**
      * 
      */
     scopeType?: string | null;
@@ -62,6 +67,10 @@ export interface UpdateModelAccessRequest {
      * 
      */
     scopeValue?: string | null;
+    /**
+     * Replaces the whole role / group binding when present; `[]` unbinds.
+     */
+    scopeValues?: Array<string> | null;
     /**
      * 
      */
@@ -94,8 +103,10 @@ export function UpdateModelAccessRequestFromJSONTyped(json: any, ignoreDiscrimin
         'name': json['name'] === undefined ? undefined : json['name'] === null ? null : json['name'],
         'policyType': json['policy_type'] === undefined ? undefined : json['policy_type'] === null ? null : json['policy_type'],
         'scopeId': json['scope_id'] === undefined ? undefined : json['scope_id'] === null ? null : json['scope_id'],
+        'scopeIds': json['scope_ids'] === undefined ? undefined : json['scope_ids'] === null ? null : json['scope_ids'],
         'scopeType': json['scope_type'] === undefined ? undefined : json['scope_type'] === null ? null : json['scope_type'],
         'scopeValue': json['scope_value'] === undefined ? undefined : json['scope_value'] === null ? null : json['scope_value'],
+        'scopeValues': json['scope_values'] === undefined ? undefined : json['scope_values'] === null ? null : json['scope_values'],
         'targets': json['targets'] === undefined ? undefined : json['targets'] === null ? null : ((json['targets'] as Array<any>).map(ModelAccessTargetFromJSON)),
         'trafficType': json['traffic_type'] === undefined ? undefined : json['traffic_type'] === null ? null : json['traffic_type'],
     };
@@ -117,8 +128,10 @@ export function UpdateModelAccessRequestToJSONTyped(value?: UpdateModelAccessReq
         'name': value['name'],
         'policy_type': value['policyType'],
         'scope_id': value['scopeId'],
+        'scope_ids': value['scopeIds'],
         'scope_type': value['scopeType'],
         'scope_value': value['scopeValue'],
+        'scope_values': value['scopeValues'],
         'targets': value['targets'] == null ? undefined : ((value['targets'] as Array<any>).map(ModelAccessTargetToJSON)),
         'traffic_type': value['trafficType'],
     };
