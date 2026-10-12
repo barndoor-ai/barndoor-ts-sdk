@@ -33,7 +33,9 @@ export interface PutClientSettingsRequest {
     capabilities: AgentRuntimeCapabilities;
     /**
      * Any subset of the client's slot keys (possibly empty). Each value is a
-     * single Model Route or routing-policy alias.
+     * single Model Route or routing-policy alias. A trailing `[1m]` on a
+     * Claude value is accepted for older clients and dropped: whether a slot
+     * launches at 1M is derived from its route's upstream model at launch.
      */
     preferences?: { [key: string]: string; };
 }
