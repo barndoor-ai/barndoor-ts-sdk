@@ -4402,7 +4402,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Replaces the client\'s capabilities and preferred models, appending a version; the first save creates the settings. Preferences are optional and advisory: Model Access decides which models each person can use, and a launch uses a preference only when the person is allowed that model.
+     * Replaces the client\'s capabilities, appending a version; the first save creates the settings. `preferences` are stored but not read by a launch: Model Access decides which models each person can use, and every launch slot is derived from that (the newest allowed route of the slot\'s family).
      * Save one client\'s settings
      */
     async putClientSettingsRaw(requestParameters: PutClientSettingsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ClientSettings>> {
@@ -4413,7 +4413,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Replaces the client\'s capabilities and preferred models, appending a version; the first save creates the settings. Preferences are optional and advisory: Model Access decides which models each person can use, and a launch uses a preference only when the person is allowed that model.
+     * Replaces the client\'s capabilities, appending a version; the first save creates the settings. `preferences` are stored but not read by a launch: Model Access decides which models each person can use, and every launch slot is derived from that (the newest allowed route of the slot\'s family).
      * Save one client\'s settings
      */
     async putClientSettings(requestParameters: PutClientSettingsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ClientSettings> {

@@ -4790,10 +4790,11 @@ paths:
       tags:
       - llm-gateway
       summary: Save one client's settings
-      description: 'Replaces the client''s capabilities and preferred models, appending
-        a version; the first save creates the settings. Preferences are optional and
-        advisory: Model Access decides which models each person can use, and a launch
-        uses a preference only when the person is allowed that model.'
+      description: 'Replaces the client''s capabilities, appending a version; the
+        first save creates the settings. `preferences` are stored but not read by
+        a launch: Model Access decides which models each person can use, and every
+        launch slot is derived from that (the newest allowed route of the slot''s
+        family).'
       operationId: put_client_settings
       parameters:
       - name: client
@@ -4816,8 +4817,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClientSettings'
         '400':
-          description: Malformed request, or a preference a launch could never honour
-            (code `profile_guardrails` carries the findings)
+          description: Malformed request (an unknown slot key, an empty or list-valued
+            preference, a capability outside the client's contract)
         '401':
           description: Missing or invalid credentials
         '403':
@@ -6536,10 +6537,11 @@ components:
           type: string
         config:
           type: object
-          description: 'Preferred model route per client slot. Advisory: a launch
-            uses a
+          description: 'Stored model route per client slot (the settings'' `preferences`).
 
-            preference only when the person is allowed that model.'
+            Kept, but not read by a launch: every slot is derived from the models
+
+            Model Access allows the person.'
           additionalProperties:
             type: string
           propertyNames:
@@ -7942,12 +7944,12 @@ components:
             the same before and after the first save).'
         preferences:
           type: object
-          description: 'Preferred model per slot. Optional and advisory: a launch
-            uses a
+          description: 'Stored per-slot model preferences. Accepted and kept, but
+            not read by a
 
-            preference only when the person is allowed that model; Model Access
+            launch: every slot is derived from the models Model Access allows the
 
-            decides who can use what.'
+            person (the newest allowed route of the slot''s family).'
           additionalProperties:
             type: string
           propertyNames:
@@ -13197,11 +13199,13 @@ components:
           description: 'Any subset of the client''s slot keys (possibly empty). Each
             value is a
 
-            single Model Route or routing-policy alias. A trailing `[1m]` on a
+            single Model Route or routing-policy alias. Stored but not read by a
 
-            Claude value is accepted for older clients and dropped: whether a slot
+            launch, which derives every slot from the person''s allowed models. A
 
-            launches at 1M is derived from its route''s upstream model at launch.'
+            trailing `[1m]` on a Claude value is accepted for older clients and
+
+            dropped.'
           additionalProperties:
             type: string
           propertyNames:

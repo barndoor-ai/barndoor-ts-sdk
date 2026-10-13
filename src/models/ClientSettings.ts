@@ -47,9 +47,9 @@ export interface ClientSettings {
      */
     id: string;
     /**
-     * Preferred model per slot. Optional and advisory: a launch uses a
-     * preference only when the person is allowed that model; Model Access
-     * decides who can use what.
+     * Stored per-slot model preferences. Accepted and kept, but not read by a
+     * launch: every slot is derived from the models Model Access allows the
+     * person (the newest allowed route of the slot's family).
      */
     preferences: { [key: string]: string; };
     /**

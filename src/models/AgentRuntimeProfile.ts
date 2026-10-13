@@ -45,8 +45,9 @@ export interface AgentRuntimeProfile {
      */
     client: string;
     /**
-     * Preferred model route per client slot. Advisory: a launch uses a
-     * preference only when the person is allowed that model.
+     * Stored model route per client slot (the settings' `preferences`).
+     * Kept, but not read by a launch: every slot is derived from the models
+     * Model Access allows the person.
      */
     config: { [key: string]: string; };
     /**
