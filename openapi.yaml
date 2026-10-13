@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.9.0
+  version: 2.10.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4311,6 +4311,15 @@ paths:
       tags:
       - llm-gateway
       summary: Create the safe default Claude launch setup for a login provider
+      description: Creates a Model Route per current Claude model on the login provider,
+        first enabling the newest catalog Opus, Sonnet, Haiku or Fable model on it
+        when nothing in that family is enabled (`models_enabled` lists them; the organization's
+        pricing requirement applies). Because a login (seat) token works only for
+        Claude Code, each route it creates that has no fallback behind it yet also
+        gets a lower-priority fallback target on the first enabled API-key, Bedrock,
+        Vertex or Foundry provider (by name) that has the same model enabled; `routes[].fallback_provider`
+        names it. Routes left with only login-token targets are returned in `warnings`
+        (code `seat_only_route`).
       operationId: create_default_setup
       requestBody:
         content:
@@ -4326,15 +4335,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DefaultSetupResponse'
         '400':
-          description: The provider or its enabled models cannot support the default
-            setup, or a model alias is already routed on another provider; nothing
-            is changed
+          description: The provider or its model catalog cannot support the default
+            setup, a model alias is already routed on another provider, or a model
+            the setup would enable has no pricing while the organization requires
+            it; nothing is changed
         '401':
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such provider in this organization
+        '503':
+          description: Governance config read timed out; safe to retry
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}:
     get:
       tags:
@@ -9436,7 +9448,17 @@ components:
       - routes
       - profile
       - policies_needing_update
+      - models_enabled
+      - warnings
       properties:
+        models_enabled:
+          type: array
+          items:
+            type: string
+          description: 'Models this run enabled on the login provider because nothing
+            in their
+
+            family (Opus, Sonnet, Haiku, Fable) was enabled there.'
         policies_needing_update:
           type: array
           items:
@@ -9447,6 +9469,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DefaultSetupRoute'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileGuardrailFinding'
+          description: '`seat_only_route` warnings for the setup''s routes that still
+            have only
+
+            seat-token targets that serve after this run: a route this run created
+
+            found no enabled API-key, Bedrock, Vertex or Foundry provider with the
+
+            model; the route already existed with no non-seat target; or its
+
+            existing fallback does not serve (switched off, or its provider or model
+
+            is off), which the setup leaves for the admin to fix.'
     DefaultSetupRoute:
       type: object
       required:
@@ -9457,6 +9495,16 @@ components:
           type: string
         created:
           type: boolean
+        fallback_provider:
+          type:
+          - string
+          - 'null'
+          description: 'The non-seat provider (API key, Bedrock, Vertex, Foundry)
+            this run added
+
+            to the route as its fallback target, so clients other than Claude Code
+
+            are not refused by Anthropic. Null when this run added no fallback.'
     DeletedResponse:
       type: object
       description: "The acknowledgement every admin `DELETE` returns.\n\nShared by\
@@ -10221,6 +10269,17 @@ components:
             \ config bodies written before this field existed\n\u2014 every current\
             \ Terraform config and API client \u2014 keep deserialising,\nand keep\
             \ meaning \"off\"."
+    GuardrailPolicyRef:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     HTTPValidationError:
       properties:
         detail:
@@ -12919,6 +12978,26 @@ components:
       - tracking
       - pinned
       - auto
+    ProfileGuardrailFinding:
+      type: object
+      required:
+      - code
+      - slot
+      - alias
+      - message
+      properties:
+        alias:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardrailPolicyRef'
+        slot:
+          type: string
     Protocol:
       type: string
       enum:
