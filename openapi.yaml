@@ -5070,7 +5070,8 @@ paths:
         '500':
           description: Unexpected server error
         '503':
-          description: Governance config read timed out; safe to retry
+          description: Governance config read or write timed out; nothing was changed
+            and it is safe to retry
   /api/llm-gateway/admin/model-access:
     get:
       tags:
