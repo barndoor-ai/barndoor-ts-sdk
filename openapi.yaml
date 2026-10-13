@@ -4318,8 +4318,10 @@ paths:
         Claude Code, each route it creates that has no fallback behind it yet also
         gets a lower-priority fallback target on the first enabled API-key, Bedrock,
         Vertex or Foundry provider (by name) that has the same model enabled; `routes[].fallback_provider`
-        names it. Routes left with only login-token targets are returned in `warnings`
-        (code `seat_only_route`).
+        names it. A route that already exists with only login-token targets gets the
+        same fallback (never a second one), and `fallback_provider` reports the fallback
+        a route already has. Routes left with only login-token targets are returned
+        in `warnings` (code `seat_only_route`).
       operationId: create_default_setup
       requestBody:
         content:
@@ -9500,11 +9502,14 @@ components:
           - string
           - 'null'
           description: 'The non-seat provider (API key, Bedrock, Vertex, Foundry)
-            this run added
+            behind the
 
-            to the route as its fallback target, so clients other than Claude Code
+            route as its fallback target, so clients other than Claude Code are not
 
-            are not refused by Anthropic. Null when this run added no fallback.'
+            refused by Anthropic: one this run added, or one the route already had.
+
+            Null when the route has none, or when its fallback does not serve (switched
+            off, or its provider or model is off): that route is in `warnings`.'
     DeletedResponse:
       type: object
       description: "The acknowledgement every admin `DELETE` returns.\n\nShared by\

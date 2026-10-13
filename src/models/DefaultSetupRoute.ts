@@ -28,9 +28,10 @@ export interface DefaultSetupRoute {
      */
     created: boolean;
     /**
-     * The non-seat provider (API key, Bedrock, Vertex, Foundry) this run added
-     * to the route as its fallback target, so clients other than Claude Code
-     * are not refused by Anthropic. Null when this run added no fallback.
+     * The non-seat provider (API key, Bedrock, Vertex, Foundry) behind the
+     * route as its fallback target, so clients other than Claude Code are not
+     * refused by Anthropic: one this run added, or one the route already had.
+     * Null when the route has none, or when its fallback does not serve (switched off, or its provider or model is off): that route is in `warnings`.
      */
     fallbackProvider?: string | null;
 }
