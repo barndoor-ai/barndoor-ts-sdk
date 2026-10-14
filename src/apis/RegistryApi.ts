@@ -179,6 +179,10 @@ export interface GetMcpServerRequest {
      * Include connection_status computation (requires Bao calls). Set to false for better performance when connection_status is not needed.
      */
     includeConnectionStatus?: boolean;
+    /**
+     * BCP-4300: allow servers that run locally through the Barndoor CLI (embedded and local catalogs). Omitted, the registry resolves it from the org's `local-cli-mcp-tooling` flag (fail-closed); an explicit value is always honoured. An excluded server is left out of the result, and a single-server read of one returns 404.
+     */
+    includeLocal?: boolean | null;
 }
 
 export interface GetMcpServerBySlugRequest {
@@ -194,6 +198,10 @@ export interface GetMcpServerBySlugRequest {
      * Include connection_status computation (requires Bao calls). Set to false for better performance when connection_status is not needed.
      */
     includeConnectionStatus?: boolean;
+    /**
+     * BCP-4300: allow servers that run locally through the Barndoor CLI (embedded and local catalogs). Omitted, the registry resolves it from the org's `local-cli-mcp-tooling` flag (fail-closed); an explicit value is always honoured. An excluded server is left out of the result, and a single-server read of one returns 404.
+     */
+    includeLocal?: boolean | null;
 }
 
 export interface GetMcpServerConnectionRequest {
@@ -220,13 +228,17 @@ export interface GetMcpServerDirectoryEntryRequest {
 
 export interface ListActiveMcpServerIdsRequest {
     /**
-     * When omitted, returns all alive (non-soft-deleted) server IDs for the org. True returns only available servers (with the publishing flag on — BCP-3039 — published AND still operationally sound; else operationally available); False returns the complement. Uncapped — no pagination.
+     * When omitted, returns all alive (non-soft-deleted) server IDs for the org (local servers only per `include_local`). True returns only available servers (with the publishing flag on — BCP-3039 — published AND still operationally sound; else operationally available); False returns the complement. Uncapped — no pagination.
      */
     availabilityStatus?: boolean | null;
     /**
-     * BCP-3735: restrict the returned IDs to servers this user may discover — published AND named by an active allow rule on one of the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true). Opt-in: the default keeps existing callers (audit-history deleted tagging, dashboard denominators) seeing every server. Fails closed with HTTP 503 when the visible set cannot be resolved.
+     * BCP-3735: restrict the returned IDs to servers this user may discover — published AND named by an active allow rule on one of the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true). Opt-in: the default keeps existing callers (audit-history deleted tagging, dashboard denominators) seeing every server the `include_local` gate allows. Fails closed with HTTP 503 when the visible set cannot be resolved.
      */
     audienceScoped?: boolean;
+    /**
+     * BCP-4300: allow servers that run locally through the Barndoor CLI (embedded and local catalogs). Omitted, the registry resolves it from the org's `local-cli-mcp-tooling` flag (fail-closed); an explicit value is always honoured. An excluded server is left out of the result, and a single-server read of one returns 404.
+     */
+    includeLocal?: boolean | null;
 }
 
 export interface ListAgentDirectoryRequest {
@@ -284,6 +296,10 @@ export interface ListMcpServerDirectoryRequest {
      * Include server instances for the current user's organization
      */
     includeServers?: boolean;
+    /**
+     * BCP-4300: false drops catalogs that run locally through the Barndoor CLI (embedded and local sources) before pagination, so page counts match what an org without the `local-cli-mcp-tooling` flag is shown. Defaults to true (unchanged listing).
+     */
+    includeLocal?: boolean;
     /**
      * Page number (1-based)
      */
@@ -794,6 +810,10 @@ export class RegistryApi extends runtime.BaseAPI {
             queryParameters['include_connection_status'] = requestParameters['includeConnectionStatus'];
         }
 
+        if (requestParameters['includeLocal'] != null) {
+            queryParameters['include_local'] = requestParameters['includeLocal'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -871,6 +891,10 @@ export class RegistryApi extends runtime.BaseAPI {
 
         if (requestParameters['includeConnectionStatus'] != null) {
             queryParameters['include_connection_status'] = requestParameters['includeConnectionStatus'];
+        }
+
+        if (requestParameters['includeLocal'] != null) {
+            queryParameters['include_local'] = requestParameters['includeLocal'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -1219,6 +1243,10 @@ export class RegistryApi extends runtime.BaseAPI {
             queryParameters['audience_scoped'] = requestParameters['audienceScoped'];
         }
 
+        if (requestParameters['includeLocal'] != null) {
+            queryParameters['include_local'] = requestParameters['includeLocal'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -1454,6 +1482,10 @@ export class RegistryApi extends runtime.BaseAPI {
 
         if (requestParameters['includeServers'] != null) {
             queryParameters['include_servers'] = requestParameters['includeServers'];
+        }
+
+        if (requestParameters['includeLocal'] != null) {
+            queryParameters['include_local'] = requestParameters['includeLocal'];
         }
 
         if (requestParameters['page'] != null) {

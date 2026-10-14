@@ -241,16 +241,16 @@ paths:
           - type: boolean
           - type: 'null'
           description: "When omitted, returns all alive (non-soft-deleted) server\
-            \ IDs for the org. True returns only available servers (with the publishing\
-            \ flag on \u2014 BCP-3039 \u2014 published AND still operationally sound;\
-            \ else operationally available); False returns the complement. Uncapped\
-            \ \u2014 no pagination."
+            \ IDs for the org (local servers only per `include_local`). True returns\
+            \ only available servers (with the publishing flag on \u2014 BCP-3039\
+            \ \u2014 published AND still operationally sound; else operationally available);\
+            \ False returns the complement. Uncapped \u2014 no pagination."
           title: Availability Status
         description: "When omitted, returns all alive (non-soft-deleted) server IDs\
-          \ for the org. True returns only available servers (with the publishing\
-          \ flag on \u2014 BCP-3039 \u2014 published AND still operationally sound;\
-          \ else operationally available); False returns the complement. Uncapped\
-          \ \u2014 no pagination."
+          \ for the org (local servers only per `include_local`). True returns only\
+          \ available servers (with the publishing flag on \u2014 BCP-3039 \u2014\
+          \ published AND still operationally sound; else operationally available);\
+          \ False returns the complement. Uncapped \u2014 no pagination."
       - name: audience_scoped
         in: query
         required: false
@@ -260,16 +260,34 @@ paths:
             \ discover \u2014 published AND named by an active allow rule on one of\
             \ the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true).\
             \ Opt-in: the default keeps existing callers (audit-history deleted tagging,\
-            \ dashboard denominators) seeing every server. Fails closed with HTTP\
-            \ 503 when the visible set cannot be resolved."
+            \ dashboard denominators) seeing every server the `include_local` gate\
+            \ allows. Fails closed with HTTP 503 when the visible set cannot be resolved."
           default: false
           title: Audience Scoped
         description: "BCP-3735: restrict the returned IDs to servers this user may\
           \ discover \u2014 published AND named by an active allow rule on one of\
           \ the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true).\
           \ Opt-in: the default keeps existing callers (audit-history deleted tagging,\
-          \ dashboard denominators) seeing every server. Fails closed with HTTP 503\
-          \ when the visible set cannot be resolved."
+          \ dashboard denominators) seeing every server the `include_local` gate allows.\
+          \ Fails closed with HTTP 503 when the visible set cannot be resolved."
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successful Response
@@ -324,6 +342,24 @@ paths:
           title: Include Connection Status
         description: Include connection_status computation (requires Bao calls). Set
           to false for better performance when connection_status is not needed.
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successfully retrieved server details
@@ -381,6 +417,24 @@ paths:
           title: Include Connection Status
         description: Include connection_status computation (requires Bao calls). Set
           to false for better performance when connection_status is not needed.
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successful Response
@@ -917,6 +971,21 @@ paths:
           default: false
           title: Include Servers
         description: Include server instances for the current user's organization
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: 'BCP-4300: false drops catalogs that run locally through the
+            Barndoor CLI (embedded and local sources) before pagination, so page counts
+            match what an org without the `local-cli-mcp-tooling` flag is shown. Defaults
+            to true (unchanged listing).'
+          default: true
+          title: Include Local
+        description: 'BCP-4300: false drops catalogs that run locally through the
+          Barndoor CLI (embedded and local sources) before pagination, so page counts
+          match what an org without the `local-cli-mcp-tooling` flag is shown. Defaults
+          to true (unchanged listing).'
       - name: page
         in: query
         required: false
