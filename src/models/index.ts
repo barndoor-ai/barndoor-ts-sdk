@@ -241,6 +241,7 @@ export * from './ServerPolicyRevisionsPage.js';
 export * from './ServerResponse.js';
 export * from './ServerSource.js';
 export * from './SetApiKeyDisabledRequest.js';
+export * from './SetCatalogUnlistedTableActionRequest.js';
 export * from './StaleReason.js';
 export * from './TestFindingResponse.js';
 export * from './TestProcessTextRequest.js';

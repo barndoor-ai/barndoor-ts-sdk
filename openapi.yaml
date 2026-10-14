@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.10.0
+  version: 2.11.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -3032,6 +3032,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: '`catalog_unlisted_table_action` is not `allow`, `block` or
+            `observe` (checked only when catalog SQL controls are enabled for the
+            organization)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
   /api/dlp/admin/v1/custom-detection-types:
     get:
       tags:
@@ -3717,13 +3725,16 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
           description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid
+            or invalid, or (when catalog SQL controls are enabled for the organization)
+            a rule's `dry_run` is not a boolean
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid rules, or a missing directory slug
+          description: Invalid rules, a missing directory slug, or (when catalog SQL
+            controls are enabled for the organization) a `catalog_unlisted_table_action`
+            other than `allow`, `block` or `observe`
           content:
             application/json:
               schema:
@@ -3818,7 +3829,8 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
           description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid
+            or invalid, or (when catalog SQL controls are enabled for the organization)
+            a rule's `dry_run` is not a boolean
           content:
             application/json:
               schema:
@@ -3865,6 +3877,62 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '404':
           description: No such field-control policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/field-control-policies/{id}/catalog-unlisted-table-action:
+    put:
+      tags:
+      - dlp
+      summary: Set a field-control policy's unlisted-table override
+      description: 'What catalog-aware SQL controls do for this MCP server with a
+        table no rule covers: `allow`, `block` or `observe`, or `null` to fall back
+        to the organization default (`PUT /config`). Requires catalog SQL controls
+        to be enabled for the organization.'
+      operationId: set_field_control_catalog_unlisted_table_action
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCatalogUnlistedTableActionRequest'
+        required: true
+      responses:
+        '200':
+          description: The updated field-control policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldControlPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role, or catalog SQL controls are
+            not enabled for the organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such field-control policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: '`catalog_unlisted_table_action` is missing or not `allow`,
+            `block`, `observe` or `null`'
           content:
             application/json:
               schema:
@@ -10173,6 +10241,12 @@ components:
       - created_at
       - updated_at
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: This server's override for tables no catalog-aware SQL rule
+            covers. Absent when not set, which means the org default applies.
         created_at:
           type: string
         created_by:
@@ -11938,6 +12012,12 @@ components:
       - created_at
       - updated_at
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: Org default for tables no catalog-aware SQL rule covers. Absent
+            when never set, which means `allow`.
         created_at:
           type: string
         enabled:
@@ -14361,6 +14441,18 @@ components:
       properties:
         disabled:
           type: boolean
+    SetCatalogUnlistedTableActionRequest:
+      type: object
+      description: Body of `PUT /field-control-policies/{id}/catalog-unlisted-table-action`.
+      properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'This server''s override for tables no catalog-aware SQL rule
+            covers: `allow`, `block` or `observe`; `null` clears it back to the organization
+            default. Required.'
+      additionalProperties: false
     StaleReason:
       type: string
       enum:
@@ -14977,6 +15069,14 @@ components:
     UpdateOrgConfigRequest:
       type: object
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'Org default for tables no catalog-aware SQL rule covers: `allow`,
+            `block` or `observe`. Omit (or send `null`) to keep the stored value;
+            once set it cannot be cleared, so set `allow` to undo it. Ignored unless
+            the catalog SQL controls feature is enabled for the organization.'
         enabled:
           type:
           - boolean
@@ -15543,6 +15643,14 @@ components:
       - mcp_server_id
       - name
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'This server''s override for tables no catalog-aware SQL rule
+            covers: `allow`, `block` or `observe`; `null` clears it back to the org
+            default. Omit to keep the stored value. Ignored unless the catalog SQL
+            controls feature is enabled for the organization.'
         directory_slug:
           type:
           - string
