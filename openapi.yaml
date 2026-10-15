@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.12.0
+  version: 2.13.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -8273,6 +8273,20 @@ components:
         \nSerialized straight to the admin API \u2014 there is no separate response\
         \ type,\nwhich is safe because no column here holds key material. `secret_path`\
         \ is a\npointer into OpenBao; `key_last4` is four characters of a tail (BCP-3821)."
+    ConnectionErrorReason:
+      type: string
+      enum:
+      - authorization_not_completed
+      - authorization_denied
+      - reauthorization_required
+      - other
+      title: ConnectionErrorReason
+      description: 'Why a connection is in ``error``, as a code safe to show its owner.
+
+
+        It is derived from ``error_message``, which can hold an arbitrary exception
+
+        string and is never shown in its place.'
     ConnectionInitiateResponse:
       properties:
         connection_id:
@@ -14099,6 +14113,10 @@ components:
           - type: string
           - type: 'null'
           title: Account Email
+        error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
+          - type: 'null'
       type: object
       required:
       - id
@@ -14213,6 +14231,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/ConnectionStatus'
           - type: 'null'
+        connection_error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
+          - type: 'null'
         url:
           anyOf:
           - type: string
@@ -14280,6 +14302,7 @@ components:
       - mcp_server_directory
       - mcp_server_service_connection
       - connection_status
+      - connection_error_reason
       - url
       - proxy_url
       - can_manage_policies
@@ -14427,6 +14450,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/ConnectionStatus'
           - type: 'null'
+        connection_error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
+          - type: 'null'
         url:
           anyOf:
           - type: string
@@ -14501,6 +14528,7 @@ components:
       - mcp_server_directory
       - mcp_server_service_connection
       - connection_status
+      - connection_error_reason
       - url
       - proxy_url
       - can_manage_policies
