@@ -644,14 +644,39 @@ paths:
       tags:
       - registry
       summary: Report Connection Auth Error
-      description: "Mark the calling user's connection as needing re-authorization.\n\
-        \nCalled by tool-router when the upstream provider rejects the stored OAuth\n\
-        token mid-use (e.g. a Salesforce session revoked out-of-band while the\nrecorded\
-        \ expiry is still in the future), so the UI flips to a reconnect\nprompt instead\
-        \ of continuing to show \"connected\".\n\nScoped to the caller's own connection\
-        \ on this server \u2014 it cannot affect\nother users' connections or the\
-        \ server configuration, so the worst a\nmisbehaving caller can do is force\
-        \ themselves to reconnect."
+      description: 'Report that the provider rejected the stored credential for the
+        calling user''s connection.
+
+
+        Called by tool-router when an upstream provider rejects a served OAuth token
+
+        mid-use.
+
+
+        The service first forces one refresh; if it succeeds the connection stays
+
+        connected. The caller''s connection flips to a reconnect prompt only when
+        the
+
+        provider refuses that refresh (the authorization is then dead for every
+
+        connection using it), or when no refresh token exists and the token is older
+
+        than the service''s cooldown, which changes only the caller''s own connection.
+
+        A caller-supplied ``rejected_fingerprint`` matching the stored token on a
+
+        credential with no refresh token skips the cooldown and retires the shared
+
+        authorization, which also affects service-account connections that borrow
+        it.
+
+
+        A report that cannot be acted on (a just-issued token, a lost refresh race,
+
+        a transient failure) changes nothing. The response is always 204 once the
+
+        connection is found and never says which outcome occurred.'
       operationId: report_mcp_connection_auth_error
       parameters:
       - name: server_id
