@@ -6678,6 +6678,14 @@ components:
         subagents:
           type: boolean
           default: true
+        unreviewed_desktop_builds:
+          type: boolean
+          description: Codex only. When true, Codex Desktop may launch a version newer
+            than the installed Barndoor CLI has reviewed, under the newest reviewed
+            version's rules and with a warning to the user, instead of being refused
+            until Barndoor is updated. A managed-device setting can still turn it
+            off. Default false; independent of `preset`.
+          default: false
     AgentRuntimeProfile:
       type: object
       description: A profile joined with the contract of its `current_version`.

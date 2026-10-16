@@ -78,6 +78,10 @@ export interface AgentRuntimeCapabilities {
      * 
      */
     subagents?: boolean;
+    /**
+     * Codex only. When true, Codex Desktop may launch a version newer than the installed Barndoor CLI has reviewed, under the newest reviewed version's rules and with a warning to the user, instead of being refused until Barndoor is updated. A managed-device setting can still turn it off. Default false; independent of `preset`.
+     */
+    unreviewedDesktopBuilds?: boolean;
 }
 
 /**
@@ -111,6 +115,7 @@ export function AgentRuntimeCapabilitiesFromJSONTyped(json: any, ignoreDiscrimin
         'shell': json['shell'] == null ? undefined : json['shell'],
         'skills': json['skills'] == null ? undefined : json['skills'],
         'subagents': json['subagents'] == null ? undefined : json['subagents'],
+        'unreviewedDesktopBuilds': json['unreviewed_desktop_builds'] == null ? undefined : json['unreviewed_desktop_builds'],
     };
 }
 
@@ -139,6 +144,7 @@ export function AgentRuntimeCapabilitiesToJSONTyped(value?: AgentRuntimeCapabili
         'shell': value['shell'],
         'skills': value['skills'],
         'subagents': value['subagents'],
+        'unreviewed_desktop_builds': value['unreviewedDesktopBuilds'],
     };
 }
 
