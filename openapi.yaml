@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.13.0
+  version: 2.14.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -14275,6 +14275,13 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
+        uses_cimd:
+          type: boolean
+          title: Uses Cimd
+          description: Whether this server identifies itself to the provider with
+            Barndoor's OAuth Client ID Metadata Document, rather than a registered
+            or managed client.
+          default: false
         tools_count:
           type: integer
           title: Tools Count
@@ -14317,6 +14324,7 @@ components:
       - attention_tier
       - publish_blockers
       - deleted_at
+      - uses_cimd
       - tools_count
       - resources_count
       title: ServerListResponse
@@ -14501,6 +14509,13 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
+        uses_cimd:
+          type: boolean
+          title: Uses Cimd
+          description: Whether this server identifies itself to the provider with
+            Barndoor's OAuth Client ID Metadata Document, rather than a registered
+            or managed client.
+          default: false
         tools_count:
           type: integer
           title: Tools Count
@@ -14544,6 +14559,7 @@ components:
       - publish_blockers
       - cascaded_fields
       - deleted_at
+      - uses_cimd
       - tools_count
       - resources_count
       title: ServerResponse
