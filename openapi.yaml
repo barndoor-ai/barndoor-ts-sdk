@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.1.0
+  version: 2.13.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -138,6 +138,22 @@ paths:
           \ (a flag-eval outage must not silently serve the unfiltered listing); the\
           \ rollout gate is whether a surface sends the parameter at all (BCP-3735).\
           \ Fails closed with HTTP 503 when the visible set cannot be resolved."
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: include servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured.'
+          title: Include Local
+        description: 'BCP-4300: include servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured.'
       - name: page
         in: query
         required: false
@@ -225,16 +241,16 @@ paths:
           - type: boolean
           - type: 'null'
           description: "When omitted, returns all alive (non-soft-deleted) server\
-            \ IDs for the org. True returns only available servers (with the publishing\
-            \ flag on \u2014 BCP-3039 \u2014 published AND still operationally sound;\
-            \ else operationally available); False returns the complement. Uncapped\
-            \ \u2014 no pagination."
+            \ IDs for the org (local servers only per `include_local`). True returns\
+            \ only available servers (with the publishing flag on \u2014 BCP-3039\
+            \ \u2014 published AND still operationally sound; else operationally available);\
+            \ False returns the complement. Uncapped \u2014 no pagination."
           title: Availability Status
         description: "When omitted, returns all alive (non-soft-deleted) server IDs\
-          \ for the org. True returns only available servers (with the publishing\
-          \ flag on \u2014 BCP-3039 \u2014 published AND still operationally sound;\
-          \ else operationally available); False returns the complement. Uncapped\
-          \ \u2014 no pagination."
+          \ for the org (local servers only per `include_local`). True returns only\
+          \ available servers (with the publishing flag on \u2014 BCP-3039 \u2014\
+          \ published AND still operationally sound; else operationally available);\
+          \ False returns the complement. Uncapped \u2014 no pagination."
       - name: audience_scoped
         in: query
         required: false
@@ -244,16 +260,34 @@ paths:
             \ discover \u2014 published AND named by an active allow rule on one of\
             \ the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true).\
             \ Opt-in: the default keeps existing callers (audit-history deleted tagging,\
-            \ dashboard denominators) seeing every server. Fails closed with HTTP\
-            \ 503 when the visible set cannot be resolved."
+            \ dashboard denominators) seeing every server the `include_local` gate\
+            \ allows. Fails closed with HTTP 503 when the visible set cannot be resolved."
           default: false
           title: Audience Scoped
         description: "BCP-3735: restrict the returned IDs to servers this user may\
           \ discover \u2014 published AND named by an active allow rule on one of\
           \ the server's ACTIVE policies (same semantics as GET /servers?audience_scoped=true).\
           \ Opt-in: the default keeps existing callers (audit-history deleted tagging,\
-          \ dashboard denominators) seeing every server. Fails closed with HTTP 503\
-          \ when the visible set cannot be resolved."
+          \ dashboard denominators) seeing every server the `include_local` gate allows.\
+          \ Fails closed with HTTP 503 when the visible set cannot be resolved."
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successful Response
@@ -308,6 +342,24 @@ paths:
           title: Include Connection Status
         description: Include connection_status computation (requires Bao calls). Set
           to false for better performance when connection_status is not needed.
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successfully retrieved server details
@@ -365,6 +417,24 @@ paths:
           title: Include Connection Status
         description: Include connection_status computation (requires Bao calls). Set
           to false for better performance when connection_status is not needed.
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: 'BCP-4300: allow servers that run locally through the Barndoor
+            CLI (embedded and local catalogs). Omitted, the registry resolves it from
+            the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+            is always honoured. An excluded server is left out of the result, and
+            a single-server read of one returns 404.'
+          title: Include Local
+        description: 'BCP-4300: allow servers that run locally through the Barndoor
+          CLI (embedded and local catalogs). Omitted, the registry resolves it from
+          the org''s `local-cli-mcp-tooling` flag (fail-closed); an explicit value
+          is always honoured. An excluded server is left out of the result, and a
+          single-server read of one returns 404.'
       responses:
         '200':
           description: Successful Response
@@ -438,7 +508,8 @@ paths:
         \ server registered with managed credentials so no secret passes through the\
         \ caller at all, and never solicit one in a chat transcript.\n\n`as_service:\
         \ true` connects the tenant's shared service account rather than the calling\
-        \ user, which is what a server needs before it can be published."
+        \ user, which is what a server needs before it can be published, and requires\
+        \ an organization admin."
       operationId: connect_mcp_server
       parameters:
       - name: server_id
@@ -573,14 +644,39 @@ paths:
       tags:
       - registry
       summary: Report Connection Auth Error
-      description: "Mark the calling user's connection as needing re-authorization.\n\
-        \nCalled by tool-router when the upstream provider rejects the stored OAuth\n\
-        token mid-use (e.g. a Salesforce session revoked out-of-band while the\nrecorded\
-        \ expiry is still in the future), so the UI flips to a reconnect\nprompt instead\
-        \ of continuing to show \"connected\".\n\nScoped to the caller's own connection\
-        \ on this server \u2014 it cannot affect\nother users' connections or the\
-        \ server configuration, so the worst a\nmisbehaving caller can do is force\
-        \ themselves to reconnect."
+      description: 'Report that the provider rejected the stored credential for the
+        calling user''s connection.
+
+
+        Called by tool-router when an upstream provider rejects a served OAuth token
+
+        mid-use.
+
+
+        The service first forces one refresh; if it succeeds the connection stays
+
+        connected. The caller''s connection flips to a reconnect prompt only when
+        the
+
+        provider refuses that refresh (the authorization is then dead for every
+
+        connection using it), or when no refresh token exists and the token is older
+
+        than the service''s cooldown, which changes only the caller''s own connection.
+
+        A caller-supplied ``rejected_fingerprint`` matching the stored token on a
+
+        credential with no refresh token skips the cooldown and retires the shared
+
+        authorization, which also affects service-account connections that borrow
+        it.
+
+
+        A report that cannot be acted on (a just-issued token, a lost refresh race,
+
+        a transient failure) changes nothing. The response is always 204 once the
+
+        connection is found and never says which outcome occurred.'
       operationId: report_mcp_connection_auth_error
       parameters:
       - name: server_id
@@ -900,6 +996,21 @@ paths:
           default: false
           title: Include Servers
         description: Include server instances for the current user's organization
+      - name: include_local
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: 'BCP-4300: false drops catalogs that run locally through the
+            Barndoor CLI (embedded and local sources) before pagination, so page counts
+            match what an org without the `local-cli-mcp-tooling` flag is shown. Defaults
+            to true (unchanged listing).'
+          default: true
+          title: Include Local
+        description: 'BCP-4300: false drops catalogs that run locally through the
+          Barndoor CLI (embedded and local sources) before pagination, so page counts
+          match what an org without the `local-cli-mcp-tooling` flag is shown. Defaults
+          to true (unchanged listing).'
       - name: page
         in: query
         required: false
@@ -1661,6 +1772,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PolicyRevisionDetailResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/policy/v2/policy-revisions:
+    get:
+      tags:
+      - policy
+      summary: List Server Policy Revisions
+      description: 'List policy revisions across every policy scoped to `mcp_server_id`
+        in the
+
+        caller''s organization, newest first, cursor-paginated (BCP-4458).
+
+
+        Replaces the client''s old per-policy revisions fan-out (one call per
+
+        policy, capped at 20 policies): this is one server-scoped call whose
+
+        `version_number` values are computed over each policy''s whole revision
+
+        history before `since`/`cursor` filtering, so they stay stable across
+
+        pages.'
+      operationId: list_server_policy_revisions
+      parameters:
+      - name: mcp_server_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: MCP server to scope revisions to
+          title: Mcp Server Id
+        description: MCP server to scope revisions to
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Max items per page
+          default: 20
+          title: Limit
+        description: Max items per page
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Opaque cursor from a previous response's next_cursor
+          title: Cursor
+        description: Opaque cursor from a previous response's next_cursor
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          description: Inclusive lower bound on revised_at
+          title: Since
+        description: Inclusive lower bound on revised_at
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerPolicyRevisionsPage'
         '422':
           description: Validation Error
           content:
@@ -2940,6 +3126,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: '`catalog_unlisted_table_action` is not `allow`, `block` or
+            `observe` (checked only when catalog SQL controls are enabled for the
+            organization)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
   /api/dlp/admin/v1/custom-detection-types:
     get:
       tags:
@@ -3413,7 +3607,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
-          description: Caller lacks a tenant-admin role
+          description: Caller lacks a tenant-admin role, or selected-agent scope is
+            not enabled for the organization
           content:
             application/json:
               schema:
@@ -3425,7 +3620,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid target, action, principal or detector selection
+          description: Invalid target, action, principal, agent or detector selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
           content:
             application/json:
               schema:
@@ -3500,7 +3702,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
-          description: Caller lacks a tenant-admin role
+          description: Caller lacks a tenant-admin role, or selected-agent scope is
+            not enabled for the organization
           content:
             application/json:
               schema:
@@ -3512,7 +3715,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid target, action, principal or detector selection
+          description: Invalid target, action, principal, agent or detector selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
           content:
             application/json:
               schema:
@@ -3609,13 +3819,16 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
           description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid
+            or invalid, or (when catalog SQL controls are enabled for the organization)
+            a rule's `dry_run` is not a boolean
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid rules, or a missing directory slug
+          description: Invalid rules, a missing directory slug, or (when catalog SQL
+            controls are enabled for the organization) a `catalog_unlisted_table_action`
+            other than `allow`, `block` or `observe`
           content:
             application/json:
               schema:
@@ -3710,7 +3923,8 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
           description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid
+            or invalid, or (when catalog SQL controls are enabled for the organization)
+            a rule's `dry_run` is not a boolean
           content:
             application/json:
               schema:
@@ -3761,6 +3975,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/field-control-policies/{id}/catalog-unlisted-table-action:
+    put:
+      tags:
+      - dlp
+      summary: Set a field-control policy's unlisted-table override
+      description: 'What catalog-aware SQL controls do for this MCP server with a
+        table no rule covers: `allow`, `block` or `observe`, or `null` to fall back
+        to the organization default (`PUT /config`). Requires catalog SQL controls
+        to be enabled for the organization.'
+      operationId: set_field_control_catalog_unlisted_table_action
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCatalogUnlistedTableActionRequest'
+        required: true
+      responses:
+        '200':
+          description: The updated field-control policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldControlPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role, or catalog SQL controls are
+            not enabled for the organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such field-control policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: '`catalog_unlisted_table_action` is missing or not `allow`,
+            `block`, `observe` or `null`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
   /api/dlp/admin/v1/policies/resolved:
     get:
       tags:
@@ -3796,6 +4066,16 @@ paths:
           type:
           - string
           - 'null'
+      - name: agent_id
+        in: query
+        description: 'Resolve as this AI agent. Omitted = no agent: only All-agents
+          policies apply.'
+        required: false
+        schema:
+          type:
+          - string
+          - 'null'
+          format: uuid
       responses:
         '200':
           description: The resolved rule set, with per-rule attribution
@@ -3913,7 +4193,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -3950,7 +4230,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4005,7 +4285,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4048,7 +4328,7 @@ paths:
       parameters:
       - name: name
         in: path
-        description: Provider name, e.g. `presidio`
+        description: Provider name, e.g. `google_dlp`
         required: true
         schema:
           type: string
@@ -4156,10 +4436,14 @@ paths:
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
+      deprecated: true
     post:
       tags:
       - llm-gateway
       summary: Create an agent runtime profile
+      description: Creates the client's settings at version 1. An organization has
+        one settings object per client, so this is refused with 409 when the client
+        already has one; edit it instead.
       operationId: create_profile
       requestBody:
         content:
@@ -4181,7 +4465,52 @@ paths:
         '403':
           description: Caller is not permitted to act on this resource in this organization
         '409':
-          description: Another profile in this organization already uses this slug
+          description: This organization already has settings for the client, or another
+            profile already uses this slug
+      deprecated: true
+  /api/llm-gateway/admin/agent-runtime-profiles/default-setup:
+    post:
+      tags:
+      - llm-gateway
+      summary: Create the safe default Claude launch setup for a login provider
+      description: Creates a Model Route per current Claude model on the login provider,
+        first enabling the newest catalog Opus, Sonnet, Haiku or Fable model on it
+        when nothing in that family is enabled (`models_enabled` lists them; the organization's
+        pricing requirement applies). Because a login (seat) token works only for
+        Claude Code, each route it creates that has no fallback behind it yet also
+        gets a lower-priority fallback target on the first enabled API-key, Bedrock,
+        Vertex or Foundry provider (by name) that has the same model enabled; `routes[].fallback_provider`
+        names it. A route that already exists with only login-token targets gets the
+        same fallback (never a second one), and `fallback_provider` reports the fallback
+        a route already has. Routes left with only login-token targets are returned
+        in `warnings` (code `seat_only_route`).
+      operationId: create_default_setup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefaultSetupRequest'
+        required: true
+      responses:
+        '200':
+          description: The routes and launch profile created or already present
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultSetupResponse'
+        '400':
+          description: The provider or its model catalog cannot support the default
+            setup, a model alias is already routed on another provider, or a model
+            the setup would enable has no pricing while the organization requires
+            it; nothing is changed
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such provider in this organization
+        '503':
+          description: Governance config read timed out; safe to retry
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}:
     get:
       tags:
@@ -4208,6 +4537,7 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+      deprecated: true
     put:
       tags:
       - llm-gateway
@@ -4243,6 +4573,7 @@ paths:
           description: No such profile in this organization
         '500':
           description: Unexpected server error
+      deprecated: true
     delete:
       tags:
       - llm-gateway
@@ -4271,13 +4602,18 @@ paths:
         '404':
           description: No such profile in this organization
         '409':
-          description: The profile is still referenced and cannot be removed
+          description: The profile is the client's settings, which are edited rather
+            than deleted, or is still referenced and cannot be removed
         '500':
           description: Unexpected server error
+      deprecated: true
     patch:
       tags:
       - llm-gateway
       summary: Update a profile's display metadata
+      description: 'Changes the display name. `active` is accepted only when it restates
+        the profile''s current state: client settings can''t be switched off, and
+        an archived profile can''t be switched back on (promote it instead).'
       operationId: patch_profile_metadata
       parameters:
       - name: slug
@@ -4307,11 +4643,18 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+        '409':
+          description: '`active` would switch the client''s settings off, or an archived
+            profile on'
+      deprecated: true
   /api/llm-gateway/admin/agent-runtime-profiles/{slug}/default:
     post:
       tags:
       - llm-gateway
-      summary: Make this the organization's default profile for its client
+      summary: Make this the organization's settings for its client
+      description: Promotes an archived profile to the client's settings and archives
+        the current settings, in one transaction. Naming the current settings is a
+        no-op.
       operationId: set_profile_default
       parameters:
       - name: slug
@@ -4322,19 +4665,18 @@ paths:
           type: string
       responses:
         '200':
-          description: The profile, now the default for its client
+          description: The profile, now the settings for its client
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgentRuntimeProfile'
-        '400':
-          description: The profile is inactive, so it cannot be made default
         '401':
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such profile in this organization
+      deprecated: true
   /api/llm-gateway/admin/api-keys:
     get:
       tags:
@@ -4573,6 +4915,95 @@ paths:
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/client-settings:
+    get:
+      tags:
+      - llm-gateway
+      summary: List the organization's client settings
+      description: 'Returns the settings for both clients, Claude Code first. A client
+        the organization has not configured is returned with `exists: false`, version
+        0 and the built-in defaults.'
+      operationId: list_client_settings
+      responses:
+        '200':
+          description: Settings for each client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListClientSettingsResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/client-settings/{client}:
+    get:
+      tags:
+      - llm-gateway
+      summary: Fetch one client's settings
+      operationId: get_client_settings
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code) or `codex` (Codex)'
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The client's settings (the built-in defaults when `exists`
+            is false)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSettings'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client
+    put:
+      tags:
+      - llm-gateway
+      summary: Save one client's settings
+      description: 'Replaces the client''s capabilities, appending a version; the
+        first save creates the settings. `preferences` are stored but not read by
+        a launch: Model Access decides which models each person can use, and every
+        launch slot is derived from that (the newest allowed route of the slot''s
+        family).'
+      operationId: put_client_settings
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code) or `codex` (Codex)'
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutClientSettingsRequest'
+        required: true
+      responses:
+        '200':
+          description: The saved settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSettings'
+        '400':
+          description: Malformed request (an unknown slot key, an empty or list-valued
+            preference, a capability outside the client's contract)
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client
+        '503':
+          description: The first save kept losing a race with another first save;
+            retry
   /api/llm-gateway/admin/connections:
     get:
       tags:
@@ -4772,6 +5203,8 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
     put:
       tags:
       - llm-gateway
@@ -4798,6 +5231,9 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read or write timed out; nothing was changed
+            and it is safe to retry
   /api/llm-gateway/admin/model-access:
     get:
       tags:
@@ -4955,6 +5391,8 @@ paths:
           description: No such resource in this organization
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
   /api/llm-gateway/admin/model-mappings/reorder:
     put:
       tags:
@@ -4974,6 +5412,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReorderedResponse'
+        '400':
+          description: An entry is a model enablement, which belongs to no route
         '401':
           description: Missing or invalid credentials
         '403':
@@ -5029,6 +5469,8 @@ paths:
             this provider
         '500':
           description: Unexpected server error
+        '503':
+          description: Governance config read timed out; safe to retry
     delete:
       tags:
       - llm-gateway
@@ -5460,6 +5902,44 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such resource in this organization
+  /api/llm-gateway/admin/model-routes/rename:
+    post:
+      tags:
+      - llm-gateway
+      summary: Rename a model route
+      description: 'Renames a route in one transaction: every target, and the route''s
+
+        route-group memberships (BCP-4580). Renaming target by target through
+
+        `PUT /admin/model-mappings/{id}` still works, but leaves the route split
+
+        across two names until the last PUT lands, and moves the memberships on the
+
+        first one.'
+      operationId: rename_model_route
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameModelRouteRequest'
+        required: true
+      responses:
+        '200':
+          description: The route was renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenameModelRouteResponse'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No route has this name in this organization
+        '409':
+          description: Another route already has the new name
   /api/llm-gateway/admin/providers:
     get:
       tags:
@@ -6217,12 +6697,28 @@ components:
       properties:
         active:
           type: boolean
+          description: True for the client's settings; false for an archived former
+            profile.
+        archived_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'When this former launch profile was archived; null for the
+            client''s
+
+            settings.'
         capabilities:
           $ref: '#/components/schemas/AgentRuntimeCapabilities'
         client:
           type: string
         config:
           type: object
+          description: 'Stored model route per client slot (the settings'' `preferences`).
+
+            Kept, but not read by a launch: every slot is derived from the models
+
+            Model Access allows the person.'
           additionalProperties:
             type: string
           propertyNames:
@@ -6237,6 +6733,8 @@ components:
           format: uuid
         is_org_default:
           type: boolean
+          description: True for the client's settings; false for an archived former
+            profile.
         org_id:
           type: string
           format: uuid
@@ -6248,7 +6746,38 @@ components:
         version:
           type: integer
           format: int32
-          description: The immutable version whose `config` is loaded below.
+          description: The immutable version whose preferences are loaded below.
+    AgentScopeRequest:
+      type: object
+      description: Which AI agents a policy applies to, ANDed with its principals.
+      required:
+      - mode
+      properties:
+        agent_ids:
+          type: array
+          items:
+            type: string
+          description: 'Registry agent (application) ids: 1 to 200 unique UUIDs when
+            `mode` is `SELECTED`, empty for `ALL`.'
+        mode:
+          type: string
+          description: '`ALL` (every agent, including agents created later) or `SELECTED`.'
+      additionalProperties: false
+    AgentScopeResponse:
+      type: object
+      required:
+      - mode
+      - agent_ids
+      properties:
+        agent_ids:
+          type: array
+          items:
+            type: string
+          description: Selected agent ids. Can include agents deleted since the save,
+            which no longer match any request.
+        mode:
+          type: string
+          description: '`ALL` or `SELECTED`.'
     AgentType:
       type: string
       enum:
@@ -7558,6 +8087,61 @@ components:
         - alert_type: break_glass_used
         type: webhook
         url: https://hooks.example.com/barndoor
+    ClientSettings:
+      type: object
+      description: 'One client''s settings, or the built-in defaults when the organization
+        has
+
+        not saved any.'
+      required:
+      - client
+      - exists
+      - id
+      - version
+      - capabilities
+      - preferences
+      properties:
+        capabilities:
+          $ref: '#/components/schemas/AgentRuntimeCapabilities'
+        client:
+          type: string
+          description: '`claude` (Claude Code) or `codex` (Codex).'
+        exists:
+          type: boolean
+          description: 'False until the organization first saves settings for the
+            client; the
+
+            other fields then describe the built-in defaults.'
+        id:
+          type: string
+          format: uuid
+          description: 'Stable settings id (deterministic per organization and client,
+            so it is
+
+            the same before and after the first save).'
+        preferences:
+          type: object
+          description: 'Stored per-slot model preferences. Accepted and kept, but
+            not read by a
+
+            launch: every slot is derived from the models Model Access allows the
+
+            person (the newest allowed route of the slot''s family).'
+          additionalProperties:
+            type: string
+          propertyNames:
+            type: string
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+          format: int32
+          description: Current version, 0 when `exists` is false. Each save appends
+            a version.
+          minimum: 0
     ConditionOf-Input:
       properties:
         of:
@@ -7689,6 +8273,20 @@ components:
         \nSerialized straight to the admin API \u2014 there is no separate response\
         \ type,\nwhich is safe because no column here holds key material. `secret_path`\
         \ is a\npointer into OpenBao; `key_last4` is four characters of a tail (BCP-3821)."
+    ConnectionErrorReason:
+      type: string
+      enum:
+      - authorization_not_completed
+      - authorization_denied
+      - reauthorization_required
+      - other
+      title: ConnectionErrorReason
+      description: 'Why a connection is in ``error``, as a code safe to show its owner.
+
+
+        It is derived from ``error_message``, which can hold an arbitrary exception
+
+        string and is never shown in its place.'
     ConnectionInitiateResponse:
       properties:
         connection_id:
@@ -7773,6 +8371,58 @@ components:
         from the user''s perspective, taking into account server configuration,
 
         Bao registration, and user connections.'
+    CooldownPolicy:
+      type: object
+      description: 'A route''s cooldown policy, one field per column.
+
+
+        Route-health *state* is keyed by `(provider_id, upstream_model)`, so an
+
+        enablement row and an alias row that target the same upstream share one
+
+        failure window and ejection deadline; each request judges that shared
+
+        state by the policy of the row it resolved.'
+      required:
+      - cooldown_failure_threshold
+      - cooldown_window_secs
+      - cooldown_base_secs
+      - cooldown_max_secs
+      - cooldown_429_default_secs
+      - cooldown_overloaded_secs
+      properties:
+        cooldown_429_default_secs:
+          type: integer
+          format: int32
+          description: Cooldown on a 429 with no usable `Retry-After`, seconds.
+        cooldown_base_secs:
+          type: integer
+          format: int32
+          description: 'First cooldown window, doubled on each failed recovery probe
+            up to
+
+            `cooldown_max_secs`.'
+        cooldown_failure_threshold:
+          type: integer
+          format: int32
+          description: 'Gateway failures within `cooldown_window_secs` that cool the
+            route.
+
+            `0` disables every cooldown of the shared route.'
+        cooldown_max_secs:
+          type: integer
+          format: int32
+          description: Cap on every cooldown window.
+        cooldown_overloaded_secs:
+          type: integer
+          format: int32
+          description: 'Flat cooldown on a 529 "overloaded" with no usable `Retry-After`,
+
+            seconds. `0` counts a 529 as an ordinary gateway failure instead.'
+        cooldown_window_secs:
+          type: integer
+          format: int32
+          description: Width of the rolling failure window, seconds.
     CreateAllowListEntryRequest:
       type: object
       required:
@@ -8047,6 +8697,11 @@ components:
       properties:
         action:
           type: string
+        agent_scope:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/AgentScopeRequest'
+            description: Omitted = all agents.
         detection_engine_ids:
           type: array
           items:
@@ -8114,12 +8769,42 @@ components:
           - string
           - 'null'
           format: uuid
+          description: 'Single-entity form of `scope_ids`, kept for existing clients.
+            Send one
+
+            or the other; when both are sent `scope_id` must be the first element
+
+            of `scope_ids`.'
+        scope_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+            format: uuid
+          description: 'Every user / project / API key / agent the policy applies
+            to
+
+            (BCP-5001). The policy applies when any one of them matches the caller.
+
+            Empty or omitted means not bound to a specific entity.'
         scope_type:
           type: string
         scope_value:
           type:
           - string
           - 'null'
+          description: Single-entity form of `scope_values`; same rules as `scope_id`.
+        scope_values:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: 'Every role / group name the policy applies to (BCP-5001).
+            Same
+
+            any-of semantics as `scope_ids`.'
         targets:
           type: array
           items:
@@ -8137,11 +8822,12 @@ components:
           type:
           - boolean
           - 'null'
-          description: "Whether this row should participate in bare-name resolution.\
-            \ The\nadmin handler treats `None` as \"infer from alias shape\" \u2014\
-            \ custom\naliases imply `true`, 1:1 enablement rows imply `false`. Pass\n\
-            `Some(true)` explicitly from the Model Routes tab to opt a 1:1\nrow into\
-            \ bare resolution."
+          description: 'Whether a route target participates in bare-name resolution.
+            Defaults
+
+            to `true` for a route and is always `false` for an enablement, which is
+
+            reachable only as `<provider>/<model>`.'
         change_note:
           type:
           - string
@@ -8149,8 +8835,92 @@ components:
           description: 'Optional free-text note explaining why this route was added
 
             (BCP-3998). Surfaced on the row and mirrored into the audit event.'
+        cooldown_429_default_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cooldown on an upstream 429 that carries no usable `Retry-After`
+
+            (a `Retry-After` sets the window instead). Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.'
+        cooldown_base_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'First cooldown window once the threshold trips, doubled on
+            each failed
+
+            recovery probe up to `cooldown_max_secs`. Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.'
+        cooldown_failure_threshold:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Gateway failures (5xx, timeouts, connection errors, managed-key
+            401/403)
+
+            within `cooldown_window_secs` that cool the route. `0` disables every
+
+            cooldown of the shared route (rolling failures, 429 and 529); per-user
+
+            credential cooldowns on passthrough routes still apply. Range 0-100;
+
+            default 10.'
+        cooldown_max_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cap on every cooldown window: doubling, 429 and 529. Range
+            1-86400;
+
+            default 300.'
+        cooldown_overloaded_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Flat cooldown on an upstream 529 "overloaded" with no usable
+
+            `Retry-After`; it does not spend the failure budget. `0` counts a 529
+            as
+
+            an ordinary gateway failure instead. Range 0-3600, and at most
+
+            `cooldown_max_secs` unless 0; default 10.'
+        cooldown_window_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Width of the rolling failure window, seconds. Range 1-3600;
+            default 60.
         enabled:
           type: boolean
+        kind:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/MappingKind'
+            description: '`model` enables the model on the provider; `route` adds
+              a target to the
+
+              route named `model_alias`, which may be the upstream''s own name.
+
+
+              Omitted, it is inferred the way callers predating the field meant it
+
+              (see [`MappingKind::infer`]): `model_alias == upstream_model` without
+
+              `bare_alias: true` is an enablement, anything else a route. A route
+
+              named after its upstream with no enablement yet on the provider is
+
+              accepted only in that legacy form, which enables the model first.'
         model_alias:
           type: string
         priority:
@@ -8817,6 +9587,106 @@ components:
           type: string
         source:
           type: string
+    DefaultSetupProfile:
+      type: object
+      required:
+      - slug
+      - created
+      - is_org_default
+      - preferences_seeded
+      properties:
+        created:
+          type: boolean
+          description: True when no settings row existed for the client and this run
+            created it.
+        is_org_default:
+          type: boolean
+        preferences_seeded:
+          type: boolean
+          description: 'True when this run wrote the setup''s models as the settings''
+
+            preferences (a new row, or a row whose preferences were empty). False
+
+            when existing preferences were left alone.'
+        slug:
+          type: string
+    DefaultSetupRequest:
+      type: object
+      required:
+      - provider_id
+      - client
+      properties:
+        client:
+          type: string
+        provider_id:
+          type: string
+          format: uuid
+    DefaultSetupResponse:
+      type: object
+      required:
+      - routes
+      - profile
+      - policies_needing_update
+      - models_enabled
+      - warnings
+      properties:
+        models_enabled:
+          type: array
+          items:
+            type: string
+          description: 'Models this run enabled on the login provider because nothing
+            in their
+
+            family (Opus, Sonnet, Haiku, Fable) was enabled there.'
+        policies_needing_update:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyNeedingUpdate'
+        profile:
+          $ref: '#/components/schemas/DefaultSetupProfile'
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DefaultSetupRoute'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileGuardrailFinding'
+          description: '`seat_only_route` warnings for the setup''s routes that still
+            have only
+
+            seat-token targets that serve after this run: a route this run created
+
+            found no enabled API-key, Bedrock, Vertex or Foundry provider with the
+
+            model; the route already existed with no non-seat target; or its
+
+            existing fallback does not serve (switched off, or its provider or model
+
+            is off), which the setup leaves for the admin to fix.'
+    DefaultSetupRoute:
+      type: object
+      required:
+      - alias
+      - created
+      properties:
+        alias:
+          type: string
+        created:
+          type: boolean
+        fallback_provider:
+          type:
+          - string
+          - 'null'
+          description: 'The non-seat provider (API key, Bedrock, Vertex, Foundry)
+            behind the
+
+            route as its fallback target, so clients other than Claude Code are not
+
+            refused by Anthropic: one this run added, or one the route already had.
+
+            Null when the route has none, or when its fallback does not serve (switched
+            off, or its provider or model is off): that route is in `warnings`.'
     DeletedResponse:
       type: object
       description: "The acknowledgement every admin `DELETE` returns.\n\nShared by\
@@ -9184,6 +10054,7 @@ components:
       - dry_run
       - mcp_targets
       - principals
+      - agent_scope
       - detection_engine_ids
       - created_by
       - updated_by
@@ -9192,6 +10063,8 @@ components:
       properties:
         action:
           type: string
+        agent_scope:
+          $ref: '#/components/schemas/AgentScopeResponse'
         created_at:
           type: string
         created_by:
@@ -9476,6 +10349,12 @@ components:
       - created_at
       - updated_at
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: This server's override for tables no catalog-aware SQL rule
+            covers. Absent when not set, which means the org default applies.
         created_at:
           type: string
         created_by:
@@ -9578,6 +10457,17 @@ components:
             \ config bodies written before this field existed\n\u2014 every current\
             \ Terraform config and API client \u2014 keep deserialising,\nand keep\
             \ meaning \"off\"."
+    GuardrailPolicyRef:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     HTTPValidationError:
       properties:
         detail:
@@ -9739,6 +10629,12 @@ components:
           - type: string
           - type: 'null'
           title: Domain
+        domains:
+          items:
+            type: string
+          type: array
+          title: Domains
+          default: []
       type: object
       title: IdpConnectionResponse
       description: Response containing current IdP connection configuration.
@@ -9828,6 +10724,16 @@ components:
       - label
       title: LabeledOption
       description: An enum value paired with its display label.
+    ListClientSettingsResponse:
+      type: object
+      required:
+      - settings
+      properties:
+        settings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSettings'
+          description: Both clients, Claude Code first.
     ListProfilesResponse:
       type: object
       required:
@@ -10060,6 +10966,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10140,11 +11062,16 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
       type: object
       required:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -10180,6 +11107,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10260,6 +11203,8 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
         categories:
           items:
             $ref: '#/components/schemas/MCPServerCategory'
@@ -10278,6 +11223,9 @@ components:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -10315,6 +11263,22 @@ components:
           type: string
           format: date-time
           title: Updated At
+        runtime:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Runtime
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+        tool_manifest:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tool Manifest
         name:
           type: string
           title: Name
@@ -10395,6 +11359,8 @@ components:
             format: date-time
           - type: 'null'
           title: Requires Auth Observed At
+          description: When requires_auth was last observed. NULL = not observed since
+            the last URL change.
         categories:
           items:
             $ref: '#/components/schemas/MCPServerCategory'
@@ -10420,6 +11386,9 @@ components:
       - id
       - created_at
       - updated_at
+      - runtime
+      - configuration_schema
+      - tool_manifest
       - name
       - description
       - icon
@@ -10444,6 +11413,27 @@ components:
       - active_server_ids
       - registered_mcp_servers
       title: MCPServerDirectoryReadWithServers
+    MappingKind:
+      type: string
+      description: 'What a `model_mappings` row is (BCP-4580, migration V84). Persisted
+        as a
+
+        `VARCHAR(8)` constrained to `model | route`.
+
+
+        The table holds two different things, and they used to be told apart only
+
+        by `model_alias = upstream_model`. That made a route named after its own
+
+        upstream indistinguishable from the model''s enablement, so the two shared
+        a
+
+        row and every route operation on it had to tiptoe around the enablement.
+
+        The kind is now stated, never inferred from a name.'
+      enum:
+      - model
+      - route
     MaskFormat:
       type: object
       description: 'The `mask_format` object stored on `dlp.enforcement_policies.mask_format`
@@ -10596,6 +11586,11 @@ components:
         \ resolves to\n`gpt-4o-mini`)."
     ModelMapping:
       allOf:
+      - $ref: '#/components/schemas/CooldownPolicy'
+        description: 'The route''s passive cooldown policy (BCP-2671 H5), serialized
+          as six
+
+          flat `cooldown_*` fields.'
       - $ref: '#/components/schemas/ChangeAttribution'
         description: 'Who created and last changed this route, and why (BCP-3998).
 
@@ -10614,6 +11609,7 @@ components:
         - retry_on_429_count
         - retry_on_429_max_wait_secs
         - bare_alias
+        - kind
         - source
         properties:
           auto_disabled_reason:
@@ -10635,17 +11631,23 @@ components:
                 \ the\ncatalog\"), not a bug \u2014 see\n`model_sync::tests::re_enabling_a_dropped_model_is_retired_again_on_the_next_tick`."
           bare_alias:
             type: boolean
-            description: "When `true` the row participates in bare-name resolution\n\
-              (`POST /v1/chat/completions {\"model\": \"<alias>\"}`). When `false`\
-              \ the\nrow is enablement-only \u2014 addressable solely via the explicit\n\
-              `<provider>/<upstream>` form. Custom-alias rows\n(`model_alias != upstream_model`)\
-              \ are always `true`; 1:1 rows\ndefault to `false` and admins opt in\
-              \ by creating an explicit Route\non the Model Routes tab."
+            description: 'When `true` the row participates in bare-name resolution
+
+              (`POST /v1/chat/completions {"model": "<alias>"}`). Route targets are
+
+              `true`; enablements (`kind = model`) are always `false` and are
+
+              addressable solely via the explicit `<provider>/<upstream>` form.'
           enabled:
             type: boolean
           id:
             type: string
             format: uuid
+          kind:
+            $ref: '#/components/schemas/MappingKind'
+            description: "Whether this row is the model's enablement or a route target\
+              \ \u2014 see\n[`MappingKind`]. Never inferred from `model_alias == upstream_model`:\n\
+              a route may carry its upstream's name (migration V84)."
           model_alias:
             type: string
           priority:
@@ -10664,13 +11666,13 @@ components:
 
               non-streaming requests (streaming responses have no total timeout).
 
-              Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a
+              Defaults to `TOTAL_REQUEST_TIMEOUT_DEFAULT_SECS` at insert. On a route
 
-              custom-alias row this is the *route* tier; on the 1:1 enablement
+              target this is the *route* tier; on the enablement (`kind = model`)
 
-              (anchor) row it is the *model* tier consulted by the resolver for
+              it is the *model* tier consulted by the resolver for every route
 
-              every alias of that model. The range is fixed platform policy
+              target of that model. The range is fixed platform policy
 
               (`TOTAL_REQUEST_TIMEOUT_MIN_SECS..=TOTAL_REQUEST_TIMEOUT_MAX_SECS`),
 
@@ -10768,6 +11770,8 @@ components:
         that ignore `budget_status` keep working unchanged."
     ModelMappingWithProvider:
       allOf:
+      - $ref: '#/components/schemas/CooldownPolicy'
+        description: See [`ModelMapping::cooldown`].
       - $ref: '#/components/schemas/ChangeAttribution'
         description: See [`ModelMapping::attribution`].
       - type: object
@@ -10783,6 +11787,7 @@ components:
         - retry_on_429_count
         - retry_on_429_max_wait_secs
         - bare_alias
+        - kind
         - created_at
         - source
         properties:
@@ -10803,6 +11808,9 @@ components:
           id:
             type: string
             format: uuid
+          kind:
+            $ref: '#/components/schemas/MappingKind'
+            description: See [`ModelMapping::kind`].
           model_alias:
             type: string
           priority:
@@ -10988,8 +11996,8 @@ components:
         \ catalog or typed a name into the \"Custom Model\" box \u2014\nand deliberately\
         \ never changes afterwards. It is not a claim about whether\nthe catalog still\
         \ lists the model today: that is live state, drifts as\nvendors retire models,\
-        \ and belongs to BCP-3038's stale-route detection.\nKeeping the two apart\
-        \ is what lets a retired-from-catalog model avoid\nrendering as a deliberate\
+        \ and belongs to the Stale annotation (BCP-3812).\nKeeping the two apart is\
+        \ what lets a retired-from-catalog model avoid\nrendering as a deliberate\
         \ custom choice. See migration V61 for the full\nrationale."
       enum:
       - catalog
@@ -11112,6 +12120,12 @@ components:
       - created_at
       - updated_at
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: Org default for tables no catalog-aware SQL rule covers. Absent
+            when never set, which means `allow`.
         created_at:
           type: string
         enabled:
@@ -11575,6 +12589,17 @@ components:
         \ off the ORM\nrow \u2014 the field set below is a straight projection of\n\
         ``policy_service.db.policy_impact.PolicyImpact``, so there is no hand-mapping\n\
         to drift out of sync."
+    PolicyNeedingUpdate:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
     PolicyRevisionCompareResponse:
       properties:
         before:
@@ -12086,27 +13111,6 @@ components:
       - savings
       - balanced
       - quality
-    PresidioConnectionResponse:
-      type: object
-      required:
-      - org_id
-      - analyzer_url
-      - anonymizer_url
-      - language
-      - has_bearer_token
-      properties:
-        analyzer_url:
-          type: string
-        anonymizer_url:
-          type: string
-        has_bearer_token:
-          type: boolean
-          description: Whether a bearer token is configured. The token value is never
-            returned.
-        language:
-          type: string
-        org_id:
-          type: string
     PricingChangeSource:
       type: string
       description: 'How a `model_pricing` version was produced. Persisted as a
@@ -12168,6 +13172,26 @@ components:
       - tracking
       - pinned
       - auto
+    ProfileGuardrailFinding:
+      type: object
+      required:
+      - code
+      - slot
+      - alias
+      - message
+      properties:
+        alias:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardrailPolicyRef'
+        slot:
+          type: string
     Protocol:
       type: string
       enum:
@@ -12287,8 +13311,8 @@ components:
             type:
             - string
             - 'null'
-            description: Human-readable reason for the last `unhealthy` probe (NULL
-              otherwise).
+            description: Reason for the last `unhealthy` or `unverified` probe (NULL
+              if healthy or never probed).
           health_status:
             type: string
             description: 'Observed upstream reachability, recorded separately from
@@ -12366,16 +13390,6 @@ components:
     ProviderConnectionResponse:
       oneOf:
       - allOf:
-        - $ref: '#/components/schemas/PresidioConnectionResponse'
-        - type: object
-          required:
-          - provider
-          properties:
-            provider:
-              type: string
-              enum:
-              - presidio
-      - allOf:
         - $ref: '#/components/schemas/TokenizationConnectionResponse'
         - type: object
           required:
@@ -12446,6 +13460,103 @@ components:
       description: "BCP-3815 \u2014 why ``POST /servers/{id}/publish`` would currently\
         \ 422.\n\nOne value per gate the publish route enforces, in the order it checks\
         \ them."
+    PutClientSettingsRequest:
+      type: object
+      required:
+      - capabilities
+      properties:
+        capabilities:
+          $ref: '#/components/schemas/AgentRuntimeCapabilities'
+        preferences:
+          type: object
+          description: 'Any subset of the client''s slot keys (possibly empty). Each
+            value is a
+
+            single Model Route or routing-policy alias. Stored but not read by a
+
+            launch, which derives every slot from the person''s allowed models. A
+
+            trailing `[1m]` on a Claude value is accepted for older clients and
+
+            dropped.'
+          additionalProperties:
+            type: string
+          propertyNames:
+            type: string
+    RenameModelRouteRequest:
+      type: object
+      description: "`POST /admin/model-routes/rename`: rename a route in one step\
+        \ \u2014 every\ntarget, and the route's route-group memberships with it (BCP-4580)."
+      required:
+      - model_alias
+      - new_model_alias
+      properties:
+        change_note:
+          type:
+          - string
+          - 'null'
+          description: Optional note explaining the rename (BCP-3998), stamped on
+            every target.
+        model_alias:
+          type: string
+          description: The route's current name.
+        new_model_alias:
+          type: string
+          description: 'The new name. Any name no other route uses, including the
+            name of a
+
+            model one of its targets points at.'
+    RenameModelRouteResponse:
+      type: object
+      required:
+      - model_alias
+      - targets_renamed
+      - route_group_memberships_moved
+      - token_budgets_retargeted
+      - rate_limit_policies_retargeted
+      - model_access_policies_retargeted
+      - governance_targets_kept
+      properties:
+        governance_targets_kept:
+          type: integer
+          format: int64
+          description: 'Budgets, rate limits and model-access policies that stayed
+            on the old
+
+            name, because a model enablement or routing policy still answers to
+
+            it. Nonzero means those rows no longer apply to this route.'
+          minimum: 0
+        model_access_policies_retargeted:
+          type: integer
+          format: int64
+          description: How many model-access policies had a target renamed.
+          minimum: 0
+        model_alias:
+          type: string
+        rate_limit_policies_retargeted:
+          type: integer
+          format: int64
+          description: How many rate-limit policies now target the new name.
+          minimum: 0
+        route_group_memberships_moved:
+          type: integer
+          format: int64
+          description: How many route-group memberships moved to the new name.
+          minimum: 0
+        targets_renamed:
+          type: integer
+          format: int64
+          description: How many route targets were renamed.
+          minimum: 0
+        token_budgets_retargeted:
+          type: integer
+          format: int64
+          description: 'How many token budgets now target the new name. Their usage
+            so far
+
+            this period moved with them.'
+          minimum: 0
     ReorderEntry:
       type: object
       required:
@@ -12641,12 +13752,16 @@ components:
           type:
           - string
           - 'null'
-          description: 'The LLM that picks a slot. Optional because a policy may be
-            saved before
+          description: 'The model that picks a slot. Optional because a policy may
+            be saved before
 
             one is chosen; the picker falls back to the context-size floor when it
 
-            is absent.'
+            is absent. Either a chat model that supports JSON-mode output, or a Jev
+
+            classifier model (TypeSafe, or OpenRouter''s `typesafe/` models), which
+
+            is asked on System One instead of prompted for JSON.'
         determiner_prompt:
           type:
           - string
@@ -12660,7 +13775,9 @@ components:
 
             always appended by the gateway so the structured-output contract holds
 
-            regardless of what an admin writes here.'
+            regardless of what an admin writes here. Not used by a Jev determiner,
+
+            whose questions carry their own instructions.'
         enabled:
           type: boolean
         id:
@@ -12996,6 +14113,10 @@ components:
           - type: string
           - type: 'null'
           title: Account Email
+        error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
+          - type: 'null'
       type: object
       required:
       - id
@@ -13018,6 +14139,14 @@ components:
           type: string
           format: date-time
           title: Updated At
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        configuration:
+          additionalProperties: true
+          type: object
+          title: Configuration
         name:
           type: string
           title: Name
@@ -13045,6 +14174,10 @@ components:
           - type: boolean
           - type: 'null'
           title: Uses Managed Credentials
+        ema_enabled:
+          type: boolean
+          title: Ema Enabled
+          default: false
         scopes:
           anyOf:
           - items:
@@ -13097,6 +14230,10 @@ components:
         connection_status:
           anyOf:
           - $ref: '#/components/schemas/ConnectionStatus'
+          - type: 'null'
+        connection_error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
           - type: 'null'
         url:
           anyOf:
@@ -13143,12 +14280,15 @@ components:
       - id
       - created_at
       - updated_at
+      - enabled
+      - configuration
       - name
       - slug
       - oauth_base_url_override
       - client_id
       - client_secret
       - uses_managed_credentials
+      - ema_enabled
       - scopes
       - organization_id
       - mcp_server_directory_id
@@ -13162,6 +14302,7 @@ components:
       - mcp_server_directory
       - mcp_server_service_connection
       - connection_status
+      - connection_error_reason
       - url
       - proxy_url
       - can_manage_policies
@@ -13181,6 +14322,28 @@ components:
         for a single server, sourced from Bao, and is only served by the
 
         single-server GET endpoints.'
+    ServerPolicyRevisionsPage:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/PolicyRevisionSummary'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Opaque cursor for the next page; null when there are no more
+            results.
+      type: object
+      required:
+      - data
+      title: ServerPolicyRevisionsPage
+      description: "Cursor-paged page of policy revisions scoped to one MCP server\
+        \ (BCP-4458).\n\nBacks ``GET /admin/v2/policy-revisions`` \u2014 one source\
+        \ instead of the\nper-policy fan-out the client used to do. No ``total``/``pages``:\
+        \ this is\nkeyset, not offset, pagination, so there is deliberately no ``COUNT``."
     ServerResponse:
       properties:
         id:
@@ -13195,6 +14358,14 @@ components:
           type: string
           format: date-time
           title: Updated At
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        configuration:
+          additionalProperties: true
+          type: object
+          title: Configuration
         name:
           type: string
           title: Name
@@ -13222,6 +14393,10 @@ components:
           - type: boolean
           - type: 'null'
           title: Uses Managed Credentials
+        ema_enabled:
+          type: boolean
+          title: Ema Enabled
+          default: false
         scopes:
           anyOf:
           - items:
@@ -13274,6 +14449,10 @@ components:
         connection_status:
           anyOf:
           - $ref: '#/components/schemas/ConnectionStatus'
+          - type: 'null'
+        connection_error_reason:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionErrorReason'
           - type: 'null'
         url:
           anyOf:
@@ -13327,12 +14506,15 @@ components:
       - id
       - created_at
       - updated_at
+      - enabled
+      - configuration
       - name
       - slug
       - oauth_base_url_override
       - client_id
       - client_secret
       - uses_managed_credentials
+      - ema_enabled
       - scopes
       - organization_id
       - mcp_server_directory_id
@@ -13346,6 +14528,7 @@ components:
       - mcp_server_directory
       - mcp_server_service_connection
       - connection_status
+      - connection_error_reason
       - url
       - proxy_url
       - can_manage_policies
@@ -13380,6 +14563,18 @@ components:
       properties:
         disabled:
           type: boolean
+    SetCatalogUnlistedTableActionRequest:
+      type: object
+      description: Body of `PUT /field-control-policies/{id}/catalog-unlisted-table-action`.
+      properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'This server''s override for tables no catalog-aware SQL rule
+            covers: `allow`, `block` or `observe`; `null` clears it back to the organization
+            default. Required.'
+      additionalProperties: false
     StaleReason:
       type: string
       enum:
@@ -13448,6 +14643,12 @@ components:
       - plaintext
       - runtime_stage
       properties:
+        agent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Test as this AI agent. Omitted = no agent.
         plaintext:
           type: string
         runtime_stage:
@@ -13674,6 +14875,11 @@ components:
           type:
           - string
           - 'null'
+        agent_scope:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/AgentScopeRequest'
+            description: Omitted = unchanged.
         detection_engine_ids:
           type:
           - array
@@ -13783,6 +14989,17 @@ components:
             \ UI moves an\n`api_key`-scoped policy back to \"All API Keys\". A plain\
             \ `Option<Uuid>`\nmade that indistinguishable from omitting the field,\
             \ so the update\nsilently kept the old binding (BCP-3955)."
+        scope_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+            format: uuid
+          description: 'Replaces the whole UUID binding when present; `[]` unbinds.
+            Omitted
+
+            leaves it unchanged. See [`CreateModelAccessRequest::scope_ids`].'
         scope_type:
           type:
           - string
@@ -13791,6 +15008,14 @@ components:
           type:
           - string
           - 'null'
+        scope_values:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: Replaces the whole role / group binding when present; `[]`
+            unbinds.
         targets:
           type:
           - array
@@ -13823,6 +15048,89 @@ components:
             change and an unrelated later edit must not inherit an explanation
 
             written for a different one.'
+        cooldown_429_default_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cooldown on an upstream 429 that carries no usable `Retry-After`
+
+            (a `Retry-After` sets the window instead). Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_base_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'First cooldown window once the threshold trips, doubled on
+            each failed
+
+            recovery probe up to `cooldown_max_secs`. Range 1-3600, and at most
+
+            `cooldown_max_secs`; default 30.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_failure_threshold:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Gateway failures (5xx, timeouts, connection errors, managed-key
+            401/403)
+
+            within `cooldown_window_secs` that cool the route. `0` disables every
+
+            cooldown of the shared route (rolling failures, 429 and 529); per-user
+
+            credential cooldowns on passthrough routes still apply. Range 0-100;
+
+            default 10.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_max_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Cap on every cooldown window: doubling, 429 and 529. Range
+            1-86400;
+
+            default 300.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_overloaded_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Flat cooldown on an upstream 529 "overloaded" with no usable
+
+            `Retry-After`; it does not spend the failure budget. `0` counts a 529
+            as
+
+            an ordinary gateway failure instead. Range 0-3600, and at most
+
+            `cooldown_max_secs` unless 0; default 10.
+
+
+            Omitted (or `null`) keeps the stored value.'
+        cooldown_window_secs:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Width of the rolling failure window, seconds. Range 1-3600;
+            default 60.
+
+
+            Omitted (or `null`) keeps the stored value.'
         enabled:
           type:
           - boolean
@@ -13883,6 +15191,14 @@ components:
     UpdateOrgConfigRequest:
       type: object
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'Org default for tables no catalog-aware SQL rule covers: `allow`,
+            `block` or `observe`. Omit (or send `null`) to keep the stored value;
+            once set it cannot be cleared, so set `allow` to undo it. Ignored unless
+            the catalog SQL controls feature is enabled for the organization.'
         enabled:
           type:
           - boolean
@@ -14382,16 +15698,6 @@ components:
     UpsertConnectionRequest:
       oneOf:
       - allOf:
-        - $ref: '#/components/schemas/UpsertPresidioRequest'
-        - type: object
-          required:
-          - provider
-          properties:
-            provider:
-              type: string
-              enum:
-              - presidio
-      - allOf:
         - $ref: '#/components/schemas/UpsertTokenizationRequest'
         - type: object
           required:
@@ -14459,6 +15765,14 @@ components:
       - mcp_server_id
       - name
       properties:
+        catalog_unlisted_table_action:
+          type:
+          - string
+          - 'null'
+          description: 'This server''s override for tables no catalog-aware SQL rule
+            covers: `allow`, `block` or `observe`; `null` clears it back to the org
+            default. Omit to keep the stored value. Ignored unless the catalog SQL
+            controls feature is enabled for the organization.'
         directory_slug:
           type:
           - string
@@ -14487,24 +15801,6 @@ components:
         location:
           type: string
         project_id:
-          type: string
-    UpsertPresidioRequest:
-      type: object
-      required:
-      - analyzer_url
-      properties:
-        analyzer_url:
-          type: string
-        anonymizer_url:
-          type:
-          - string
-          - 'null'
-        bearer_token:
-          type:
-          - string
-          - 'null'
-          description: Supply to set or rotate the token; omit to leave unchanged.
-        language:
           type: string
     UpsertTokenizationRequest:
       type: object
@@ -14637,6 +15933,8 @@ components:
         - org_id
         - name
         - scope_type
+        - scope_ids
+        - scope_values
         - policy_type
         - targets
         - traffic_type
@@ -14659,12 +15957,42 @@ components:
             - string
             - 'null'
             format: uuid
+            description: 'First element of [`Self::scope_ids`], kept for clients that
+              predate
+
+              multi-entity scopes (BCP-5001). Never read for matching when
+
+              `scope_ids` is non-empty -- see [`Self::bound_ids`].'
+          scope_ids:
+            type: array
+            items:
+              type: string
+              format: uuid
+            description: 'Every UUID-keyed entity (user / project / api_key / agent)
+              the policy
+
+              is bound to (BCP-5001). Empty means unbound: the policy is not pinned
+              to
+
+              a specific entity of its scope type.'
           scope_type:
             type: string
           scope_value:
             type:
             - string
             - 'null'
+            description: 'First element of [`Self::scope_values`]; same compatibility
+              role as
+
+              `scope_id`.'
+          scope_values:
+            type: array
+            items:
+              type: string
+            description: 'Every role / group name the policy is bound to (BCP-5001).
+              Empty means
+
+              unbound.'
           targets:
             type: array
             items:
@@ -15011,9 +16339,16 @@ security:
   - email
 tags:
 - name: dlp
+  x-group: Data Control Center
 - name: identity
+  x-group: Identity
 - name: llm-gateway
+  x-group: LLM Gateway
 - name: notification
+  x-group: Notifications
 - name: policy
+  x-group: Policies
 - name: registry
+  x-group: MCP Gateway
 - name: system-management
+  x-group: Log Exports
