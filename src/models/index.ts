@@ -77,6 +77,7 @@ export * from './CreateProfileRequest.js';
 export * from './CreateProviderRequest.js';
 export * from './CreateRateLimitRequest.js';
 export * from './CreateRouteGroupRequest.js';
+export * from './CredentialMode.js';
 export * from './CredentialsPayload.js';
 export * from './CustomDetectionPatternRequest.js';
 export * from './CustomDetectionPatternResponse.js';

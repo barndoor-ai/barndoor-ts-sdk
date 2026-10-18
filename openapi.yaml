@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.14.0
+  version: 2.15.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -9421,6 +9421,26 @@ components:
             selected" is one request instead of two.'
         name:
           type: string
+    CredentialMode:
+      type: string
+      enum:
+      - managed
+      - cimd
+      - dcr
+      - manual
+      - static_client
+      - none
+      title: CredentialMode
+      description: 'Where a server''s OAuth client credentials come from.
+
+
+        `static_client`: a per-server client that was either entered by hand or
+
+        dynamically registered, written by a request that did not name the mode, so
+
+        the row cannot tell which. `none`: the row holds no OAuth client (a pending
+
+        server, a non-OAuth directory, or a local-provider install).'
     CredentialsPayload:
       properties:
         api_key:
@@ -14275,13 +14295,27 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
+        credential_mode:
+          $ref: '#/components/schemas/CredentialMode'
+          description: 'Where the server''s OAuth client credentials come from. `managed`:
+            Barndoor''s managed OAuth client for this provider. `cimd`: Barndoor''s
+            client ID metadata document. `dcr`: a client registered with the provider
+            through dynamic client registration. `manual`: a client ID entered by
+            an administrator. `static_client`: a per-server client that was either
+            entered by hand or registered through dynamic client registration by a
+            request that did not name `credential_mode`, so Barndoor cannot tell which.
+            It changes when an update stores a client whose source is known: managed
+            credentials, a client Barndoor registers, or a new client ID sent with
+            `credential_mode: manual`. `none`: the server holds no OAuth client (not
+            yet configured, or its provider does not use OAuth).'
         uses_cimd:
           type: boolean
           title: Uses Cimd
-          description: Whether this server identifies itself to the provider with
-            Barndoor's OAuth Client ID Metadata Document, rather than a registered
-            or managed client.
+          description: 'Deprecated: use `credential_mode`. Whether this live server
+            identifies itself to the provider with Barndoor''s OAuth Client ID Metadata
+            Document.'
           default: false
+          deprecated: true
         tools_count:
           type: integer
           title: Tools Count
@@ -14324,6 +14358,7 @@ components:
       - attention_tier
       - publish_blockers
       - deleted_at
+      - credential_mode
       - uses_cimd
       - tools_count
       - resources_count
@@ -14509,13 +14544,27 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
+        credential_mode:
+          $ref: '#/components/schemas/CredentialMode'
+          description: 'Where the server''s OAuth client credentials come from. `managed`:
+            Barndoor''s managed OAuth client for this provider. `cimd`: Barndoor''s
+            client ID metadata document. `dcr`: a client registered with the provider
+            through dynamic client registration. `manual`: a client ID entered by
+            an administrator. `static_client`: a per-server client that was either
+            entered by hand or registered through dynamic client registration by a
+            request that did not name `credential_mode`, so Barndoor cannot tell which.
+            It changes when an update stores a client whose source is known: managed
+            credentials, a client Barndoor registers, or a new client ID sent with
+            `credential_mode: manual`. `none`: the server holds no OAuth client (not
+            yet configured, or its provider does not use OAuth).'
         uses_cimd:
           type: boolean
           title: Uses Cimd
-          description: Whether this server identifies itself to the provider with
-            Barndoor's OAuth Client ID Metadata Document, rather than a registered
-            or managed client.
+          description: 'Deprecated: use `credential_mode`. Whether this live server
+            identifies itself to the provider with Barndoor''s OAuth Client ID Metadata
+            Document.'
           default: false
+          deprecated: true
         tools_count:
           type: integer
           title: Tools Count
@@ -14559,6 +14608,7 @@ components:
       - publish_blockers
       - cascaded_fields
       - deleted_at
+      - credential_mode
       - uses_cimd
       - tools_count
       - resources_count
