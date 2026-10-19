@@ -36,6 +36,8 @@ import {
  * 
  * * field absent entirely → backend predates this annotation
  * * `source == "none"` → unpriced, bills at $0 because the rate is *unknown*
+ * * `source == "provider_reported"` → bills what the provider reports per
+ *   request (BCP-4543, OpenRouter). No rates: the price varies per request.
  * * `source == "not_metered"` → bills at $0 *by decision* (BCP-3876): the
  *   provider's `billing_mode` is `subscription`, so no rate is consulted.
  *   Rates are `None` here too, but for the opposite reason, and the UI must
@@ -84,7 +86,8 @@ export interface EffectivePricing {
     pricingRuleId?: string | null;
     /**
      * Which resolution tier matched: `org_instance`, `org_catalog`,
-     * `org_generic`, `barndoor_default`, or `none`. Mirrors
+     * `org_generic`, `barndoor_default`, `provider_reported`,
+     * `not_metered`, or `none`. Mirrors
      * [`PricingSource::as_str`] so the value matches what audit events
      * already record for the same decision.
      */

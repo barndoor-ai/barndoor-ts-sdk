@@ -9937,6 +9937,8 @@ components:
         \ which is exactly the wrong\nconclusion.\n\nClients distinguish four states:\n\
         \n* field absent entirely \u2192 backend predates this annotation\n* `source\
         \ == \"none\"` \u2192 unpriced, bills at $0 because the rate is *unknown*\n\
+        * `source == \"provider_reported\"` \u2192 bills what the provider reports\
+        \ per\n  request (BCP-4543, OpenRouter). No rates: the price varies per request.\n\
         * `source == \"not_metered\"` \u2192 bills at $0 *by decision* (BCP-3876):\
         \ the\n  provider's `billing_mode` is `subscription`, so no rate is consulted.\n\
         \  Rates are `None` here too, but for the opposite reason, and the UI must\n\
@@ -10008,7 +10010,9 @@ components:
           type: string
           description: 'Which resolution tier matched: `org_instance`, `org_catalog`,
 
-            `org_generic`, `barndoor_default`, or `none`. Mirrors
+            `org_generic`, `barndoor_default`, `provider_reported`,
+
+            `not_metered`, or `none`. Mirrors
 
             [`PricingSource::as_str`] so the value matches what audit events
 
