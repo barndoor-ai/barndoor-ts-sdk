@@ -14657,6 +14657,7 @@ components:
       type: string
       enum:
       - catalog_removed
+      - upstream_unlisted
     TestFindingResponse:
       type: object
       required:

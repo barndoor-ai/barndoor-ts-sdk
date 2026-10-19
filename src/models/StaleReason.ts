@@ -19,6 +19,7 @@
  */
 export const StaleReason = {
     CatalogRemoved: 'catalog_removed',
+    UpstreamUnlisted: 'upstream_unlisted',
 } as const;
 export type StaleReason = typeof StaleReason[keyof typeof StaleReason];
 
