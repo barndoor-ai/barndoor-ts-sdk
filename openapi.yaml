@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.16.0
+  version: 2.17.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -9892,6 +9892,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DetectionTypeInfoResponse'
+    DirectoryCredentialModes:
+      properties:
+        automatic:
+          type: string
+          enum:
+          - cimd
+          - dcr
+          - manual
+          title: Automatic
+          description: 'The mode server create selects with `credential_mode: auto`:
+            `cimd` when the provider accepts Barndoor''s client ID metadata document,
+            else `dcr` when it has a registration endpoint, else `manual`. Depends
+            on the organization''s rollout of the metadata document, so it can differ
+            between organizations for the same directory.'
+        managed:
+          type: boolean
+          title: Managed
+          description: 'Barndoor''s managed OAuth client can be requested with `credential_mode:
+            managed`.'
+        default:
+          type: string
+          enum:
+          - managed
+          - cimd
+          - dcr
+          - manual
+          title: Default
+          description: 'The mode to preselect when creating a server: `managed` when
+            it is available and `automatic` would otherwise leave the administrator
+            to enter a client ID, else `automatic`.'
+      type: object
+      required:
+      - automatic
+      - managed
+      - default
+      title: DirectoryCredentialModes
+      description: The OAuth credential modes a new server from this directory can
+        use, for the calling organization.
     DlpAwsTrustInfoResponse:
       type: object
       description: The pair a customer needs to write an `aws_role` trust policy.
@@ -11250,6 +11288,14 @@ components:
             type: array
           - type: 'null'
           title: Active Server Ids
+        credential_modes:
+          anyOf:
+          - $ref: '#/components/schemas/DirectoryCredentialModes'
+          - type: 'null'
+          description: The OAuth credential modes a new server from this directory
+            can use, for the calling organization. `null` for a directory whose provider
+            does not use OAuth, and on the responses of the directory create and update
+            routes.
       type: object
       required:
       - id
@@ -11280,6 +11326,7 @@ components:
       - requires_auth_observed_at
       - categories
       - active_server_ids
+      - credential_modes
       title: MCPServerDirectoryRead
     MCPServerDirectoryReadWithServers:
       properties:
@@ -11406,6 +11453,14 @@ components:
             type: array
           - type: 'null'
           title: Active Server Ids
+        credential_modes:
+          anyOf:
+          - $ref: '#/components/schemas/DirectoryCredentialModes'
+          - type: 'null'
+          description: The OAuth credential modes a new server from this directory
+            can use, for the calling organization. `null` for a directory whose provider
+            does not use OAuth, and on the responses of the directory create and update
+            routes.
         registered_mcp_servers:
           anyOf:
           - items:
@@ -11443,6 +11498,7 @@ components:
       - requires_auth_observed_at
       - categories
       - active_server_ids
+      - credential_modes
       - registered_mcp_servers
       title: MCPServerDirectoryReadWithServers
     MappingKind:

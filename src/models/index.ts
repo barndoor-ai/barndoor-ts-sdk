@@ -95,6 +95,7 @@ export * from './DetectionEngineCapabilitiesResponse.js';
 export * from './DetectionEngineResponse.js';
 export * from './DetectionTypeInfoResponse.js';
 export * from './DetectionTypesResponse.js';
+export * from './DirectoryCredentialModes.js';
 export * from './DlpAwsTrustInfoResponse.js';
 export * from './DlpErrorResponse.js';
 export * from './EffectivePricing.js';
