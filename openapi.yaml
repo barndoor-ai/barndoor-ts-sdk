@@ -8707,9 +8707,9 @@ components:
           type: string
         agent_scope:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/AgentScopeRequest'
             description: Omitted = all agents.
+          - type: 'null'
         detection_engine_ids:
           type: array
           items:
@@ -8719,9 +8719,9 @@ components:
           type: boolean
         mask_format:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/MaskFormat'
             description: Partial-redaction shape; only valid with `POLICY_ACTION_MASK`.
+          - type: 'null'
         mcp_targets:
           type: array
           items:
@@ -8912,7 +8912,6 @@ components:
           type: boolean
         kind:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/MappingKind'
             description: '`model` enables the model on the provider; `route` adds
               a target to the
@@ -8929,6 +8928,7 @@ components:
               named after its upstream with no enablement yet on the provider is
 
               accepted only in that legacy form, which enables the model first.'
+          - type: 'null'
         model_alias:
           type: string
         priority:
@@ -8970,7 +8970,6 @@ components:
             default.
         source:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/ModelSource'
             description: "Where this model came from. The Add Models dialog sends\
               \ `Custom` from\nits free-text branch and `Catalog` from the picker;\
@@ -8981,6 +8980,7 @@ components:
               \ and otherwise falls back to `Catalog`. SDK\nand curl callers therefore\
               \ land on `Catalog` by default \u2014 accepted,\nsince the pill exists\
               \ to catch a typo in the UI and an API caller is\nnot its audience."
+          - type: 'null'
         stream_idle_timeout_secs:
           type:
           - integer
@@ -9131,12 +9131,12 @@ components:
           format: double
         long_context:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/LongContextTierRequest'
             description: 'Optional context-tiered surcharge (BCP-3904). Omit for the
               normal
 
               case of one rate set at every prompt size.'
+          - type: 'null'
         model_pattern:
           type: string
         model_provider:
@@ -9196,13 +9196,13 @@ components:
           type: string
         billing_mode:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/BillingMode'
             description: "Whether the gateway records a per-token cost (BCP-3876).\
               \ Omitted means\n`per_token` \u2014 a provider never stops recording\
               \ cost by default, and\nnothing is inferred server-side. The create\
               \ form *suggests* from the\ncatalog entry and the auth type; `openrouter`\
               \ is why inference would be\nwrong (it ships `pricing: []` and is API-billed)."
+          - type: 'null'
         billing_note:
           type:
           - string
@@ -9212,10 +9212,10 @@ components:
             [`BILLING_NOTE_MAX_LEN`] chars.'
         billing_reason:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/BillingReason'
             description: "How the vendor bills. Required when `billing_mode` is `not_metered`,\n\
               optional otherwise \u2014 see `validate_billing_fields`."
+          - type: 'null'
         catalog_id:
           type:
           - string
@@ -9257,10 +9257,10 @@ components:
           type: string
         model_sync_mode:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/ModelSyncMode'
             description: "Whether this provider tracks Barndoor's model catalog (BCP-3811).\n\
               Omitted means `off` \u2014 a provider is never enrolled by default."
+          - type: 'null'
         models:
           type: array
           items:
@@ -9596,7 +9596,6 @@ components:
           format: double
         long_context:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/LongContextTierEntry'
             description: "Seeded long-context surcharge tier (BCP-3904). `None` for\
               \ the vast\nmajority of models, which price at one rate at any prompt\
@@ -9604,6 +9603,7 @@ components:
               \ that a\ndefault carries a second rate set *before* importing it \u2014\
               \ a listing\nthat showed only the short-context rate would understate\
               \ what the\nrow is about to cost them."
+          - type: 'null'
         model_name:
           type: string
         model_pattern:
@@ -10009,7 +10009,6 @@ components:
           format: double
         long_context:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/LongContextTier'
             description: 'The long-context surcharge on the matched rule (BCP-3904),
               when it
@@ -10028,6 +10027,7 @@ components:
               cost on exactly the long-context traffic that makes the choice
 
               matter.'
+          - type: 'null'
         output_cost_per_million_tokens:
           type:
           - number
@@ -10149,8 +10149,8 @@ components:
           type: string
         mask_format:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/MaskFormat'
+          - type: 'null'
         mcp_targets:
           type: array
           items:
@@ -11702,7 +11702,6 @@ components:
         properties:
           auto_disabled_reason:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/AutoDisabledReason'
               description: "Set when the *gateway* turned this row off (BCP-3811's\
                 \ `full` sync\nretiring a model the catalog dropped). `None` means\
@@ -11717,6 +11716,7 @@ components:
                 \ so\nunder `full` a model the catalog still does not list is re-disabled\
                 \ on\nthe next tick. That is `full`'s contract (\"enabled set tracks\
                 \ the\ncatalog\"), not a bug \u2014 see\n`model_sync::tests::re_enabling_a_dropped_model_is_retired_again_on_the_next_tick`."
+            - type: 'null'
           bare_alias:
             type: boolean
             description: 'When `true` the row participates in bare-name resolution
@@ -11809,7 +11809,6 @@ components:
         properties:
           budget_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/BudgetTargetStatus'
               description: 'Populated when a `LlmProvider` / `Model` / `ModelAlias`
                 budget with
@@ -11823,6 +11822,7 @@ components:
                 surfaces the same state without filtering the row out of the
 
                 listing.'
+            - type: 'null'
           effective_pricing:
             $ref: '#/components/schemas/EffectivePricing'
             description: 'The rate a request against this mapping would be billed
@@ -11835,7 +11835,6 @@ components:
               [`crate::effective_pricing`].'
           route_health_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/RouteHealthStatus'
               description: 'Populated when the mapping''s `(provider_id, upstream_model)`
                 route is
@@ -11843,14 +11842,15 @@ components:
                 in a passive-health cooldown. The page renders a "temporarily
 
                 unavailable" pill; the row stays in the listing.'
+            - type: 'null'
           stale_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/ModelStaleStatus'
               description: "Populated when the model is enabled from a provider catalog\
                 \ that no\nlonger lists it (BCP-3812). Advisory: nothing is disabled\
                 \ on the\nstrength of it \u2014 retirement is BCP-3811's `full` mode,\
                 \ which the org\nopts into. See [`crate::catalog_status`]."
+            - type: 'null'
       description: "Wraps a [`ModelMapping`] with the BCP-2813 `budget_status` annotation\
         \ so\nthe admin Model Mappings page can render a \"disabled by budget\" pill.\n\
         The inner `ModelMapping` fields are flattened so the response is a\ndrop-in\
@@ -11881,9 +11881,9 @@ components:
         properties:
           auto_disabled_reason:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/AutoDisabledReason'
               description: See [`ModelMapping::auto_disabled_reason`].
+            - type: 'null'
           bare_alias:
             type: boolean
           created_at:
@@ -11941,19 +11941,19 @@ components:
         properties:
           budget_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/BudgetTargetStatus'
+            - type: 'null'
           effective_pricing:
             $ref: '#/components/schemas/EffectivePricing'
           route_health_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/RouteHealthStatus'
+            - type: 'null'
           stale_status:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/ModelStaleStatus'
               description: See [`ModelMappingWithBudgetStatus::stale_status`].
+            - type: 'null'
       description: 'Same wrapper but for the cross-provider listing endpoint that
         returns
 
@@ -11998,7 +11998,6 @@ components:
           format: double
         long_context:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/LongContextTier'
             description: "Optional context-tiered surcharge (BCP-3904). `None` \u21D2\
               \ one rate set\nat every prompt size, i.e. exactly the pre-BCP-3904\
@@ -12011,6 +12010,7 @@ components:
               \ then\nread back nothing, which is precisely how it behaved before\
               \ this\nattribute existed: the surcharge saved, the dialog reopened\
               \ unchecked,\nand the edit looked silently discarded. Pinned by\n`admin_model_pricing_serializes_the_tier_as_long_context`."
+          - type: 'null'
         model_pattern:
           type: string
         model_provider:
@@ -13348,13 +13348,13 @@ components:
               \ chars).\nHuman-readable only \u2014 never parsed, never aggregated."
           billing_reason:
             oneOf:
-            - type: 'null'
             - $ref: '#/components/schemas/BillingReason'
               description: "How the vendor bills this provider. Required when `billing_mode`\
                 \ is\n`NotMetered`, optional otherwise (V69 CHECK-enforced) \u2014\
                 \ a subscription\nbilling overages is both per-token and a subscription.\
                 \ Purely\ndescriptive: no code branches on it, which is what lets\
                 \ a new reason be\nadded without touching the billing path."
+            - type: 'null'
           catalog_id:
             type:
             - string
@@ -13969,8 +13969,8 @@ components:
           - 'null'
         posture:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/Posture'
+          - type: 'null'
         router_input_max_chars:
           type:
           - integer
@@ -14944,8 +14944,8 @@ components:
       properties:
         capabilities:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/AgentRuntimeCapabilities'
+          - type: 'null'
         config:
           type: object
           additionalProperties:
@@ -15012,9 +15012,9 @@ components:
           - 'null'
         agent_scope:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/AgentScopeRequest'
             description: Omitted = unchanged.
+          - type: 'null'
         detection_engine_ids:
           type:
           - array
@@ -15028,9 +15028,9 @@ components:
           - 'null'
         mask_format:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/MaskFormat'
             description: Absent = unchanged; `null` = clear; object = replace.
+          - type: 'null'
         mcp_targets:
           type:
           - array
@@ -15441,7 +15441,6 @@ components:
           format: double
         long_context:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/LongContextTierRequest'
             description: "Update the long-context surcharge (BCP-3904). Same three-state\n\
               semantics as the cache rates: omitted = leave the tier alone, JSON\n\
@@ -15449,6 +15448,7 @@ components:
               \ as a unit, so `null` clears the threshold and every\ntier rate together\
               \ \u2014 there is no way to null out one tier rate while\nkeeping the\
               \ others, which is what the DB constraint requires anyway."
+          - type: 'null'
         output_cost_per_million_tokens:
           type:
           - number
@@ -15456,9 +15456,9 @@ components:
           format: double
         sync_mode:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/PricingSyncMode'
             description: Omit (or pass `null`) to leave the mode unchanged.
+          - type: 'null'
     UpdateProviderRequest:
       type: object
       properties:
@@ -15476,7 +15476,6 @@ components:
           - 'null'
         billing_mode:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/BillingMode'
             description: '`None` (omitted) leaves the billing mode unchanged (BCP-3876).
 
@@ -15487,6 +15486,7 @@ components:
               events already recorded keep the cost they were recorded with. The UI
 
               confirms that before saving.'
+          - type: 'null'
         billing_note:
           type:
           - string
@@ -15495,7 +15495,6 @@ components:
             it.'
         billing_reason:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/BillingReason'
             description: '`None` (omitted) leaves the reason unchanged; `Some(None)`
               (JSON
@@ -15508,6 +15507,7 @@ components:
 
               so clearing a reason would be indistinguishable from not mentioning
               it.'
+          - type: 'null'
         change_note:
           type:
           - string
@@ -15553,10 +15553,10 @@ components:
             provider serves even when its connectivity probe is failing.'
         model_sync_mode:
           oneOf:
-          - type: 'null'
           - $ref: '#/components/schemas/ModelSyncMode'
             description: '`None` (omitted) leaves the catalog-sync mode unchanged
               (BCP-3811).'
+          - type: 'null'
         name:
           type:
           - string
