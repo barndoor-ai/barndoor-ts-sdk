@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.17.0
+  version: 2.18.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4677,6 +4677,244 @@ paths:
         '404':
           description: No such profile in this organization
       deprecated: true
+  /api/llm-gateway/admin/api-key-lifetime-policies:
+    get:
+      tags:
+      - llm-gateway
+      summary: Get the API key lifetime policy
+      description: The org default, per-group overrides and per-user overrides that
+        limit how long self-serve API keys (created by users for themselves) may live.
+        A user's own override wins; otherwise the strictest of their groups' overrides;
+        otherwise the default. Keys created by admins are exempt. Existing keys keep
+        their expiry; the policy is checked when a key is created or rotated.
+      operationId: list_lifetime_policies
+      responses:
+        '200':
+          description: The requested record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimePolicies'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/api-key-lifetime-policies/default:
+    put:
+      tags:
+      - llm-gateway
+      summary: Set the default API key lifetime policy
+      description: Set the org-wide limit for self-serve API keys. `max_lifetime_days`
+        (1-3650) caps how long a key may live from when it is created or rotated,
+        and also rules out keys that never expire; `require_expiry` requires an expiry
+        without capping it; `fixed_lifetime` gives every key exactly `max_lifetime_days`,
+        so users don't choose one. Sending none removes the default.
+      operationId: set_default_lifetime_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifetimeLimitInput'
+        required: true
+      responses:
+        '200':
+          description: The updated policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimePolicies'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/api-key-lifetime-policies/groups:
+    post:
+      tags:
+      - llm-gateway
+      summary: Create a group API key lifetime override
+      description: 'Override the default for members of one IdP group. An override
+        replaces the default for its members, so one with neither field set exempts
+        the group. A user in several overridden groups gets the strictest: the shortest
+        maximum, and an expiry required if any requires one.'
+      operationId: create_group_lifetime_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupLifetimePolicyRequest'
+        required: true
+      responses:
+        '200':
+          description: The created record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimePolicy'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '409':
+          description: Conflicts with an existing record
+  /api/llm-gateway/admin/api-key-lifetime-policies/groups/{id}:
+    put:
+      tags:
+      - llm-gateway
+      summary: Update a group API key lifetime override
+      operationId: update_group_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifetimeLimitInput'
+        required: true
+      responses:
+        '200':
+          description: The updated record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimePolicy'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+    delete:
+      tags:
+      - llm-gateway
+      summary: Delete a group API key lifetime override
+      description: Members of the group fall back to the default (or to their other
+        groups' overrides).
+      operationId: delete_group_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Deletion acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+  /api/llm-gateway/admin/api-key-lifetime-policies/users:
+    post:
+      tags:
+      - llm-gateway
+      summary: Create a user API key lifetime override
+      description: 'Override the policy for one user. A user override wins outright:
+        it replaces the user''s group overrides and the default, so it can be looser
+        or stricter than both. One with neither field set exempts the user.'
+      operationId: create_user_lifetime_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserLifetimePolicyRequest'
+        required: true
+      responses:
+        '200':
+          description: The created record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimeUserOverride'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '409':
+          description: Conflicts with an existing record
+  /api/llm-gateway/admin/api-key-lifetime-policies/users/{id}:
+    put:
+      tags:
+      - llm-gateway
+      summary: Update a user API key lifetime override
+      operationId: update_user_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifetimeLimitInput'
+        required: true
+      responses:
+        '200':
+          description: The updated record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimeUserOverride'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+    delete:
+      tags:
+      - llm-gateway
+      summary: Delete a user API key lifetime override
+      description: The user falls back to their groups' overrides, or to the default.
+      operationId: delete_user_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Deletion acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
   /api/llm-gateway/admin/api-keys:
     get:
       tags:
@@ -4803,6 +5041,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiKeyDisabledResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+  /api/llm-gateway/admin/api-keys/{id}/expiry:
+    put:
+      tags:
+      - llm-gateway
+      summary: Change an API key's expiry
+      description: Extend, shorten or remove a key's expiry without issuing a new
+        secret, so clients keep working unchanged. Also reactivates an expired key.
+        A shortened expiry takes effect immediately. Admin only, and not limited by
+        the API key lifetime policy. To replace the secret as well, rotate the key
+        instead.
+      operationId: set_api_key_expiry
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetApiKeyExpiryRequest'
+        required: true
+      responses:
+        '200':
+          description: The updated record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+  /api/llm-gateway/admin/api-keys/{id}/rotate:
+    post:
+      tags:
+      - llm-gateway
+      summary: Rotate an API key
+      description: Replace the key's secret in place. The key id, name, bindings and
+        usage history are kept. With `grace_period_secs` the previous secret keeps
+        working for that long (at most 7 days); otherwise it stops working immediately.
+        The new secret is returned once and never stored.
+      operationId: rotate_api_key
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateApiKeyRequest'
+        required: true
+      responses:
+        '200':
+          description: The rotated key, including its new secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateApiKeyResponse'
+        '400':
+          description: Malformed request
         '401':
           description: Missing or invalid credentials
         '403':
@@ -6808,6 +7125,8 @@ components:
       - llm_provider_unavailable
       - llm_provider_key_rejected
       - api_key_revoked
+      - llm_api_key_expiring
+      - llm_api_key_expired
       - mcp_server_tooling_changed
       title: AlertType
       description: "A discrete, notification-worthy event. This is what publishers\
@@ -6945,11 +7264,31 @@ components:
         org_id:
           type: string
           format: uuid
+        previous_key_expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'End of the grace period granted by the last rotation: until
+            then the
+
+            previous secret still authenticates as this key. `None`, or a time in
+
+            the past, means only the current secret works.'
         revoked_at:
           type:
           - string
           - 'null'
           format: date-time
+        rotated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'When the secret was last replaced in place (BCP-5195). `None`
+            means the
+
+            key still carries the secret it was created with.'
         scopes:
           type: array
           items:
@@ -6985,6 +7324,117 @@ components:
       - user
       - machine
       - agent_session
+    ApiKeyLifetimePolicies:
+      type: object
+      required:
+      - groups
+      - users
+      properties:
+        default:
+          oneOf:
+          - $ref: '#/components/schemas/ApiKeyLifetimePolicy'
+            description: 'The org default; `None` means self-serve keys have no lifetime
+              limit
+
+              unless a group override applies.'
+          - type: 'null'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiKeyLifetimePolicy'
+          description: Per-IdP-group overrides. A user in several of these gets the
+            strictest.
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiKeyLifetimeUserOverride'
+          description: Per-user overrides. A user's own override wins over their groups
+            and the default.
+    ApiKeyLifetimePolicy:
+      type: object
+      description: 'One stored row: the org default (`group_name: None`) or a group
+        override.'
+      required:
+      - id
+      - require_expiry
+      - fixed_lifetime
+      - updated_at
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: 'Every key gets exactly `max_lifetime_days` and the user doesn''t
+            choose
+
+            (BCP-5229). Requires `max_lifetime_days`.'
+        group_name:
+          type:
+          - string
+          - 'null'
+          description: '`None` for the org default; otherwise the IdP group this overrides
+            it for.'
+        id:
+          type: string
+          format: uuid
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'Longest a key may live, in days from when it is created or
+            rotated.
+
+            `None` = no maximum. A maximum also rules out a never-expiring key.'
+        require_expiry:
+          type: boolean
+          description: The key must have an expiry, even when there is no maximum.
+        updated_at:
+          type: string
+          format: date-time
+        updated_by_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    ApiKeyLifetimeUserOverride:
+      type: object
+      description: 'A per-user override (BCP-5283). It wins outright: the user''s
+        group overrides
+
+        and the org default don''t apply to them.'
+      required:
+      - id
+      - user_id
+      - require_expiry
+      - fixed_lifetime
+      - updated_at
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: Every key gets exactly `max_lifetime_days`. Requires `max_lifetime_days`.
+        id:
+          type: string
+          format: uuid
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Longest a key may live, in days. `None` = no maximum.
+        require_expiry:
+          type: boolean
+          description: The key must have an expiry, even when there is no maximum.
+        updated_at:
+          type: string
+          format: date-time
+        updated_by_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: The user this override applies to.
     AppType:
       type: string
       enum:
@@ -8753,6 +9203,23 @@ components:
           type:
           - string
           - 'null'
+    CreateGroupLifetimePolicyRequest:
+      type: object
+      required:
+      - group_name
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: Give every key exactly `max_lifetime_days` (BCP-5229).
+        group_name:
+          type: string
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        require_expiry:
+          type: boolean
     CreateModelAccessRequest:
       type: object
       required:
@@ -9421,6 +9888,25 @@ components:
             selected" is one request instead of two.'
         name:
           type: string
+    CreateUserLifetimePolicyRequest:
+      type: object
+      required:
+      - user_id
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: Give every key exactly `max_lifetime_days`.
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        require_expiry:
+          type: boolean
+        user_id:
+          type: string
+          format: uuid
+          description: The user to override the policy for; must belong to the organization.
     CredentialMode:
       type: string
       enum:
@@ -10794,6 +11280,24 @@ components:
       - label
       title: LabeledOption
       description: An enum value paired with its display label.
+    LifetimeLimitInput:
+      type: object
+      description: The settings an admin writes, for the org default, one group or
+        one user.
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: 'Give every key exactly `max_lifetime_days` instead of capping
+            at it.
+
+            Omitted = false, so every existing caller keeps writing a cap.'
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        require_expiry:
+          type: boolean
     ListClientSettingsResponse:
       type: object
       required:
@@ -13767,6 +14271,67 @@ components:
         revoked:
           type: boolean
           description: Always true.
+    RotateApiKeyRequest:
+      type: object
+      description: 'Body of `POST /admin/api-keys/{id}/rotate` and `POST /user/api-keys/{id}/rotate`
+
+        (BCP-5195). An empty object rotates immediately and keeps the key''s expiry.'
+      properties:
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'New expiry for the key. Omit to keep the current one; `null`
+            removes
+
+            the expiry. Must be in the future.'
+        grace_period_secs:
+          type: integer
+          format: int32
+          description: 'How long the previous secret keeps authenticating after rotation,
+            in
+
+            seconds. `0` (the default) cuts it off immediately. At most 7 days.'
+          minimum: 0
+    RotateApiKeyResponse:
+      type: object
+      required:
+      - id
+      - name
+      - key_prefix
+      - key
+      properties:
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        id:
+          type: string
+          format: uuid
+          description: Unchanged by rotation.
+        key:
+          type: string
+          description: "The new API key \u2014 only returned by this call, never stored."
+        key_prefix:
+          type: string
+        name:
+          type: string
+        previous_key_expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'Until when the previous secret still authenticates; `None`
+            when it was
+
+            cut off immediately.'
+        rotated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
     RouteHealthStatus:
       type: object
       description: 'Per-mapping annotation: the route is currently suspended by
@@ -14697,6 +15262,21 @@ components:
       properties:
         disabled:
           type: boolean
+    SetApiKeyExpiryRequest:
+      type: object
+      description: Body of `PUT /admin/api-keys/{id}/expiry` (BCP-5209).
+      properties:
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: 'The new expiry. `null` removes it, so the key never expires.
+            Must be in
+
+            the future. Required: a missing field is a 400 rather than a silent
+
+            "never expires".'
     SetCatalogUnlistedTableActionRequest:
       type: object
       description: Body of `PUT /field-control-policies/{id}/catalog-unlisted-table-action`.
