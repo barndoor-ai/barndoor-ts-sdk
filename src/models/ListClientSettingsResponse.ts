@@ -28,7 +28,7 @@ import {
  */
 export interface ListClientSettingsResponse {
     /**
-     * Both clients, Claude Code first.
+     * Every client, Claude Code first.
      */
     settings: Array<ClientSettings>;
 }

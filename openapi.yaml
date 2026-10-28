@@ -5237,7 +5237,7 @@ paths:
       tags:
       - llm-gateway
       summary: List the organization's client settings
-      description: 'Returns the settings for both clients, Claude Code first. A client
+      description: 'Returns the settings for every client, Claude Code first. A client
         the organization has not configured is returned with `exists: false`, version
         0 and the built-in defaults.'
       operationId: list_client_settings
@@ -5261,7 +5261,7 @@ paths:
       parameters:
       - name: client
         in: path
-        description: '`claude` (Claude Code) or `codex` (Codex)'
+        description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)'
         required: true
         schema:
           type: string
@@ -5292,7 +5292,7 @@ paths:
       parameters:
       - name: client
         in: path
-        description: '`claude` (Claude Code) or `codex` (Codex)'
+        description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)'
         required: true
         schema:
           type: string
@@ -8563,7 +8563,7 @@ components:
           $ref: '#/components/schemas/AgentRuntimeCapabilities'
         client:
           type: string
-          description: '`claude` (Claude Code) or `codex` (Codex).'
+          description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code).'
         exists:
           type: boolean
           description: 'False until the organization first saves settings for the
@@ -11315,7 +11315,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ClientSettings'
-          description: Both clients, Claude Code first.
+          description: Every client, Claude Code first.
     ListProfilesResponse:
       type: object
       required:

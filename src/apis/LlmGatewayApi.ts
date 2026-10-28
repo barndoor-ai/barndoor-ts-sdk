@@ -586,7 +586,7 @@ export interface GetApiKeyRequest {
 
 export interface GetClientSettingsRequest {
     /**
-     * `claude` (Claude Code) or `codex` (Codex)
+     * `claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)
      */
     client: string | null;
 }
@@ -664,7 +664,7 @@ export interface PatchProfileMetadataRequest {
 
 export interface PutClientSettingsOperationRequest {
     /**
-     * `claude` (Claude Code) or `codex` (Codex)
+     * `claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)
      */
     client: string;
     /**
@@ -3809,7 +3809,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Returns the settings for both clients, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
+     * Returns the settings for every client, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
      * List the organization\'s client settings
      */
     async listClientSettingsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListClientSettingsResponse>> {
@@ -3820,7 +3820,7 @@ export class LlmGatewayApi extends runtime.BaseAPI {
     }
 
     /**
-     * Returns the settings for both clients, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
+     * Returns the settings for every client, Claude Code first. A client the organization has not configured is returned with `exists: false`, version 0 and the built-in defaults.
      * List the organization\'s client settings
      */
     async listClientSettings(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListClientSettingsResponse> {

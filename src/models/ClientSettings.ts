@@ -33,7 +33,7 @@ export interface ClientSettings {
      */
     capabilities: AgentRuntimeCapabilities;
     /**
-     * `claude` (Claude Code) or `codex` (Codex).
+     * `claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code).
      */
     client: string;
     /**
