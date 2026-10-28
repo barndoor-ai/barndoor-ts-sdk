@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.18.0
+  version: 2.19.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -10837,6 +10837,14 @@ components:
         max_retries:
           format: int64
           type: integer
+        partition_by_event_type:
+          description: Read only by the datadog-json export. Write one object per
+            event type under {prefix}/event_type=<TYPE>/ instead of mixing all types
+            in one object, so storage lifecycle, replication and ETL rules can be
+            scoped to an event type by key prefix. In this layout the dt=/hour= segments
+            are the time of the earliest event in the object, not the delivery time,
+            so an object can land in an hour that has already passed.
+          type: boolean
         retry_backoff_seconds:
           format: int64
           type: integer
@@ -16294,6 +16302,14 @@ components:
         max_retries:
           format: int64
           type: integer
+        partition_by_event_type:
+          description: Read only by the datadog-json export. Write one object per
+            event type under {prefix}/event_type=<TYPE>/ instead of mixing all types
+            in one object, so storage lifecycle, replication and ETL rules can be
+            scoped to an event type by key prefix. In this layout the dt=/hour= segments
+            are the time of the earliest event in the object, not the delivery time,
+            so an object can land in an hour that has already passed.
+          type: boolean
         retry_backoff_seconds:
           format: int64
           type: integer
