@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.19.0
+  version: 2.20.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -1491,9 +1491,10 @@ paths:
       - policy
       summary: Get Affected Policies
       description: "Preview policies that would be archived or revised by a cascade.\n\
-        \nBacks the AI agent / MCP server delete-confirmation modal so the user\n\
-        sees what's about to change before they confirm (BCP-1686 spec\n\xA7 \"Policy-service\
-        \ endpoint\"). Exactly one of ``agent_id`` /\n``mcp_server_id`` must be supplied."
+        \nBacks the AI agent / MCP server / group delete-confirmation modals so the\n\
+        user sees what's about to change before they confirm (BCP-1686 spec\n\xA7\
+        \ \"Policy-service endpoint\"; groups BCP-5328). Exactly one of\n``agent_id``\
+        \ / ``mcp_server_id`` / ``group_name`` must be supplied."
       operationId: list_policies_affected_by
       parameters:
       - name: agent_id
@@ -1513,9 +1514,24 @@ paths:
           anyOf:
           - type: string
           - type: 'null'
-          description: MCP server UUID. Mutually exclusive with agent_id.
+          description: MCP server UUID. Mutually exclusive with agent_id and group_name.
           title: Mcp Server Id
-        description: MCP server UUID. Mutually exclusive with agent_id.
+        description: MCP server UUID. Mutually exclusive with agent_id and group_name.
+      - name: group_name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          description: 'Group display name, as rules reference it (`group:<name>`).
+            Mutually exclusive with agent_id and mcp_server_id. Matching policies
+            are listed as revised: deleting the group removes it from their rules.'
+          title: Group Name
+        description: 'Group display name, as rules reference it (`group:<name>`).
+          Mutually exclusive with agent_id and mcp_server_id. Matching policies are
+          listed as revised: deleting the group removes it from their rules.'
       responses:
         '200':
           description: Successful Response
@@ -6884,8 +6900,9 @@ components:
       description: "Response shape for GET /admin/v2/policies/affected-by.\n\nMirrors\
         \ the cascade-handler buckets exactly: ``archive_*`` are policies\nthat would\
         \ transition to ARCHIVED, ``revise_*`` are policies that would\nhave only\
-        \ their application_ids set-minus'd (only possible on agent_id\nqueries \u2014\
-        \ always 0/[] for mcp_server_id queries)."
+        \ their application_ids set-minus'd (agent_id queries) or the\ngroup removed\
+        \ from their rules (group_name queries) \u2014 always 0/[] for\nmcp_server_id\
+        \ queries."
     AffectedPolicyPreview:
       properties:
         id:
