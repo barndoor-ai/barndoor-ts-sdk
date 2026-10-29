@@ -14856,6 +14856,11 @@ components:
           type: boolean
           title: Ema Enabled
           default: false
+        local_availability:
+          type: string
+          maxLength: 16
+          title: Local Availability
+          default: required
         scopes:
           anyOf:
           - items:
@@ -14988,6 +14993,7 @@ components:
       - client_secret
       - uses_managed_credentials
       - ema_enabled
+      - local_availability
       - scopes
       - organization_id
       - mcp_server_directory_id
@@ -15098,6 +15104,11 @@ components:
           type: boolean
           title: Ema Enabled
           default: false
+        local_availability:
+          type: string
+          maxLength: 16
+          title: Local Availability
+          default: required
         scopes:
           anyOf:
           - items:
@@ -15237,6 +15248,7 @@ components:
       - client_secret
       - uses_managed_credentials
       - ema_enabled
+      - local_availability
       - scopes
       - organization_id
       - mcp_server_directory_id

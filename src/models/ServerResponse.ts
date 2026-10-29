@@ -123,6 +123,10 @@ export interface ServerResponse {
     /**
      * 
      */
+    localAvailability: string;
+    /**
+     * 
+     */
     scopes: Array<string> | null;
     /**
      * 
@@ -241,6 +245,7 @@ export function instanceOfServerResponse(value: object): value is ServerResponse
     if ((!('clientSecret' in (value as Record<string, any>)) && !('client_secret' in (value as Record<string, any>))) || ((value as Record<string, any>)['clientSecret'] === undefined && (value as Record<string, any>)['client_secret'] === undefined)) return false;
     if ((!('usesManagedCredentials' in (value as Record<string, any>)) && !('uses_managed_credentials' in (value as Record<string, any>))) || ((value as Record<string, any>)['usesManagedCredentials'] === undefined && (value as Record<string, any>)['uses_managed_credentials'] === undefined)) return false;
     if ((!('emaEnabled' in (value as Record<string, any>)) && !('ema_enabled' in (value as Record<string, any>))) || ((value as Record<string, any>)['emaEnabled'] === undefined && (value as Record<string, any>)['ema_enabled'] === undefined)) return false;
+    if ((!('localAvailability' in (value as Record<string, any>)) && !('local_availability' in (value as Record<string, any>))) || ((value as Record<string, any>)['localAvailability'] === undefined && (value as Record<string, any>)['local_availability'] === undefined)) return false;
     if (!('scopes' in value) || value['scopes'] === undefined) return false;
     if ((!('organizationId' in (value as Record<string, any>)) && !('organization_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['organizationId'] === undefined && (value as Record<string, any>)['organization_id'] === undefined)) return false;
     if ((!('mcpServerDirectoryId' in (value as Record<string, any>)) && !('mcp_server_directory_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['mcpServerDirectoryId'] === undefined && (value as Record<string, any>)['mcp_server_directory_id'] === undefined)) return false;
@@ -291,6 +296,7 @@ export function ServerResponseFromJSONTyped(json: any, ignoreDiscriminator: bool
         'clientSecret': json['client_secret'],
         'usesManagedCredentials': json['uses_managed_credentials'],
         'emaEnabled': json['ema_enabled'],
+        'localAvailability': json['local_availability'],
         'scopes': json['scopes'] == null ? null : json['scopes'],
         'organizationId': json['organization_id'],
         'mcpServerDirectoryId': json['mcp_server_directory_id'],
@@ -342,6 +348,7 @@ export function ServerResponseToJSONTyped(value?: Omit<ServerResponse, 'toolsCou
         'client_secret': value['clientSecret'],
         'uses_managed_credentials': value['usesManagedCredentials'],
         'ema_enabled': value['emaEnabled'],
+        'local_availability': value['localAvailability'],
         'scopes': value['scopes'],
         'organization_id': value['organizationId'],
         'mcp_server_directory_id': value['mcpServerDirectoryId'],
