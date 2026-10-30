@@ -15695,8 +15695,9 @@ components:
           type:
           - string
           - 'null'
-          description: Seeded directory slug (`slack`, `gdrive`). Required when `rules`
-            contain `when`.
+          description: 'Deprecated and ignored: the connector is taken from the MCP
+            server (`mcp_server_id`). Still accepted so existing requests keep working.'
+          deprecated: true
         enabled:
           type:
           - boolean
@@ -16537,8 +16538,9 @@ components:
           type:
           - string
           - 'null'
-          description: Seeded directory slug (`slack`, `gdrive`). Required when `rules`
-            contain `when`.
+          description: 'Deprecated and ignored: the connector is taken from the MCP
+            server (`mcp_server_id`). Still accepted so existing requests keep working.'
+          deprecated: true
         enabled:
           type: boolean
         mcp_server_id:

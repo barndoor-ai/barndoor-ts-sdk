@@ -24,7 +24,8 @@ export interface UpsertFieldControlPolicyRequest {
      */
     catalogUnlistedTableAction?: string | null;
     /**
-     * Seeded directory slug (`slack`, `gdrive`). Required when `rules` contain `when`.
+     * Deprecated and ignored: the connector is taken from the MCP server (`mcp_server_id`). Still accepted so existing requests keep working.
+     * @deprecated
      */
     directorySlug?: string | null;
     /**
