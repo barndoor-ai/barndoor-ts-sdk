@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.21.0
+  version: 2.22.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4196,6 +4196,93 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
           description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/provider-connections/google-impersonation-config:
+    get:
+      tags:
+      - dlp
+      summary: Get this organization's Barndoor principal for Google impersonation
+      description: Returns the Barndoor service account this organization grants `roles/iam.serviceAccountTokenCreator`
+        on its target service account, creating it on first call. Each organization
+        has its own principal.
+      operationId: provider_connection_google_impersonation_config
+      responses:
+        '200':
+          description: Whether Google impersonation is configured, and this organization's
+            principal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleImpersonationConfigResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '502':
+          description: Google IAM refused or failed to create the principal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Barndoor's principal projects are full; contact support
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/provider-connections/google-impersonation-validate:
+    post:
+      tags:
+      - dlp
+      summary: Probe a Google target service account through this organization's principal
+      operationId: validate_google_impersonation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateGoogleImpersonationRequest'
+        required: true
+      responses:
+        '200':
+          description: A token was minted through the full chain and `content:inspect`
+            succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleImpersonationValidationResponse'
+        '400':
+          description: Impersonation is unconfigured, the target is malformed, or
+            the organization has no principal yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '502':
+          description: Google refused the token or the inspect call; the message says
+            which grant is missing
           content:
             application/json:
               schema:
@@ -10999,23 +11086,88 @@ components:
       type: object
       required:
       - org_id
+      - auth_type
       - project_id
       - location
       - endpoint
       - has_bearer_token
+      - has_credentials
+      - deprecated_auth
       properties:
+        auth_type:
+          type: string
+          description: '`google_service_account_impersonation`, or the deprecated
+
+            `google_bearer_token`.'
+        deprecated_auth:
+          type: boolean
+          description: 'True for deprecated bearer-token connections, which stop working
+            when
+
+            the pasted token expires. Reconnect with impersonation.'
         endpoint:
           type: string
         has_bearer_token:
           type: boolean
-          description: Whether a bearer token is configured. The token value is never
-            returned.
+          description: 'Whether a bearer token is stored (deprecated connections only).
+            The
+
+            token value is never returned.'
+        has_credentials:
+          type: boolean
+          description: Whether the connection has what it needs to call Google.
         location:
           type: string
         org_id:
           type: string
+        principal_service_account:
+          type:
+          - string
+          - 'null'
+          description: 'This organization''s Barndoor principal, which the customer
+            grants
+
+            `roles/iam.serviceAccountTokenCreator` on the target (impersonation only).'
         project_id:
           type: string
+        target_service_account:
+          type:
+          - string
+          - 'null'
+          description: The customer's service account Barndoor impersonates (impersonation
+            only).
+    GoogleImpersonationConfigResponse:
+      type: object
+      description: The organization's own Barndoor principal for Google impersonation.
+      required:
+      - configured
+      properties:
+        configured:
+          type: boolean
+          description: True when this environment can provision Google principals.
+        principal_service_account:
+          type:
+          - string
+          - 'null'
+          description: 'This organization''s Barndoor service account. The customer
+            grants it
+
+            `roles/iam.serviceAccountTokenCreator` on their target service account.
+
+            Null when unconfigured.'
+    GoogleImpersonationValidationResponse:
+      type: object
+      description: 'Result of a successful Google impersonation probe. A failed probe
+        is an
+
+        error response, not `ok: false`.'
+      required:
+      - ok
+      properties:
+        ok:
+          type: boolean
+          description: "Always true \u2014 a token was minted and `content:inspect`\
+            \ succeeded."
     GovernanceConfig:
       type: object
       required:
@@ -16553,17 +16705,38 @@ components:
       required:
       - project_id
       properties:
+        auth_type:
+          type:
+          - string
+          - 'null'
+          description: '`google_service_account_impersonation` (recommended), or the
+            deprecated
+
+            `google_bearer_token`. Omitted means `google_bearer_token`, for older
+
+            clients; new bearer-token connections are refused.'
         bearer_token:
           type:
           - string
           - 'null'
-          description: Supply to set or rotate the token; omit to leave unchanged.
+          description: 'Deprecated bearer-token connections only: supply to rotate
+            the token;
+
+            omit to leave unchanged.'
         endpoint:
           type: string
         location:
           type: string
         project_id:
           type: string
+        target_service_account:
+          type:
+          - string
+          - 'null'
+          description: 'The customer''s service account (holding `roles/dlp.user`)
+            that Barndoor
+
+            impersonates. Required for `google_service_account_impersonation`.'
     UpsertTokenizationRequest:
       type: object
       required:
@@ -16588,6 +16761,20 @@ components:
         iam_role_arn:
           type: string
         region:
+          type: string
+    ValidateGoogleImpersonationRequest:
+      type: object
+      required:
+      - project_id
+      - target_service_account
+      properties:
+        endpoint:
+          type: string
+        location:
+          type: string
+        project_id:
+          type: string
+        target_service_account:
           type: string
     ValidatePolicyRequest:
       properties:
