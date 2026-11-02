@@ -49,7 +49,9 @@ export interface CreateModelAccessRequest {
     /**
      * Every user / project / API key / agent the policy applies to
      * (BCP-5001). The policy applies when any one of them matches the caller.
-     * Empty or omitted means not bound to a specific entity.
+     * Empty or omitted means not bound to a specific entity: for `agent`
+     * that is every agent. `user`, `project` and `api_key` must name at
+     * least one; use `org` to apply a policy to everyone.
      */
     scopeIds?: Array<string> | null;
     /**

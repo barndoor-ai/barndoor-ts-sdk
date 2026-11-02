@@ -9366,7 +9366,11 @@ components:
 
             (BCP-5001). The policy applies when any one of them matches the caller.
 
-            Empty or omitted means not bound to a specific entity.'
+            Empty or omitted means not bound to a specific entity: for `agent`
+
+            that is every agent. `user`, `project` and `api_key` must name at
+
+            least one; use `org` to apply a policy to everyone.'
         scope_type:
           type: string
         scope_value:
@@ -15891,9 +15895,11 @@ components:
           format: uuid
           description: "Tri-state (see [`deserialize_explicit_null`]). A policy bound\
             \ to one\nentity is unbound by sending `null` \u2014 that is how the admin\
-            \ UI moves an\n`api_key`-scoped policy back to \"All API Keys\". A plain\
+            \ UI moves an\n`agent`-scoped policy back to \"All AI agents\". A plain\
             \ `Option<Uuid>`\nmade that indistinguishable from omitting the field,\
-            \ so the update\nsilently kept the old binding (BCP-3955)."
+            \ so the update\nsilently kept the old binding (BCP-3955). Unbinding a\
+            \ `user`,\n`project` or `api_key` policy is refused: unbound, those scopes\
+            \ apply\nto nobody (BCP-5364)."
         scope_ids:
           type:
           - array

@@ -49,9 +49,11 @@ export interface UpdateModelAccessRequest {
     /**
      * Tri-state (see [`deserialize_explicit_null`]). A policy bound to one
      * entity is unbound by sending `null` — that is how the admin UI moves an
-     * `api_key`-scoped policy back to "All API Keys". A plain `Option<Uuid>`
+     * `agent`-scoped policy back to "All AI agents". A plain `Option<Uuid>`
      * made that indistinguishable from omitting the field, so the update
-     * silently kept the old binding (BCP-3955).
+     * silently kept the old binding (BCP-3955). Unbinding a `user`,
+     * `project` or `api_key` policy is refused: unbound, those scopes apply
+     * to nobody (BCP-5364).
      */
     scopeId?: string | null;
     /**
