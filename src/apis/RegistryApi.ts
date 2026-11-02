@@ -84,6 +84,21 @@ import {
     IdListResponseToJSON,
 } from '../models/IdListResponse.js';
 import {
+    type InstallationCreate,
+    InstallationCreateFromJSON,
+    InstallationCreateToJSON,
+} from '../models/InstallationCreate.js';
+import {
+    type InstallationRead,
+    InstallationReadFromJSON,
+    InstallationReadToJSON,
+} from '../models/InstallationRead.js';
+import {
+    type InstallationUpdate,
+    InstallationUpdateFromJSON,
+    InstallationUpdateToJSON,
+} from '../models/InstallationUpdate.js';
+import {
     type MCPServerDirectoryRead,
     MCPServerDirectoryReadFromJSON,
     MCPServerDirectoryReadToJSON,
@@ -135,6 +150,13 @@ export interface ConnectMcpServerRequest {
      * Credentials for non-OAuth providers (api_key, bearer_token, basic_auth, generic). Not required for OAuth providers.
      */
     credentialsPayload?: CredentialsPayload | null;
+}
+
+export interface CreateLocalMcpInstallationRequest {
+    /**
+     * 
+     */
+    installationCreate: InstallationCreate;
 }
 
 export interface DisconnectMcpServerRequest {
@@ -419,6 +441,17 @@ export interface UpdateAgentWriteConfirmationsRequest {
     applicationWriteConfirmationsPayload: ApplicationWriteConfirmationsPayload;
 }
 
+export interface UpdateLocalMcpInstallationRequest {
+    /**
+     * 
+     */
+    installationId: string;
+    /**
+     * 
+     */
+    installationUpdate: InstallationUpdate;
+}
+
 /**
  * 
  */
@@ -570,6 +603,79 @@ export class RegistryApi extends runtime.BaseAPI {
      */
     async countAgentsByType(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApplicationCounts> {
         const response = await this.countAgentsByTypeRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for createLocalMcpInstallation without sending the request
+     */
+    async createLocalMcpInstallationRequestOpts(requestParameters: CreateLocalMcpInstallationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['installationCreate'] == null) {
+            throw new runtime.RequiredError(
+                'installationCreate',
+                'Required parameter "installationCreate" was null or undefined when calling createLocalMcpInstallation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/registry/v1/local-providers/installations`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: InstallationCreateToJSON(requestParameters['installationCreate']),
+        };
+    }
+
+    /**
+     * Installs a local MCP catalog entry for the organization; requires an organization admin. `catalog_id` is the entry\'s id from `list_mcp_server_directory` (or `get_mcp_server_directory_entry`), whose `configuration_schema` says which `configuration` keys are required. Configuration holds non-secret settings only; never put a credential in it. `availability` is `opt_in` (users connect it themselves) or `required` (every CLI in the organization gets it). Set its policy separately.
+     * Install a local MCP server for the organization
+     */
+    async createLocalMcpInstallationRaw(requestParameters: CreateLocalMcpInstallationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InstallationRead>> {
+        const requestOptions = await this.createLocalMcpInstallationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => InstallationReadFromJSON(jsonValue));
+    }
+
+    /**
+     * Installs a local MCP catalog entry for the organization; requires an organization admin. `catalog_id` is the entry\'s id from `list_mcp_server_directory` (or `get_mcp_server_directory_entry`), whose `configuration_schema` says which `configuration` keys are required. Configuration holds non-secret settings only; never put a credential in it. `availability` is `opt_in` (users connect it themselves) or `required` (every CLI in the organization gets it). Set its policy separately.
+     * Install a local MCP server for the organization
+     */
+    async createLocalMcpInstallation(requestParameters: CreateLocalMcpInstallationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InstallationRead> {
+        const response = await this.createLocalMcpInstallationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1459,6 +1565,69 @@ export class RegistryApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listLocalMcpInstallations without sending the request
+     */
+    async listLocalMcpInstallationsRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/registry/v1/local-providers/installations`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Lists the organization\'s installations of local MCP servers: catalog entries that run on users\' machines through the Barndoor CLI, including servers the organization published itself. Each row carries its `catalog_id`, `slug`, `enabled`, `configuration` and `availability`. Read this before `create_local_mcp_installation`: a catalog entry that already has an installation is changed with `update_local_mcp_installation` instead.
+     * List local MCP server installations
+     */
+    async listLocalMcpInstallationsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<InstallationRead>>> {
+        const requestOptions = await this.listLocalMcpInstallationsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(InstallationReadFromJSON));
+    }
+
+    /**
+     * Lists the organization\'s installations of local MCP servers: catalog entries that run on users\' machines through the Barndoor CLI, including servers the organization published itself. Each row carries its `catalog_id`, `slug`, `enabled`, `configuration` and `availability`. Read this before `create_local_mcp_installation`: a catalog entry that already has an installation is changed with `update_local_mcp_installation` instead.
+     * List local MCP server installations
+     */
+    async listLocalMcpInstallations(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<InstallationRead>> {
+        const response = await this.listLocalMcpInstallationsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listMcpServerDirectory without sending the request
      */
     async listMcpServerDirectoryRequestOpts(requestParameters: ListMcpServerDirectoryRequest): Promise<runtime.RequestOpts> {
@@ -2105,6 +2274,87 @@ export class RegistryApi extends runtime.BaseAPI {
      */
     async updateAgentWriteConfirmations(requestParameters: UpdateAgentWriteConfirmationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApplicationResponse> {
         const response = await this.updateAgentWriteConfirmationsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateLocalMcpInstallation without sending the request
+     */
+    async updateLocalMcpInstallationRequestOpts(requestParameters: UpdateLocalMcpInstallationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['installationId'] == null) {
+            throw new runtime.RequiredError(
+                'installationId',
+                'Required parameter "installationId" was null or undefined when calling updateLocalMcpInstallation().'
+            );
+        }
+
+        if (requestParameters['installationUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'installationUpdate',
+                'Required parameter "installationUpdate" was null or undefined when calling updateLocalMcpInstallation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/registry/v1/local-providers/installations/{installation_id}`;
+        urlPath = urlPath.replace('{installation_id}', encodeURIComponent(String(requestParameters['installationId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: InstallationUpdateToJSON(requestParameters['installationUpdate']),
+        };
+    }
+
+    /**
+     * Enables or disables an installation, replaces its `configuration`, or changes its `availability`; requires an organization admin. `enabled` and `configuration` are both required and replace the current values, so re-send the current configuration to keep it. Omit `availability` to keep the current value. The installation\'s slug and name do not change here.
+     * Update a local MCP server installation
+     */
+    async updateLocalMcpInstallationRaw(requestParameters: UpdateLocalMcpInstallationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InstallationRead>> {
+        const requestOptions = await this.updateLocalMcpInstallationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => InstallationReadFromJSON(jsonValue));
+    }
+
+    /**
+     * Enables or disables an installation, replaces its `configuration`, or changes its `availability`; requires an organization admin. `enabled` and `configuration` are both required and replace the current values, so re-send the current configuration to keep it. Omit `availability` to keep the current value. The installation\'s slug and name do not change here.
+     * Update a local MCP server installation
+     */
+    async updateLocalMcpInstallation(requestParameters: UpdateLocalMcpInstallationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InstallationRead> {
+        const response = await this.updateLocalMcpInstallationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

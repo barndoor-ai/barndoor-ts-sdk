@@ -1207,6 +1207,97 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/registry/v1/local-providers/installations:
+    get:
+      tags:
+      - registry
+      summary: List local MCP server installations
+      description: 'Lists the organization''s installations of local MCP servers:
+        catalog entries that run on users'' machines through the Barndoor CLI, including
+        servers the organization published itself. Each row carries its `catalog_id`,
+        `slug`, `enabled`, `configuration` and `availability`. Read this before `create_local_mcp_installation`:
+        a catalog entry that already has an installation is changed with `update_local_mcp_installation`
+        instead.'
+      operationId: list_local_mcp_installations
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstallationRead'
+                type: array
+                title: Response List Local Mcp Installations
+    post:
+      tags:
+      - registry
+      summary: Install a local MCP server for the organization
+      description: Installs a local MCP catalog entry for the organization; requires
+        an organization admin. `catalog_id` is the entry's id from `list_mcp_server_directory`
+        (or `get_mcp_server_directory_entry`), whose `configuration_schema` says which
+        `configuration` keys are required. Configuration holds non-secret settings
+        only; never put a credential in it. `availability` is `opt_in` (users connect
+        it themselves) or `required` (every CLI in the organization gets it). Set
+        its policy separately.
+      operationId: create_local_mcp_installation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallationCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/registry/v1/local-providers/installations/{installation_id}:
+    put:
+      tags:
+      - registry
+      summary: Update a local MCP server installation
+      description: Enables or disables an installation, replaces its `configuration`,
+        or changes its `availability`; requires an organization admin. `enabled` and
+        `configuration` are both required and replace the current values, so re-send
+        the current configuration to keep it. Omit `availability` to keep the current
+        value. The installation's slug and name do not change here.
+      operationId: update_local_mcp_installation
+      parameters:
+      - name: installation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Installation Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/policy/v2/policies:
     get:
       tags:
@@ -10683,6 +10774,27 @@ components:
             [`PricingSource::as_str`] so the value matches what audit events
 
             already record for the same decision.'
+    EmbeddedRuntime:
+      properties:
+        kind:
+          type: string
+          const: embedded
+          title: Kind
+          default: embedded
+        ref:
+          type: string
+          pattern: ^com\.barndoor\.(cli|mcp)\.[a-z][a-z0-9_-]{0,99}$|^com\.barndoor\.tenant\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z][a-z0-9_-]{0,99}$
+          title: Ref
+        minimum_cli_version:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
+          title: Minimum Cli Version
+      additionalProperties: false
+      type: object
+      required:
+      - ref
+      - minimum_cli_version
+      title: EmbeddedRuntime
     EnforcementPoliciesResponse:
       type: object
       required:
@@ -11479,6 +11591,145 @@ components:
       - message
       title: IdpTestResult
       description: Result of testing an IdP connection.
+    InstallationCreate:
+      properties:
+        catalog_id:
+          type: string
+          format: uuid
+          title: Catalog Id
+          description: Id of the local MCP catalog entry to install (its server-directory
+            id).
+        slug:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{0,99}$
+          title: Slug
+          description: Installation slug, unique in the organization; users see it
+            in `barndoor list`.
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Name
+          description: Display name.
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        configuration:
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+          type: object
+          title: Configuration
+          description: 'Values for the catalog entry''s `configuration_schema`: a
+            flat object of scalar values, every required key present and no undeclared
+            key. Not for secrets.'
+        availability:
+          type: string
+          enum:
+          - opt_in
+          - required
+          title: Availability
+          description: '`opt_in`: only users who connect it get it. `required`: every
+            Barndoor CLI in the organization gets it.'
+          default: opt_in
+      additionalProperties: false
+      type: object
+      required:
+      - catalog_id
+      - slug
+      - name
+      title: InstallationCreate
+    InstallationRead:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        catalog_id:
+          type: string
+          format: uuid
+          title: Catalog Id
+        slug:
+          type: string
+          title: Slug
+        name:
+          type: string
+          title: Name
+        enabled:
+          type: boolean
+          title: Enabled
+        configuration:
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+          type: object
+          title: Configuration
+        availability:
+          type: string
+          enum:
+          - opt_in
+          - required
+          title: Availability
+        runtime:
+          oneOf:
+          - $ref: '#/components/schemas/EmbeddedRuntime'
+          - $ref: '#/components/schemas/ManagedMcpRuntime'
+          - $ref: '#/components/schemas/LocalCliRuntime'
+          - $ref: '#/components/schemas/RemoteRuntime'
+          title: Runtime
+          discriminator:
+            propertyName: kind
+            mapping:
+              embedded: '#/components/schemas/EmbeddedRuntime'
+              local_cli: '#/components/schemas/LocalCliRuntime'
+              managed_local_mcp: '#/components/schemas/ManagedMcpRuntime'
+              remote: '#/components/schemas/RemoteRuntime'
+        configuration_schema:
+          additionalProperties: true
+          type: object
+          title: Configuration Schema
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - catalog_id
+      - slug
+      - name
+      - enabled
+      - configuration
+      - availability
+      - runtime
+      - configuration_schema
+      title: InstallationRead
+    InstallationUpdate:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+        configuration:
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+          type: object
+          title: Configuration
+          description: 'Values for the catalog entry''s `configuration_schema`: a
+            flat object of scalar values, every required key present and no undeclared
+            key. Not for secrets. Replaces the current configuration.'
+        availability:
+          anyOf:
+          - type: string
+            enum:
+            - opt_in
+            - required
+          - type: 'null'
+          title: Availability
+          description: '`opt_in`: only users who connect it get it. `required`: every
+            Barndoor CLI in the organization gets it. Omit to keep the current value.'
+      additionalProperties: false
+      type: object
+      required:
+      - enabled
+      - configuration
+      title: InstallationUpdate
+    JsonValue: {}
     LabeledOption:
       properties:
         value:
@@ -11594,6 +11845,30 @@ components:
         principal_arn:
           type: string
           description: Barndoor's principal ARN, to trust in the customer's role.
+    LocalCliRuntime:
+      properties:
+        kind:
+          type: string
+          const: local_cli
+          title: Kind
+          default: local_cli
+        ref:
+          type: string
+          pattern: ^com\.barndoor\.(cli|mcp)\.[a-z][a-z0-9_-]{0,99}$|^com\.barndoor\.tenant\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z][a-z0-9_-]{0,99}$
+          title: Ref
+        minimum_cli_version:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
+          title: Minimum Cli Version
+        artifact:
+          $ref: '#/components/schemas/SignedArtifact'
+      additionalProperties: false
+      type: object
+      required:
+      - ref
+      - minimum_cli_version
+      - artifact
+      title: LocalCliRuntime
     LongContextTier:
       type: object
       description: "The alternate rate set a pricing row switches to once a request's\
@@ -12220,6 +12495,30 @@ components:
       - credential_modes
       - registered_mcp_servers
       title: MCPServerDirectoryReadWithServers
+    ManagedMcpRuntime:
+      properties:
+        kind:
+          type: string
+          const: managed_local_mcp
+          title: Kind
+          default: managed_local_mcp
+        ref:
+          type: string
+          pattern: ^com\.barndoor\.(cli|mcp)\.[a-z][a-z0-9_-]{0,99}$|^com\.barndoor\.tenant\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-z][a-z0-9_-]{0,99}$
+          title: Ref
+        minimum_cli_version:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
+          title: Minimum Cli Version
+        artifact:
+          $ref: '#/components/schemas/SignedArtifact'
+      additionalProperties: false
+      type: object
+      required:
+      - ref
+      - minimum_cli_version
+      - artifact
+      title: ManagedMcpRuntime
     MappingKind:
       type: string
       description: 'What a `model_mappings` row is (BCP-4580, migration V84). Persisted
@@ -14290,6 +14589,16 @@ components:
             type: string
           propertyNames:
             type: string
+    RemoteRuntime:
+      properties:
+        kind:
+          type: string
+          const: remote
+          title: Kind
+          default: remote
+      additionalProperties: false
+      type: object
+      title: RemoteRuntime
     RenameModelRouteRequest:
       type: object
       description: "`POST /admin/model-routes/rename`: rename a route in one step\
@@ -15526,6 +15835,37 @@ components:
             covers: `allow`, `block` or `observe`; `null` clears it back to the organization
             default. Required.'
       additionalProperties: false
+    SignedArtifact:
+      properties:
+        key_id:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Key Id
+        manifest:
+          type: string
+          maxLength: 131072
+          minLength: 1
+          title: Manifest
+        signature:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Signature
+      additionalProperties: false
+      type: object
+      required:
+      - key_id
+      - manifest
+      - signature
+      title: SignedArtifact
+      description: "Publisher-signed manifest envelope.\n\nThe registry validates\
+        \ manifest *shape* only (schema, ref, allowed host,\ndigest format, version\
+        \ pattern) \u2014 it has no publisher private key and\ncannot verify the Ed25519\
+        \ signature itself. The CLI (internal/artifact)\nverifies `signature` over\
+        \ the exact `manifest` bytes against its pinned\nper-`key_id` trusted-publisher\
+        \ map before ever launching the artifact,\nand fails closed on an unknown\
+        \ key_id or a tampered manifest."
     StaleReason:
       type: string
       enum:
