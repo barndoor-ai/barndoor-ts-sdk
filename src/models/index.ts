@@ -60,6 +60,8 @@ export * from './ConditionOfOutput.js';
 export * from './ConfigureDestinationRequest.js';
 export * from './Connection.js';
 export * from './ConnectionErrorReason.js';
+export * from './ConnectionHealth.js';
+export * from './ConnectionHealthStatus.js';
 export * from './ConnectionInitiateResponse.js';
 export * from './ConnectionRead.js';
 export * from './ConnectionStatus.js';

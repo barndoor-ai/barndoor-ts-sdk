@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.22.0
+  version: 2.23.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -8849,6 +8849,40 @@ components:
         It is derived from ``error_message``, which can hold an arbitrary exception
 
         string and is never shown in its place.'
+    ConnectionHealth:
+      properties:
+        status:
+          $ref: '#/components/schemas/ConnectionHealthStatus'
+          description: '`failing`: the provider keeps rejecting the token refresh.'
+        failing_since:
+          type: string
+          format: date-time
+          title: Failing Since
+          description: When the current run of refresh failures started.
+        disconnect_after:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Disconnect After
+          description: The earliest time the connection can be disconnected if no
+            refresh succeeds. It is disconnected no earlier than this, and possibly
+            later, because a minimum number of failures must also accrue. Null when
+            automatic disconnection is disabled.
+      type: object
+      required:
+      - status
+      - failing_since
+      - disconnect_after
+      title: ConnectionHealth
+      description: A connected connection whose OAuth token refresh the provider keeps
+        rejecting.
+    ConnectionHealthStatus:
+      type: string
+      enum:
+      - failing
+      title: ConnectionHealthStatus
+      description: Why a connected connection needs attention.
     ConnectionInitiateResponse:
       properties:
         connection_id:
@@ -15074,6 +15108,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/ConnectionErrorReason'
           - type: 'null'
+        connection_health:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionHealth'
+          - type: 'null'
         url:
           anyOf:
           - type: string
@@ -15164,6 +15202,7 @@ components:
       - mcp_server_service_connection
       - connection_status
       - connection_error_reason
+      - connection_health
       - url
       - proxy_url
       - can_manage_policies
@@ -15322,6 +15361,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/ConnectionErrorReason'
           - type: 'null'
+        connection_health:
+          anyOf:
+          - $ref: '#/components/schemas/ConnectionHealth'
+          - type: 'null'
         url:
           anyOf:
           - type: string
@@ -15419,6 +15462,7 @@ components:
       - mcp_server_service_connection
       - connection_status
       - connection_error_reason
+      - connection_health
       - url
       - proxy_url
       - can_manage_policies
