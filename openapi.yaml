@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.24.0
+  version: 2.25.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -13676,6 +13676,10 @@ components:
           type: string
           format: date-time
           title: Created At
+        last_occurred_at:
+          type: string
+          format: date-time
+          title: Last Occurred At
       type: object
       required:
       - id
@@ -13689,6 +13693,7 @@ components:
       - snapshot_id
       - policy_status_at_eval
       - created_at
+      - last_occurred_at
       title: PolicyImpactSummary
       description: "One ``policy.policy_impact`` row, as returned by the impact list/detail\
         \ routes.\n\nBuilt with ``model_validate(row, from_attributes=True)`` directly\
