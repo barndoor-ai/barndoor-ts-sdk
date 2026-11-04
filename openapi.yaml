@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.25.0
+  version: 2.26.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -11181,8 +11181,21 @@ components:
           type: boolean
         id:
           type: string
+        mcp_server_deleted:
+          type:
+          - boolean
+          - 'null'
+          description: Whether the MCP server was deleted from the organization, which
+            leaves this policy unused. Set on list and get only, and absent when it
+            could not be determined.
         mcp_server_id:
           type: string
+        mcp_server_name:
+          type:
+          - string
+          - 'null'
+          description: The MCP server's name. Set on list and get only, and absent
+            when the server is unknown.
         name:
           type: string
         org_id:
