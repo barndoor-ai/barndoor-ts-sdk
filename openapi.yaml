@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.27.0
+  version: 2.28.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -11162,6 +11162,24 @@ components:
             displayed rate back to the rule that produced it. `None` when
 
             `source == "none"`.'
+        reference_rates:
+          oneOf:
+          - $ref: '#/components/schemas/ReferenceRates'
+            description: 'The catalog''s list rate for a model whose requests are
+              **not** billed
+
+              per token here (`not_metered`, `provider_reported`), so it can still
+
+              be ranked against other models (BCP-5431). Routing-policy setup uses
+
+              it to order tiers for an org whose only providers are OAuth
+
+              subscriptions. Absent on priced rows (the rates above already are the
+
+              list rate) and when no pricing rule covers the model. Never the
+
+              charged price.'
+          - type: 'null'
         source:
           type: string
           description: 'Which resolution tier matched: `org_instance`, `org_catalog`,
@@ -15192,6 +15210,25 @@ components:
           items:
             $ref: '#/components/schemas/McpPolicyRuleRequest'
       additionalProperties: false
+    ReferenceRates:
+      type: object
+      description: A list rate used only to compare models, never to bill (BCP-5431).
+      required:
+      - input_cost_per_million_tokens
+      - output_cost_per_million_tokens
+      - source
+      properties:
+        input_cost_per_million_tokens:
+          type: number
+          format: double
+        output_cost_per_million_tokens:
+          type: number
+          format: double
+        source:
+          type: string
+          description: 'Which pricing tier the rate came from; same values as
+
+            [`EffectivePricing::source`]''s priced tiers.'
     RemoteRuntime:
       properties:
         kind:
@@ -15592,6 +15629,14 @@ components:
           items:
             type: integer
             format: int32
+          description: 'Omitted means no size floor: the determiner picks the tier
+            at any
+
+            request size. Most targets now have 200k+ context windows, and a floor
+
+            that moves a conversation to another tier part-way through also throws
+
+            away the prompt cache built on the previous one.'
         default_slot_on_failure:
           type: integer
           format: int32
@@ -15616,6 +15661,18 @@ components:
         router_input_max_chars:
           type: integer
           format: int32
+        rules:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/RoutingRuleInput'
+          description: 'The policy''s routing rules, saved in the same transaction
+            (BCP-5483).
+
+            Omit to create the policy with no rules. On a preview, the draft''s
+
+            rules to test instead of the saved ones.'
         slots:
           type: array
           items:
@@ -15668,6 +15725,22 @@ components:
           - integer
           - 'null'
           format: int32
+        rules:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/RoutingRuleInput'
+          description: 'When present, the policy''s complete rule set after this update,
+            saved
+
+            in the same transaction (BCP-5483): rules with an `id` are updated,
+
+            rules without one are created, and the policy''s rules not listed are
+
+            deleted. Omit to leave the rules untouched. Floors and bans must name
+
+            tiers the updated policy has.'
         slots:
           type:
           - array
@@ -15745,6 +15818,20 @@ components:
           format: int32
         name:
           type: string
+    RoutingRuleInput:
+      allOf:
+      - $ref: '#/components/schemas/RoutingRuleDraft'
+      - type: object
+        properties:
+          id:
+            type:
+            - string
+            - 'null'
+            format: uuid
+      description: "One rule in a policy's rule set, as the policy endpoints receive\
+        \ it.\n\n`id` names an existing rule of this policy to update in place \u2014\
+        \ keeping its\nid is what keeps audit history and `matched_rule_id` in routing\
+        \ events\ncontinuous. Without one, the rule is created."
     RoutingRuleWriteResponse:
       allOf:
       - $ref: '#/components/schemas/RoutingRule'
