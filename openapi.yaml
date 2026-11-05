@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.26.0
+  version: 2.27.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -3693,6 +3693,10 @@ paths:
       tags:
       - dlp
       summary: Create an enforcement policy
+      description: Targets MCP servers, model providers, or both (`target`). Once
+        an organization manages MCP traffic with `/mcp-policies` (see `GET /mcp-policies`'s
+        `policy_model`), MCP-targeted writes here are refused with 409 -- create or
+        edit an MCP policy instead; model-provider policies are unaffected.
       operationId: create_enforcement_policy
       requestBody:
         content:
@@ -3722,6 +3726,13 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '404':
           description: A referenced detection engine does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: The organization now manages MCP traffic with MCP policies;
+            this target can't be written here
           content:
             application/json:
               schema:
@@ -3781,6 +3792,10 @@ paths:
       tags:
       - dlp
       summary: Update an enforcement policy
+      description: Once an organization manages MCP traffic with `/mcp-policies` (see
+        `GET /mcp-policies`'s `policy_model`), updates to an MCP-targeted policy are
+        refused with 409 -- edit the corresponding MCP policy instead; model-provider
+        policies are unaffected.
       operationId: update_enforcement_policy
       parameters:
       - name: id
@@ -3821,6 +3836,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: The organization now manages MCP traffic with MCP policies;
+            this policy can't be written here
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
         '422':
           description: Invalid target, action, principal, agent or detector selection
           content:
@@ -3838,6 +3860,10 @@ paths:
       tags:
       - dlp
       summary: Delete an enforcement policy
+      description: Once an organization manages MCP traffic with `/mcp-policies` (see
+        `GET /mcp-policies`'s `policy_model`), deleting an MCP-targeted policy is
+        refused with 409 -- delete the corresponding MCP policy instead; model-provider
+        policies are unaffected.
       operationId: delete_enforcement_policy
       parameters:
       - name: id
@@ -3863,6 +3889,13 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '404':
           description: No such enforcement policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: The organization now manages MCP traffic with MCP policies;
+            this policy can't be deleted here
           content:
             application/json:
               schema:
@@ -4134,6 +4167,338 @@ paths:
         '422':
           description: '`catalog_unlisted_table_action` is missing or not `allow`,
             `block`, `observe` or `null`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-baseline-policy:
+    get:
+      tags:
+      - dlp
+      summary: Fetch the Baseline policy, which covers every server without its own
+        policy
+      description: 'Returns `policy: null` until the Baseline policy''s first save
+        -- until then no rule applies to servers that have no policy of their own.'
+      operationId: get_mcp_baseline_policy
+      responses:
+        '200':
+          description: The Baseline policy, or null before its first save
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpBaselinePolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+    put:
+      tags:
+      - dlp
+      summary: Replace the Baseline policy's rules, creating it on first save
+      description: Replaces the Baseline policy's whole rule set (keep an existing
+        rule by passing its `id` back); there is no partial update. The Baseline policy
+        has no server list of its own -- it covers whatever servers no other policy
+        claims.
+      operationId: put_mcp_baseline_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutMcpBaselinePolicyRequest'
+        required: true
+      responses:
+        '200':
+          description: The Baseline policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: A referenced detection engine does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: The org isn't on MCP policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid rules, scopes or actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-policies:
+    get:
+      tags:
+      - dlp
+      summary: List the organization's MCP policies
+      description: 'Returns every MCP policy, the Baseline policy first and the rest
+        by name, plus `policy_model`: `SERVER_POLICIES` once the organization manages
+        MCP traffic as one policy per MCP server with a Baseline fallback, or `LEGACY`
+        while it still manages MCP traffic through `/enforcement-policies`. These
+        routes are read-only on `LEGACY` -- writes return 409 until the organization
+        converts.'
+      operationId: list_mcp_policies
+      responses:
+        '200':
+          description: MCP policies and the org's policy model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPoliciesResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+    post:
+      tags:
+      - dlp
+      summary: Create an MCP policy for one or more servers
+      description: 'Creates a policy covering the given MCP server ids; each server
+        belongs to at most one policy (the Baseline policy covers every server left
+        out). Each rule names a `runtime_boundary` (`TOOL_INPUT`, `TOOL_OUTPUT` or
+        `BOTH`), an `action`, the detection engines that trigger it, and optional
+        `agent_scope` / `principal_scope` restrictions (`mode: ALL` by default; `ONLY`
+        or `EXCEPT` with explicit agent or group/role ids otherwise). Refused with
+        409 while the organization is still on `LEGACY`.'
+      operationId: create_mcp_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMcpPolicyRequest'
+        required: true
+      responses:
+        '201':
+          description: The created MCP policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: A referenced detection engine does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: A server already belongs to another policy, the name is taken,
+            or the org isn't on MCP policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid servers, rules, scopes or actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-policies/{id}:
+    get:
+      tags:
+      - dlp
+      summary: Fetch one MCP policy
+      description: 'Returns the policy''s servers and rules. Each rule''s `agent_scope`
+        and `principal_scope` default to `mode: ALL` (every AI agent, or every user);
+        `ONLY`/`EXCEPT` narrow it to the given registry agent ids, or IdP group/role
+        ids.'
+      operationId: get_mcp_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The MCP policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such MCP policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+    put:
+      tags:
+      - dlp
+      summary: Update an MCP policy's name, servers or rules
+      description: 'Partial update: omitted fields are left unchanged, and a `rules`
+        list replaces the whole set (keep an existing rule by passing its `id` back).
+        The Baseline policy can''t be edited here -- use `/mcp-baseline-policy`.'
+      operationId: update_mcp_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMcpPolicyRequest'
+        required: true
+      responses:
+        '200':
+          description: The updated MCP policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPolicyResponse'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such MCP policy, or an unknown detection engine
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: A server already belongs to another policy, the name is taken,
+            or the org isn't on MCP policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid servers, rules, scopes or actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '503':
+          description: Selected agents could not be checked against the agent directory;
+            retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+    delete:
+      tags:
+      - dlp
+      summary: Delete an MCP policy; its servers fall back to the Baseline policy
+      description: Deletes the policy; every server it covered is immediately governed
+        by the Baseline policy instead. The Baseline policy itself can't be deleted
+        through this route.
+      operationId: delete_mcp_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such MCP policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: The Baseline policy can't be deleted, or the org isn't on MCP
+            policies
           content:
             application/json:
               schema:
@@ -7267,6 +7632,22 @@ components:
           type: integer
           format: int32
           description: The immutable version whose preferences are loaded below.
+    AgentScopeJson:
+      type: object
+      description: Which AI agents a rule applies to.
+      required:
+      - mode
+      properties:
+        agent_ids:
+          type: array
+          items:
+            type: string
+          description: Registry agent ids. Empty for `ALL`; 1 to 200 for `ONLY` and
+            `EXCEPT`.
+        mode:
+          type: string
+          description: '`ALL`, `ONLY` or `EXCEPT`.'
+      additionalProperties: false
     AgentScopeRequest:
       type: object
       description: Which AI agents a policy applies to, ANDed with its principals.
@@ -9449,6 +9830,24 @@ components:
           format: int32
         require_expiry:
           type: boolean
+    CreateMcpPolicyRequest:
+      type: object
+      required:
+      - name
+      - mcp_server_ids
+      properties:
+        mcp_server_ids:
+          type: array
+          items:
+            type: string
+          description: At least one. A server can belong to only one policy.
+        name:
+          type: string
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPolicyRuleRequest'
+      additionalProperties: false
     CreateModelAccessRequest:
       type: object
       required:
@@ -12581,6 +12980,153 @@ components:
       enum:
       - PREFIX
       - SUFFIX
+    McpBaselinePolicyResponse:
+      type: object
+      required:
+      - policy_model
+      properties:
+        policy:
+          oneOf:
+          - $ref: '#/components/schemas/McpPolicyResponse'
+            description: '`null` until the Baseline policy''s first save (plan D17).
+              Until then no
+
+              rule applies to servers without their own policy.'
+          - type: 'null'
+        policy_model:
+          type: string
+    McpPoliciesResponse:
+      type: object
+      required:
+      - policy_model
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPolicyResponse'
+          description: The Baseline policy first (when it exists), then by name.
+        policy_model:
+          type: string
+          description: '`LEGACY` or `SERVER_POLICIES`. On `LEGACY` the org''s MCP
+            traffic still
+
+            follows its enforcement policies and these routes are read-only.'
+    McpPolicyResponse:
+      type: object
+      required:
+      - id
+      - name
+      - is_baseline
+      - mcp_server_ids
+      - rules
+      - created_by
+      - updated_by
+      - created_at
+      - updated_at
+      properties:
+        created_at:
+          type: string
+        created_by:
+          type: string
+        id:
+          type: string
+        is_baseline:
+          type: boolean
+        mcp_server_ids:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPolicyRuleResponse'
+        updated_at:
+          type: string
+        updated_by:
+          type: string
+    McpPolicyRuleRequest:
+      type: object
+      required:
+      - runtime_boundary
+      - action
+      - detection_engine_ids
+      properties:
+        action:
+          type: string
+        agent_scope:
+          oneOf:
+          - $ref: '#/components/schemas/AgentScopeJson'
+            description: Omitted = all agents.
+          - type: 'null'
+        detection_engine_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        dry_run:
+          type: boolean
+        id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: An existing rule of this policy to keep. Omit to create a rule.
+        label:
+          type:
+          - string
+          - 'null'
+        mask_format:
+          oneOf:
+          - $ref: '#/components/schemas/MaskFormat'
+            description: Partial-redaction shape; only valid with `POLICY_ACTION_MASK`.
+          - type: 'null'
+        principal_scope:
+          oneOf:
+          - $ref: '#/components/schemas/PrincipalScopeJson'
+            description: Omitted = all users.
+          - type: 'null'
+        runtime_boundary:
+          type: string
+          description: '`TOOL_INPUT`, `TOOL_OUTPUT` or `BOTH`.'
+      additionalProperties: false
+    McpPolicyRuleResponse:
+      type: object
+      required:
+      - id
+      - runtime_boundary
+      - action
+      - dry_run
+      - agent_scope
+      - principal_scope
+      - detection_engine_ids
+      properties:
+        action:
+          type: string
+        agent_scope:
+          $ref: '#/components/schemas/AgentScopeJson'
+        detection_engine_ids:
+          type: array
+          items:
+            type: string
+        dry_run:
+          type: boolean
+        id:
+          type: string
+        label:
+          type:
+          - string
+          - 'null'
+        mask_format:
+          oneOf:
+          - $ref: '#/components/schemas/MaskFormat'
+          - type: 'null'
+        principal_scope:
+          $ref: '#/components/schemas/PrincipalScopeJson'
+        runtime_boundary:
+          type: string
     MetadataPatchRequest:
       type: object
       properties:
@@ -14296,6 +14842,35 @@ components:
       - tracking
       - pinned
       - auto
+    PrincipalJson:
+      type: object
+      required:
+      - principal_type
+      - principal_id
+      properties:
+        principal_id:
+          type: string
+        principal_type:
+          type: string
+          description: '`GROUP` or `ROLE`.'
+      additionalProperties: false
+    PrincipalScopeJson:
+      type: object
+      description: Which users a rule applies to, by IdP group or role.
+      required:
+      - mode
+      properties:
+        mode:
+          type: string
+          description: '`ALL`, `ONLY` or `EXCEPT`. A user matches a list when any
+            of their
+
+            groups or roles is in it.'
+        principals:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrincipalJson'
+      additionalProperties: false
     ProfileGuardrailFinding:
       type: object
       required:
@@ -14607,6 +15182,16 @@ components:
             type: string
           propertyNames:
             type: string
+    PutMcpBaselinePolicyRequest:
+      type: object
+      required:
+      - rules
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPolicyRuleRequest'
+      additionalProperties: false
     RemoteRuntime:
       properties:
         kind:
@@ -16265,6 +16850,31 @@ components:
           - string
           - 'null'
         rules: {}
+      additionalProperties: false
+    UpdateMcpPolicyRequest:
+      type: object
+      properties:
+        mcp_server_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: Replaces the server list. Omitted = unchanged.
+        name:
+          type:
+          - string
+          - 'null'
+        rules:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/McpPolicyRuleRequest'
+          description: 'Replaces the rule list. Rules with an `id` are kept, the rest
+            created,
+
+            and stored rules left out are deleted. Omitted = unchanged.'
       additionalProperties: false
     UpdateModelAccessRequest:
       type: object
