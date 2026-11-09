@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.30.0
+  version: 2.31.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -5813,6 +5813,27 @@ paths:
           description: Missing or invalid credentials
         '403':
           description: Caller is not permitted to act on this resource in this organization
+  /api/llm-gateway/admin/client-settings/slot-pins:
+    get:
+      tags:
+      - llm-gateway
+      summary: List the organization's client slot pins
+      description: Every Model Route an admin has pinned into a client launch slot.
+        A pin applies to a launch only when the person is allowed the route (Model
+        Access) and the client can serve it; otherwise that slot falls back to the
+        automatic pick.
+      operationId: list_slot_pins
+      responses:
+        '200':
+          description: The organization's pins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSlotPinsResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
   /api/llm-gateway/admin/client-settings/{client}:
     get:
       tags:
@@ -5882,6 +5903,87 @@ paths:
         '503':
           description: The first save kept losing a race with another first save;
             retry
+  /api/llm-gateway/admin/client-settings/{client}/slot-pins/{slot_key}:
+    put:
+      tags:
+      - llm-gateway
+      summary: Pin a Model Route into a client slot
+      description: 'Sets (or replaces) the route that fills one launch slot of a client,
+        overriding the automatic pick. Claude Code: `model` (Default), `ANTHROPIC_DEFAULT_OPUS_MODEL`,
+        `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_DEFAULT_FABLE_MODEL`;
+        Codex and Kilo Code: `model` only. The alias must be an enabled Model Route
+        in the organization (a routing policy is accepted for a Claude Code or Kilo
+        Code Default). A pin applies to a launch only when the person is allowed the
+        route; otherwise the slot falls back to the automatic pick. The Advisor slot
+        always follows the Opus slot.'
+      operationId: put_slot_pin
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)'
+        required: true
+        schema:
+          type: string
+      - name: slot_key
+        in: path
+        description: The slot's launch config key (`model` or an `ANTHROPIC_DEFAULT_*_MODEL`
+          key)
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutSlotPinRequest'
+        required: true
+      responses:
+        '200':
+          description: The saved pin and any non-blocking findings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotPinResponse'
+        '400':
+          description: The slot is not pinnable for the client, the alias is not an
+            enabled route in this organization, or the client cannot launch or serve
+            it (`profile_guardrails` details)
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client
+    delete:
+      tags:
+      - llm-gateway
+      summary: Remove a client slot pin
+      description: The slot returns to the automatic pick at the next launch.
+      operationId: delete_slot_pin
+      parameters:
+      - name: client
+        in: path
+        description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code)'
+        required: true
+        schema:
+          type: string
+      - name: slot_key
+        in: path
+        description: The slot's launch config key
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: The pin was removed
+        '400':
+          description: The slot is not pinnable for the client
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: Unknown client, or nothing is pinned into this slot
   /api/llm-gateway/admin/connections:
     get:
       tags:
@@ -9178,6 +9280,36 @@ components:
           description: Current version, 0 when `exists` is false. Each save appends
             a version.
           minimum: 0
+    ClientSlotPin:
+      type: object
+      description: One pinned slot, as stored.
+      required:
+      - client
+      - slot_key
+      - model_alias
+      - updated_at
+      properties:
+        client:
+          type: string
+          description: '`claude` (Claude Code), `codex` (Codex) or `kilo` (Kilo Code).'
+        model_alias:
+          type: string
+          description: The pinned route (or, for a Default slot, routing policy) alias.
+        slot_key:
+          type: string
+          description: 'The launch config key of the slot: `model` (Default) or an
+
+            `ANTHROPIC_DEFAULT_*_MODEL` family key. Codex and Kilo Code only have
+
+            `model`.'
+        updated_at:
+          type: string
+          format: date-time
+        updated_by:
+          type:
+          - string
+          - 'null'
+          description: Who last set the pin (name or email), when known.
     ConditionOf-Input:
       properties:
         of:
@@ -12233,6 +12365,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RoutingRule'
+    ListSlotPinsResponse:
+      type: object
+      required:
+      - pins
+      properties:
+        pins:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSlotPin'
+          description: Every pin of the organization, Claude Code first, then in slot
+            order.
     LlmGatewayAwsRoleConfigResponse:
       type: object
       description: 'Whether Barndoor''s own AWS principal is configured for role-assumption
@@ -15212,6 +15355,24 @@ components:
           items:
             $ref: '#/components/schemas/McpPolicyRuleRequest'
       additionalProperties: false
+    PutSlotPinRequest:
+      type: object
+      required:
+      - model_alias
+      properties:
+        change_note:
+          type:
+          - string
+          - 'null'
+          description: Optional note recorded on the audit event.
+        model_alias:
+          type: string
+          description: 'The Model Route alias to pin into the slot. For a Default
+            slot of
+
+            Claude Code or Kilo Code a routing-policy alias is accepted too. A
+
+            trailing `[1m]` is dropped.'
     ReferenceRates:
       type: object
       description: A list rate used only to compare models, never to bill (BCP-5431).
@@ -15275,6 +15436,11 @@ components:
       - model_access_policies_retargeted
       - governance_targets_kept
       properties:
+        client_slot_pins_retargeted:
+          type: integer
+          format: int64
+          description: How many client slot pins (BCP-5078) now name the new route.
+          minimum: 0
         governance_targets_kept:
           type: integer
           format: int64
@@ -16567,6 +16733,24 @@ components:
         \ the exact `manifest` bytes against its pinned\nper-`key_id` trusted-publisher\
         \ map before ever launching the artifact,\nand fails closed on an unknown\
         \ key_id or a tampered manifest."
+    SlotPinResponse:
+      type: object
+      required:
+      - pin
+      - warnings
+      properties:
+        pin:
+          $ref: '#/components/schemas/ClientSlotPin'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileGuardrailFinding'
+          description: 'Non-blocking findings: `family_mismatch` (a Claude family
+            slot pinned
+
+            to a route whose primary model is of another family) and
+
+            `seat_only_route` for Claude Code.'
     StaleReason:
       type: string
       enum:
