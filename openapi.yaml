@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.29.0
+  version: 2.30.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -15544,17 +15544,11 @@ components:
       - enabled
       - posture
       - slots
-      - context_breakpoints
       - router_input_max_chars
       - default_slot_on_failure
       - created_at
       - updated_at
       properties:
-        context_breakpoints:
-          type: array
-          items:
-            type: integer
-            format: int32
         created_at:
           type: string
           format: date-time
@@ -15624,19 +15618,6 @@ components:
       - model_alias
       - slots
       properties:
-        context_breakpoints:
-          type: array
-          items:
-            type: integer
-            format: int32
-          description: 'Omitted means no size floor: the determiner picks the tier
-            at any
-
-            request size. Most targets now have 200k+ context windows, and a floor
-
-            that moves a conversation to another tier part-way through also throws
-
-            away the prompt cache built on the previous one.'
         default_slot_on_failure:
           type: integer
           format: int32
@@ -15680,13 +15661,6 @@ components:
     RoutingPolicyUpdate:
       type: object
       properties:
-        context_breakpoints:
-          type:
-          - array
-          - 'null'
-          items:
-            type: integer
-            format: int32
         default_slot_on_failure:
           type:
           - integer
