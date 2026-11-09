@@ -3486,7 +3486,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DetectionEngineResponse'
         '400':
-          description: Unknown provider type, detection type or connection
+          description: Unknown provider type, detection type or connection, or a detection
+            type the provider cannot detect
           content:
             application/json:
               schema:
@@ -3575,7 +3576,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DetectionEngineResponse'
         '400':
-          description: Unknown provider type, detection type or connection
+          description: Unknown provider type, detection type or connection, or a detection
+            type the provider cannot detect
           content:
             application/json:
               schema:
