@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.31.0
+  version: 2.32.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -3968,8 +3968,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid rules, a missing directory slug, or (when catalog SQL
-            controls are enabled for the organization) a `catalog_unlisted_table_action`
+          description: Invalid rules, a missing directory slug, a `conditional_policy_name`
+            that is blank, over 120 characters or contains a control character, or
+            (when catalog SQL controls are enabled for the organization) a `catalog_unlisted_table_action`
             other than `allow`, `block` or `observe`
           content:
             application/json:
@@ -4072,7 +4073,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid rules, or a missing directory slug
+          description: Invalid rules, a missing directory slug, or a `conditional_policy_name`
+            that is blank, over 120 characters or contains a control character
           content:
             application/json:
               schema:
@@ -11724,6 +11726,12 @@ components:
           - 'null'
           description: This server's override for tables no catalog-aware SQL rule
             covers. Absent when not set, which means the org default applies.
+        conditional_policy_name:
+          type:
+          - string
+          - 'null'
+          description: The name of this server's metadata policy (its conditional
+            rules). Always present; `null` until an admin names it.
         created_at:
           type: string
         created_by:
@@ -17116,6 +17124,14 @@ components:
     UpdateFieldControlPolicyRequest:
       type: object
       properties:
+        conditional_policy_name:
+          type:
+          - string
+          - 'null'
+          description: The name of this server's metadata policy (its conditional
+            rules), shown in the Data Control Center. Trimmed; 1 to 120 characters.
+            Omit to keep the stored name; `null` clears it. Unrelated to `name`.
+          maxLength: 120
         directory_slug:
           type:
           - string
@@ -17986,6 +18002,14 @@ components:
             covers: `allow`, `block` or `observe`; `null` clears it back to the org
             default. Omit to keep the stored value. Ignored unless the catalog SQL
             controls feature is enabled for the organization.'
+        conditional_policy_name:
+          type:
+          - string
+          - 'null'
+          description: The name of this server's metadata policy (its conditional
+            rules), shown in the Data Control Center. Trimmed; 1 to 120 characters.
+            Omit to keep the stored name; `null` clears it. Unrelated to `name`.
+          maxLength: 120
         directory_slug:
           type:
           - string
