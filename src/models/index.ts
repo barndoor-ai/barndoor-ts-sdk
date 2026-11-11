@@ -247,6 +247,7 @@ export * from './PublishBlocker.js';
 export * from './PutClientSettingsRequest.js';
 export * from './PutMcpBaselinePolicyRequest.js';
 export * from './PutSlotPinRequest.js';
+export * from './ReasoningEffortDetection.js';
 export * from './ReferenceRates.js';
 export * from './RemoteRuntime.js';
 export * from './RenameModelRouteRequest.js';

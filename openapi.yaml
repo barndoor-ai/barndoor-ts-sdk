@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.32.0
+  version: 2.33.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -10172,6 +10172,24 @@ components:
         provider_id:
           type: string
           format: uuid
+        reasoning_effort_support:
+          type:
+          - boolean
+          - 'null'
+          description: 'Whether the gateway sends `reasoning_effort` to this model
+            on an
+
+            OpenAI-compatible provider: `true` always translates the client''s
+
+            reasoning-effort hint, `false` never sends it, removing a value the
+
+            client sent too. Omitted (or `null`) leaves it as it is: what the gateway
+
+            detects from the model id on a new model, the stored setting when the
+
+            create folds into an existing enablement. Return a model to detection
+
+            with `PUT /admin/model-mappings/{id}`. Accepted only with `kind: model`.'
         request_timeout_secs:
           type:
           - integer
@@ -13492,6 +13510,24 @@ components:
           provider_id:
             type: string
             format: uuid
+          reasoning_effort_support:
+            type:
+            - boolean
+            - 'null'
+            description: 'Whether the gateway sends `reasoning_effort` to this model
+              on an
+
+              OpenAI-compatible provider. `null` uses what the gateway detects from
+
+              the model id. `true` always translates the client''s reasoning-effort
+
+              hint into `reasoning_effort`; `false` never sends it, removing a value
+
+              the client sent too. Set only on a model''s own mapping (`kind: model`):
+
+              every route to the model inherits it, and route mappings are always
+
+              `null`.'
           request_timeout_secs:
             type:
             - integer
@@ -13659,6 +13695,24 @@ components:
             format: uuid
           provider_name:
             type: string
+          reasoning_effort_detected:
+            oneOf:
+            - $ref: '#/components/schemas/ReasoningEffortDetection'
+              description: 'What the gateway detects about this model''s `reasoning_effort`
+                support
+
+                from its id: what `reasoning_effort_support: null` does. Present only
+
+                on a model''s own mapping on an OpenAI-compatible provider, where
+                the
+
+                override applies.'
+            - type: 'null'
+          reasoning_effort_support:
+            type:
+            - boolean
+            - 'null'
+            description: See [`ModelMapping::reasoning_effort_support`].
           request_timeout_secs:
             type:
             - integer
@@ -15381,6 +15435,22 @@ components:
             Claude Code or Kilo Code a routing-policy alias is accepted too. A
 
             trailing `[1m]` is dropped.'
+    ReasoningEffortDetection:
+      type: string
+      description: 'What the gateway detects about a model''s `reasoning_effort` support
+        from its
+
+        id. `supported`: the gateway sends it. `unsupported`: a known model that
+
+        does not take it. `unknown`: an id the gateway does not recognise, such as
+
+        a self-hosted model; treated as unsupported unless the model''s
+
+        `reasoning_effort_support` says otherwise.'
+      enum:
+      - supported
+      - unsupported
+      - unknown
     ReferenceRates:
       type: object
       description: A list rate used only to compare models, never to bill (BCP-5431).
@@ -17365,6 +17435,26 @@ components:
           - integer
           - 'null'
           format: int32
+        reasoning_effort_support:
+          type:
+          - boolean
+          - 'null'
+          description: 'Whether the gateway sends `reasoning_effort` to this model
+            on an
+
+            OpenAI-compatible provider. Omitted leaves it unchanged; `null` returns
+
+            the model to what the gateway detects from its id. `true` always
+
+            translates the client''s reasoning-effort hint into `reasoning_effort`,
+
+            for a model the gateway does not recognise (a self-hosted one); `false`
+
+            never sends it, removing a value the client sent too, for a model that
+
+            rejects the field. Accepted only on a model''s own mapping
+
+            (`kind: model`); every route to the model inherits it.'
         request_timeout_secs:
           type:
           - integer
