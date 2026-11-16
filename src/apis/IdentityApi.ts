@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime.js';
 import {
+    type AddOrganizationDomainRequest,
+    AddOrganizationDomainRequestFromJSON,
+    AddOrganizationDomainRequestToJSON,
+} from '../models/AddOrganizationDomainRequest.js';
+import {
     type HTTPValidationError,
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
@@ -49,6 +54,16 @@ import {
     IdpTestResultToJSON,
 } from '../models/IdpTestResult.js';
 import {
+    type OrganizationDomainListResponse,
+    OrganizationDomainListResponseFromJSON,
+    OrganizationDomainListResponseToJSON,
+} from '../models/OrganizationDomainListResponse.js';
+import {
+    type OrganizationDomainResponse,
+    OrganizationDomainResponseFromJSON,
+    OrganizationDomainResponseToJSON,
+} from '../models/OrganizationDomainResponse.js';
+import {
     type OrganizationRolesGroupsResponse,
     OrganizationRolesGroupsResponseFromJSON,
     OrganizationRolesGroupsResponseToJSON,
@@ -59,6 +74,34 @@ export interface CreateIdpConnectionRequest {
      * 
      */
     idpConnectionConfig: IdpConnectionConfig;
+}
+
+export interface PublicAddOrganizationDomainRequest {
+    /**
+     * 
+     */
+    addOrganizationDomainRequest: AddOrganizationDomainRequest;
+}
+
+export interface PublicCancelOrganizationDomainClaimRequest {
+    /**
+     * 
+     */
+    claimId: string;
+}
+
+export interface PublicRemoveOrganizationDomainRequest {
+    /**
+     * 
+     */
+    domain: string;
+}
+
+export interface PublicVerifyOrganizationDomainRequest {
+    /**
+     * 
+     */
+    claimId: string;
 }
 
 export interface UpdateIdpConfigRequest {
@@ -464,6 +507,353 @@ export class IdentityApi extends runtime.BaseAPI {
      */
     async listRolesAndGroups(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrganizationRolesGroupsResponse> {
         const response = await this.listRolesAndGroupsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for publicAddOrganizationDomain without sending the request
+     */
+    async publicAddOrganizationDomainRequestOpts(requestParameters: PublicAddOrganizationDomainRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['addOrganizationDomainRequest'] == null) {
+            throw new runtime.RequiredError(
+                'addOrganizationDomainRequest',
+                'Required parameter "addOrganizationDomainRequest" was null or undefined when calling publicAddOrganizationDomain().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/identity/public/v1/organizations/current/domains`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: AddOrganizationDomainRequestToJSON(requestParameters['addOrganizationDomainRequest']),
+        };
+    }
+
+    /**
+     * Claim a domain (or start verifying an existing Keycloak one). Verified at once (``parent_domain``) under a verified parent in this org, unless blocked.
+     * Add Organization Domain
+     */
+    async publicAddOrganizationDomainRaw(requestParameters: PublicAddOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrganizationDomainResponse>> {
+        const requestOptions = await this.publicAddOrganizationDomainRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrganizationDomainResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Claim a domain (or start verifying an existing Keycloak one). Verified at once (``parent_domain``) under a verified parent in this org, unless blocked.
+     * Add Organization Domain
+     */
+    async publicAddOrganizationDomain(requestParameters: PublicAddOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrganizationDomainResponse> {
+        const response = await this.publicAddOrganizationDomainRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for publicCancelOrganizationDomainClaim without sending the request
+     */
+    async publicCancelOrganizationDomainClaimRequestOpts(requestParameters: PublicCancelOrganizationDomainClaimRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling publicCancelOrganizationDomainClaim().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/identity/public/v1/organizations/current/domains/claims/{claim_id}`;
+        urlPath = urlPath.replace('{claim_id}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Cancel a pending/failed claim. Keycloak is untouched.
+     * Cancel Organization Domain Claim
+     */
+    async publicCancelOrganizationDomainClaimRaw(requestParameters: PublicCancelOrganizationDomainClaimRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.publicCancelOrganizationDomainClaimRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Cancel a pending/failed claim. Keycloak is untouched.
+     * Cancel Organization Domain Claim
+     */
+    async publicCancelOrganizationDomainClaim(requestParameters: PublicCancelOrganizationDomainClaimRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.publicCancelOrganizationDomainClaimRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for publicListOrganizationDomains without sending the request
+     */
+    async publicListOrganizationDomainsRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/identity/public/v1/organizations/current/domains`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List the org\'s domain claims, merged with any existing Keycloak domains that have no claim row (``status=\"unverified\"``).
+     * List Organization Domains
+     */
+    async publicListOrganizationDomainsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrganizationDomainListResponse>> {
+        const requestOptions = await this.publicListOrganizationDomainsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrganizationDomainListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * List the org\'s domain claims, merged with any existing Keycloak domains that have no claim row (``status=\"unverified\"``).
+     * List Organization Domains
+     */
+    async publicListOrganizationDomains(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrganizationDomainListResponse> {
+        const response = await this.publicListOrganizationDomainsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for publicRemoveOrganizationDomain without sending the request
+     */
+    async publicRemoveOrganizationDomainRequestOpts(requestParameters: PublicRemoveOrganizationDomainRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['domain'] == null) {
+            throw new runtime.RequiredError(
+                'domain',
+                'Required parameter "domain" was null or undefined when calling publicRemoveOrganizationDomain().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/identity/public/v1/organizations/current/domains/{domain}`;
+        urlPath = urlPath.replace('{domain}', encodeURIComponent(String(requestParameters['domain'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Remove the domain: its claim (if any), derived subdomains, and the Keycloak entries. Refused if SSO enforcement is on and this would leave the org with no Keycloak domain.
+     * Remove Organization Domain
+     */
+    async publicRemoveOrganizationDomainRaw(requestParameters: PublicRemoveOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.publicRemoveOrganizationDomainRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Remove the domain: its claim (if any), derived subdomains, and the Keycloak entries. Refused if SSO enforcement is on and this would leave the org with no Keycloak domain.
+     * Remove Organization Domain
+     */
+    async publicRemoveOrganizationDomain(requestParameters: PublicRemoveOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.publicRemoveOrganizationDomainRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for publicVerifyOrganizationDomain without sending the request
+     */
+    async publicVerifyOrganizationDomainRequestOpts(requestParameters: PublicVerifyOrganizationDomainRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['claimId'] == null) {
+            throw new runtime.RequiredError(
+                'claimId',
+                'Required parameter "claimId" was null or undefined when calling publicVerifyOrganizationDomain().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            // oauth required
+            const oauthToken = await this.configuration.accessToken("OAuth2", ["openid", "profile", "email"]);
+            if (oauthToken) {
+                headerParameters["Authorization"] = oauthToken.startsWith("Bearer ") ? oauthToken : `Bearer ${oauthToken}`;
+            }
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("ApiKey", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/api/identity/public/v1/organizations/current/domains/{claim_id}/verify`;
+        urlPath = urlPath.replace('{claim_id}', encodeURIComponent(String(requestParameters['claimId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Synchronous DNS TXT check. Rate-limited to one attempt per claim per 10 seconds.
+     * Verify Organization Domain
+     */
+    async publicVerifyOrganizationDomainRaw(requestParameters: PublicVerifyOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrganizationDomainResponse>> {
+        const requestOptions = await this.publicVerifyOrganizationDomainRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrganizationDomainResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Synchronous DNS TXT check. Rate-limited to one attempt per claim per 10 seconds.
+     * Verify Organization Domain
+     */
+    async publicVerifyOrganizationDomain(requestParameters: PublicVerifyOrganizationDomainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrganizationDomainResponse> {
+        const response = await this.publicVerifyOrganizationDomainRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

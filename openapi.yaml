@@ -2481,6 +2481,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IdpTestResult'
+  /api/identity/public/v1/organizations/current/domains:
+    get:
+      tags:
+      - identity
+      summary: List Organization Domains
+      description: 'List the org''s domain claims, merged with any existing Keycloak
+        domains that
+
+        have no claim row (``status="unverified"``).'
+      operationId: public_list_organization_domains
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationDomainListResponse'
+    post:
+      tags:
+      - identity
+      summary: Add Organization Domain
+      description: 'Claim a domain (or start verifying an existing Keycloak one).
+        Verified at once
+
+        (``parent_domain``) under a verified parent in this org, unless blocked.'
+      operationId: public_add_organization_domain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddOrganizationDomainRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationDomainResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/identity/public/v1/organizations/current/domains/{claim_id}/verify:
+    post:
+      tags:
+      - identity
+      summary: Verify Organization Domain
+      description: Synchronous DNS TXT check. Rate-limited to one attempt per claim
+        per 10 seconds.
+      operationId: public_verify_organization_domain
+      parameters:
+      - name: claim_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Claim Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationDomainResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/identity/public/v1/organizations/current/domains/claims/{claim_id}:
+    delete:
+      tags:
+      - identity
+      summary: Cancel Organization Domain Claim
+      description: Cancel a pending/failed claim. Keycloak is untouched.
+      operationId: public_cancel_organization_domain_claim
+      parameters:
+      - name: claim_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Claim Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/identity/public/v1/organizations/current/domains/{domain}:
+    delete:
+      tags:
+      - identity
+      summary: Remove Organization Domain
+      description: 'Remove the domain: its claim (if any), derived subdomains, and
+        the Keycloak
+
+        entries. Refused if SSO enforcement is on and this would leave the org with
+        no
+
+        Keycloak domain.'
+      operationId: public_remove_organization_domain
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Domain
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/notification/public/v1/channels/options:
     get:
       tags:
@@ -7451,6 +7578,18 @@ components:
       - principal_arn
       - external_id
       type: object
+    AddOrganizationDomainRequest:
+      properties:
+        domain:
+          type: string
+          minLength: 1
+          title: Domain
+      type: object
+      required:
+      - domain
+      title: AddOrganizationDomainRequest
+      description: Request to claim a domain, or start verifying an existing Keycloak
+        one.
     AddRouteGroupMembersRequest:
       type: object
       required:
@@ -14038,6 +14177,72 @@ components:
           type: string
         updated_at:
           type: string
+    OrganizationDomainListResponse:
+      properties:
+        domains:
+          items:
+            $ref: '#/components/schemas/OrganizationDomainResponse'
+          type: array
+          title: Domains
+      type: object
+      required:
+      - domains
+      title: OrganizationDomainListResponse
+    OrganizationDomainResponse:
+      properties:
+        domain:
+          type: string
+          title: Domain
+        status:
+          type: string
+          title: Status
+        claim_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Claim Id
+        verification_method:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Verification Method
+        record_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Record Name
+        record_value:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Record Value
+        verified_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Verified At
+        last_checked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Checked At
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Error
+      type: object
+      required:
+      - domain
+      - status
+      title: OrganizationDomainResponse
+      description: "One domain: either a claim (``pending``/``verified``/``failed``)\
+        \ or an existing\nKeycloak domain with no claim row (``unverified``).\n\n\
+        ``record_name``/``record_value`` are the TXT record to publish \u2014 present\
+        \ for\nevery claim status so the UI can show/copy it even after a failed attempt."
     OrganizationRolesGroupsResponse:
       properties:
         roles:

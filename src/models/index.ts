@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './AWSTrustInfoResponse.js';
+export * from './AddOrganizationDomainRequest.js';
 export * from './AddRouteGroupMembersRequest.js';
 export * from './AdminModelPricing.js';
 export * from './AffectedPoliciesResponse.js';
@@ -199,6 +200,8 @@ export * from './OperatorAnyOutput.js';
 export * from './OperatorNoneInput.js';
 export * from './OperatorNoneOutput.js';
 export * from './OrgConfigResponse.js';
+export * from './OrganizationDomainListResponse.js';
+export * from './OrganizationDomainResponse.js';
 export * from './OrganizationRolesGroupsResponse.js';
 export * from './PaginatedResponseAllowListEntryResponse.js';
 export * from './PaginatedResponseAllowListEntryResponseItemsInner.js';
