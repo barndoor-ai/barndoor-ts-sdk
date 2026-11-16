@@ -4088,17 +4088,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid, or (when catalog SQL controls are enabled for the organization)
-            a rule's `dry_run` is not a boolean
+          description: A rule's `rule_id` that is not one of this policy's rules (where
+            rule ids are enabled for the organization); target-resource lookup metadata
+            that is unavailable, incomplete, or invalid; or (when catalog SQL controls
+            are enabled for the organization) a rule's `dry_run` that is not a boolean
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
           description: Invalid rules, a missing directory slug, a `conditional_policy_name`
-            that is blank, over 120 characters or contains a control character, or
-            (when catalog SQL controls are enabled for the organization) a `catalog_unlisted_table_action`
+            that is blank, over 120 characters or contains a control character, a
+            malformed or repeated `rule_id` (where rule ids are enabled for the organization),
+            or (when catalog SQL controls are enabled for the organization) a `catalog_unlisted_table_action`
             other than `allow`, `block` or `observe`
           content:
             application/json:
@@ -4193,16 +4195,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: Target-resource lookup metadata is unavailable, incomplete,
-            or invalid, or (when catalog SQL controls are enabled for the organization)
-            a rule's `dry_run` is not a boolean
+          description: A rule's `rule_id` that is not one of this policy's rules (where
+            rule ids are enabled for the organization); target-resource lookup metadata
+            that is unavailable, incomplete, or invalid; or (when catalog SQL controls
+            are enabled for the organization) a rule's `dry_run` that is not a boolean
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid rules, a missing directory slug, or a `conditional_policy_name`
-            that is blank, over 120 characters or contains a control character
+          description: Invalid rules, a missing directory slug, a `conditional_policy_name`
+            that is blank, over 120 characters or contains a control character, a
+            malformed or repeated `rule_id` (where rule ids are enabled for the organization)
           content:
             application/json:
               schema:
@@ -11923,7 +11927,10 @@ components:
           type: string
         org_id:
           type: string
-        rules: {}
+        rules:
+          description: The server's rules, in order. Where rule ids are enabled for
+            the organization, each carries its server-made `rule_id`; elsewhere, none
+            does.
         updated_at:
           type: string
         updated_by:
@@ -17439,7 +17446,15 @@ components:
           type:
           - string
           - 'null'
-        rules: {}
+        rules:
+          description: 'The server''s whole new rule list, in order; omit to keep
+            the stored rules. Where rule ids are enabled for the organization, each
+            rule carries a server-made `rule_id`: send it back to keep the rule (one
+            this policy does not hold is a 409; a malformed or repeated one a 422);
+            a rule sent without one keeps the `rule_id` of an identical stored rule,
+            else gets a new one. Elsewhere, `rule_id` is neither shown nor required,
+            and any sent is ignored. A rule''s own `id` key is ordinary content either
+            way.'
       additionalProperties: false
     UpdateMcpPolicyRequest:
       type: object
@@ -18335,7 +18350,14 @@ components:
           type: string
         name:
           type: string
-        rules: {}
+        rules:
+          description: 'The server''s rules, in order. Where rule ids are enabled
+            for the organization, each rule carries a server-made `rule_id`: send
+            it back to keep the rule (one this policy does not hold is a 409; a malformed
+            or repeated one a 422); a rule sent without one keeps the `rule_id` of
+            an identical stored rule, else gets a new one. Elsewhere, `rule_id` is
+            neither shown nor required, and any sent is ignored. A rule''s own `id`
+            key is ordinary content either way.'
     UpsertGoogleDlpRequest:
       type: object
       required:

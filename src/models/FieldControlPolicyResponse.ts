@@ -64,7 +64,7 @@ export interface FieldControlPolicyResponse {
      */
     orgId: string;
     /**
-     * 
+     * The server's rules, in order. Where rule ids are enabled for the organization, each carries its server-made `rule_id`; elsewhere, none does.
      */
     rules: any | null;
     /**

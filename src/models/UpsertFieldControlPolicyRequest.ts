@@ -45,7 +45,7 @@ export interface UpsertFieldControlPolicyRequest {
      */
     name: string;
     /**
-     * 
+     * The server's rules, in order. Where rule ids are enabled for the organization, each rule carries a server-made `rule_id`: send it back to keep the rule (one this policy does not hold is a 409; a malformed or repeated one a 422); a rule sent without one keeps the `rule_id` of an identical stored rule, else gets a new one. Elsewhere, `rule_id` is neither shown nor required, and any sent is ignored. A rule's own `id` key is ordinary content either way.
      */
     rules?: any | null;
 }
