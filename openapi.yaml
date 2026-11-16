@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.33.0
+  version: 2.34.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -3701,10 +3701,11 @@ paths:
       tags:
       - dlp
       summary: Create an enforcement policy
-      description: Targets MCP servers, model providers, or both (`target`). Once
-        an organization manages MCP traffic with `/mcp-policies` (see `GET /mcp-policies`'s
-        `policy_model`), MCP-targeted writes here are refused with 409 -- create or
-        edit an MCP policy instead; model-provider policies are unaffected.
+      description: 'Creates a model-provider policy. MCP traffic is managed with `/mcp-policies`:
+        an MCP-targeted policy (`target_kind: MCP_SERVER`, which is also the default
+        when `target_kind` is omitted and neither `provider_ids`, `model_alias` nor
+        a prompt or response `runtime_stage` is set) is refused with 409. The MCP
+        target is deprecated.'
       operationId: create_enforcement_policy
       requestBody:
         content:
@@ -3739,8 +3740,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: The organization now manages MCP traffic with MCP policies;
-            this target can't be written here
+          description: MCP-targeted policies are managed with `/mcp-policies`
           content:
             application/json:
               schema:
@@ -3800,10 +3800,9 @@ paths:
       tags:
       - dlp
       summary: Update an enforcement policy
-      description: Once an organization manages MCP traffic with `/mcp-policies` (see
-        `GET /mcp-policies`'s `policy_model`), updates to an MCP-targeted policy are
-        refused with 409 -- edit the corresponding MCP policy instead; model-provider
-        policies are unaffected.
+      description: 'Updates a model-provider policy. MCP traffic is managed with `/mcp-policies`:
+        updating an MCP-targeted policy, or moving a policy into or out of the MCP
+        target, is refused with 409.'
       operationId: update_enforcement_policy
       parameters:
       - name: id
@@ -3845,8 +3844,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: The organization now manages MCP traffic with MCP policies;
-            this policy can't be written here
+          description: MCP-targeted policies are managed with `/mcp-policies`
           content:
             application/json:
               schema:
@@ -3868,10 +3866,8 @@ paths:
       tags:
       - dlp
       summary: Delete an enforcement policy
-      description: Once an organization manages MCP traffic with `/mcp-policies` (see
-        `GET /mcp-policies`'s `policy_model`), deleting an MCP-targeted policy is
-        refused with 409 -- delete the corresponding MCP policy instead; model-provider
-        policies are unaffected.
+      description: 'MCP traffic is managed with `/mcp-policies`: deleting an MCP-targeted
+        policy is refused with 409.'
       operationId: delete_enforcement_policy
       parameters:
       - name: id
@@ -3902,8 +3898,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: The organization now manages MCP traffic with MCP policies;
-            this policy can't be deleted here
+          description: MCP-targeted policies are managed with `/mcp-policies`
           content:
             application/json:
               schema:
@@ -4250,7 +4245,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: The org isn't on MCP policies
+          description: The save conflicts with the stored policies
           content:
             application/json:
               schema:
@@ -4273,16 +4268,14 @@ paths:
       tags:
       - dlp
       summary: List the organization's MCP policies
-      description: 'Returns every MCP policy, the Baseline policy first and the rest
-        by name, plus `policy_model`: `SERVER_POLICIES` once the organization manages
-        MCP traffic as one policy per MCP server with a Baseline fallback, or `LEGACY`
-        while it still manages MCP traffic through `/enforcement-policies`. These
-        routes are read-only on `LEGACY` -- writes return 409 until the organization
-        converts.'
+      description: Returns every MCP policy, the Baseline policy first and the rest
+        by name, plus `policy_model`, which is always `SERVER_POLICIES` (deprecated;
+        every organization manages MCP traffic as one policy per MCP server with a
+        Baseline fallback).
       operationId: list_mcp_policies
       responses:
         '200':
-          description: MCP policies and the org's policy model
+          description: MCP policies
           content:
             application/json:
               schema:
@@ -4308,8 +4301,7 @@ paths:
         out). Each rule names a `runtime_boundary` (`TOOL_INPUT`, `TOOL_OUTPUT` or
         `BOTH`), an `action`, the detection engines that trigger it, and optional
         `agent_scope` / `principal_scope` restrictions (`mode: ALL` by default; `ONLY`
-        or `EXCEPT` with explicit agent or group/role ids otherwise). Refused with
-        409 while the organization is still on `LEGACY`.'
+        or `EXCEPT` with explicit agent or group/role ids otherwise).'
       operationId: create_mcp_policy
       requestBody:
         content:
@@ -4343,8 +4335,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: A server already belongs to another policy, the name is taken,
-            or the org isn't on MCP policies
+          description: A server already belongs to another policy, or the name is
+            taken
           content:
             application/json:
               schema:
@@ -4451,8 +4443,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: A server already belongs to another policy, the name is taken,
-            or the org isn't on MCP policies
+          description: A server already belongs to another policy, or the name is
+            taken
           content:
             application/json:
               schema:
@@ -4507,8 +4499,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: The Baseline policy can't be deleted, or the org isn't on MCP
-            policies
+          description: The Baseline policy can't be deleted
           content:
             application/json:
               schema:
@@ -9928,6 +9919,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EnforcementPolicyMcpTargetRequest'
+          description: 'MCP-lane only, so deprecated: such policies are refused with
+            409.'
+          deprecated: true
         model_alias:
           type:
           - string
@@ -9955,6 +9949,13 @@ components:
           type:
           - string
           - 'null'
+          description: '`MODEL_PROVIDER`. `MCP_SERVER` (deprecated) is refused with
+            409: MCP
+
+            traffic is managed with `/mcp-policies`. Omitted = `MODEL_PROVIDER` when
+            a
+
+            provider, model alias or prompt/response stage is given, else `MCP_SERVER`.'
     CreateGroupLifetimePolicyRequest:
       type: object
       required:
@@ -13190,6 +13191,8 @@ components:
           - type: 'null'
         policy_model:
           type: string
+          description: Always `SERVER_POLICIES`. Kept for clients that read it.
+          deprecated: true
     McpPoliciesResponse:
       type: object
       required:
@@ -13203,10 +13206,11 @@ components:
           description: The Baseline policy first (when it exists), then by name.
         policy_model:
           type: string
-          description: '`LEGACY` or `SERVER_POLICIES`. On `LEGACY` the org''s MCP
-            traffic still
+          description: 'Always `SERVER_POLICIES`: every organization manages MCP traffic
+            with
 
-            follows its enforcement policies and these routes are read-only.'
+            these routes. Kept for clients that read it.'
+          deprecated: true
     McpPolicyResponse:
       type: object
       required:
@@ -17163,6 +17167,9 @@ components:
           - 'null'
           items:
             $ref: '#/components/schemas/EnforcementPolicyMcpTargetRequest'
+          description: 'MCP-lane only, so deprecated: such policies are refused with
+            409.'
+          deprecated: true
         model_alias:
           type:
           - string
@@ -17196,6 +17203,10 @@ components:
           type:
           - string
           - 'null'
+          description: 'Moving a policy into or out of `MCP_SERVER` (deprecated) is
+            refused with
+
+            409: MCP traffic is managed with `/mcp-policies`.'
       additionalProperties: false
     UpdateFieldControlPolicyRequest:
       type: object
