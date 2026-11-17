@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.35.0
+  version: 2.36.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -15983,10 +15983,10 @@ components:
           description: Human-readable summary suitable for a tooltip.
         reason:
           type: string
-          description: "Coarse cause: `\"rate_limited\"` | `\"provider_errors\"` |\n\
-            `\"auth_failed\"` | `\"unavailable\"` (the last when only a cross-pod\n\
-            deadline is known). `\"auth_failed\"` only ever pairs with\n`scope = \"\
-            current_credential\"` \u2014 see [`status_for_cooldown`]."
+          description: "Coarse cause: `\"rate_limited\"` | `\"credit_exhausted\"`\
+            \ | `\"provider_errors\"` |\n`\"auth_failed\"` | `\"unavailable\"` (the\
+            \ last when only a cross-pod\ndeadline is known). `\"auth_failed\"` only\
+            \ ever pairs with\n`scope = \"current_credential\"` \u2014 see [`status_for_cooldown`]."
         recovers_in_secs:
           type: integer
           format: int64
@@ -16498,6 +16498,10 @@ components:
           type: boolean
           title: Ema Enabled
           default: false
+        mcp_apps_enabled:
+          type: boolean
+          title: Mcp Apps Enabled
+          default: true
         local_availability:
           type: string
           maxLength: 16
@@ -16650,6 +16654,7 @@ components:
       - client_secret
       - uses_managed_credentials
       - ema_enabled
+      - mcp_apps_enabled
       - local_availability
       - scopes
       - organization_id
@@ -16763,6 +16768,10 @@ components:
           type: boolean
           title: Ema Enabled
           default: false
+        mcp_apps_enabled:
+          type: boolean
+          title: Mcp Apps Enabled
+          default: true
         local_availability:
           type: string
           maxLength: 16
@@ -16922,6 +16931,7 @@ components:
       - client_secret
       - uses_managed_credentials
       - ema_enabled
+      - mcp_apps_enabled
       - local_availability
       - scopes
       - organization_id
