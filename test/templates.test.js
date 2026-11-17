@@ -97,6 +97,12 @@ describe('package.mustache — what consumers install', () => {
     }
   });
 
+  test('security floors survive package generation (BCP-5721)', () => {
+    assert.equal(pkg.dependencies['@modelcontextprotocol/sdk'], '^1.32.2');
+    assert.equal(pkg.overrides['body-parser@>=2.0.0 <2.4.0'], '^2.4.0');
+    assert.equal(pkg.overrides['zod@<4.6.6'], '^4.6.7');
+  });
+
   test('@types/node is declared', () => {
     // src/lib/cli.ts uses node:http. Undeclared, the build passes only on a
     // machine that already has the types on disk.
