@@ -97,10 +97,29 @@ describe('package.mustache — what consumers install', () => {
     }
   });
 
-  test('security floors survive package generation (BCP-5721)', () => {
+  test('security floors survive package generation (BCP-5721, BCP-5722)', () => {
     assert.equal(pkg.dependencies['@modelcontextprotocol/sdk'], '^1.32.2');
     assert.equal(pkg.overrides['body-parser@>=2.0.0 <2.4.0'], '^2.4.0');
     assert.equal(pkg.overrides['zod@<4.6.6'], '^4.6.7');
+  });
+
+  test('the lockfile resolves only patched MCP SDK releases', () => {
+    const lock = json('package-lock.json');
+    assert.equal(
+      lock.packages[''].dependencies['@modelcontextprotocol/sdk'],
+      pkg.dependencies['@modelcontextprotocol/sdk'],
+    );
+    const sdkPackages = Object.entries(lock.packages)
+      .filter(([path]) => path.endsWith('node_modules/@modelcontextprotocol/sdk'));
+    assert.ok(sdkPackages.length > 0, 'the MCP SDK is missing from the lockfile');
+    for (const [path, { version }] of sdkPackages) {
+      assert.match(version, /^\d+\.\d+\.\d+$/, `${path} must use a stable release`);
+      const [major, minor, patch] = version.split('.').map(Number);
+      assert.ok(
+        major > 1 || (major === 1 && (minor > 32 || (minor === 32 && patch >= 2))),
+        `${path} resolves vulnerable SDK ${version}`,
+      );
+    }
   });
 
   test('@types/node is declared', () => {
