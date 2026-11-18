@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.36.0
+  version: 2.37.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4998,6 +4998,15 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '403':
           description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: '`watsonx_catalog` only: a watsonx.data catalog connected to
+            one of the organization''s MCP servers reads with this connection''s service
+            IDs and trusted profiles. Disconnect it from those servers first; nothing
+            was removed'
           content:
             application/json:
               schema:
