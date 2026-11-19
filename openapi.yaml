@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.38.0
+  version: 2.39.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -5382,11 +5382,11 @@ paths:
       tags:
       - llm-gateway
       summary: Get the API key lifetime policy
-      description: The org default, per-group overrides and per-user overrides that
+      description: The org default, per-group, per-role and per-user overrides that
         limit how long self-serve API keys (created by users for themselves) may live.
-        A user's own override wins; otherwise the strictest of their groups' overrides;
-        otherwise the default. Keys created by admins are exempt. Existing keys keep
-        their expiry; the policy is checked when a key is created or rotated.
+        A user's own override wins; otherwise the strictest of their groups' and roles'
+        overrides; otherwise the default. Keys created by admins are exempt. Existing
+        keys keep their expiry; the policy is checked when a key is created or rotated.
       operationId: list_lifetime_policies
       responses:
         '200':
@@ -5523,14 +5523,110 @@ paths:
           description: Caller is not permitted to act on this resource in this organization
         '404':
           description: No such resource in this organization
+  /api/llm-gateway/admin/api-key-lifetime-policies/roles:
+    post:
+      tags:
+      - llm-gateway
+      summary: Create a role API key lifetime override
+      description: 'Override the default for users with one IdP role (the role Model
+        Access matches, not the platform admin role). Role overrides count alongside
+        group overrides: a user covered by several gets the strictest, the shortest
+        maximum and an expiry required if any requires one. One with neither field
+        set exempts the role. A user override still wins over both.'
+      operationId: create_role_lifetime_policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleLifetimePolicyRequest'
+        required: true
+      responses:
+        '200':
+          description: The created record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimeRoleOverride'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '409':
+          description: Conflicts with an existing record
+  /api/llm-gateway/admin/api-key-lifetime-policies/roles/{id}:
+    put:
+      tags:
+      - llm-gateway
+      summary: Update a role API key lifetime override
+      operationId: update_role_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifetimeLimitInput'
+        required: true
+      responses:
+        '200':
+          description: The updated record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyLifetimeRoleOverride'
+        '400':
+          description: Malformed request
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
+    delete:
+      tags:
+      - llm-gateway
+      summary: Delete a role API key lifetime override
+      description: Users with the role fall back to their other group and role overrides,
+        or to the default.
+      operationId: delete_role_lifetime_policy
+      parameters:
+      - name: id
+        in: path
+        description: Identifier, a UUID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Deletion acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedResponse'
+        '401':
+          description: Missing or invalid credentials
+        '403':
+          description: Caller is not permitted to act on this resource in this organization
+        '404':
+          description: No such resource in this organization
   /api/llm-gateway/admin/api-key-lifetime-policies/users:
     post:
       tags:
       - llm-gateway
       summary: Create a user API key lifetime override
       description: 'Override the policy for one user. A user override wins outright:
-        it replaces the user''s group overrides and the default, so it can be looser
-        or stricter than both. One with neither field set exempts the user.'
+        it replaces the user''s group and role overrides and the default, so it can
+        be looser or stricter than all of them. One with neither field set exempts
+        the user.'
       operationId: create_user_lifetime_policy
       requestBody:
         content:
@@ -5592,7 +5688,8 @@ paths:
       tags:
       - llm-gateway
       summary: Delete a user API key lifetime override
-      description: The user falls back to their groups' overrides, or to the default.
+      description: The user falls back to their groups' and roles' overrides, or to
+        the default.
       operationId: delete_user_lifetime_policy
       parameters:
       - name: id
@@ -8159,6 +8256,7 @@ components:
       type: object
       required:
       - groups
+      - roles
       - users
       properties:
         default:
@@ -8175,6 +8273,14 @@ components:
             $ref: '#/components/schemas/ApiKeyLifetimePolicy'
           description: Per-IdP-group overrides. A user in several of these gets the
             strictest.
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiKeyLifetimeRoleOverride'
+          description: 'Per-IdP-role overrides. They count alongside group overrides:
+            a user
+
+            covered by several group or role overrides gets the strictest.'
         users:
           type: array
           items:
@@ -8218,6 +8324,50 @@ components:
         require_expiry:
           type: boolean
           description: The key must have an expiry, even when there is no maximum.
+        updated_at:
+          type: string
+          format: date-time
+        updated_by_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    ApiKeyLifetimeRoleOverride:
+      type: object
+      description: 'A per-IdP-role override (V96). Roles sit beside groups: a user
+        whose groups
+
+        and roles both have overrides gets the strictest of all of them, and a user
+
+        override still wins over both.'
+      required:
+      - id
+      - role_name
+      - require_expiry
+      - fixed_lifetime
+      - updated_at
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: Every key gets exactly `max_lifetime_days`. Requires `max_lifetime_days`.
+        id:
+          type: string
+          format: uuid
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Longest a key may live, in days. `None` = no maximum.
+        require_expiry:
+          type: boolean
+          description: The key must have an expiry, even when there is no maximum.
+        role_name:
+          type: string
+          description: 'The IdP role this override applies to (the role Model Access
+            matches,
+
+            not the platform admin role).'
         updated_at:
           type: string
           format: date-time
@@ -10805,6 +10955,25 @@ components:
           format: int32
         traffic_type:
           type: string
+    CreateRoleLifetimePolicyRequest:
+      type: object
+      required:
+      - role_name
+      properties:
+        fixed_lifetime:
+          type: boolean
+          description: Give every key exactly `max_lifetime_days`.
+        max_lifetime_days:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        require_expiry:
+          type: boolean
+        role_name:
+          type: string
+          description: The IdP role (as synced to the user's `roles`), not the platform
+            admin role.
     CreateRouteGroupRequest:
       type: object
       required:
@@ -12500,8 +12669,8 @@ components:
       description: An enum value paired with its display label.
     LifetimeLimitInput:
       type: object
-      description: The settings an admin writes, for the org default, one group or
-        one user.
+      description: The settings an admin writes, for the org default, one group, role
+        or user.
       properties:
         fixed_lifetime:
           type: boolean
