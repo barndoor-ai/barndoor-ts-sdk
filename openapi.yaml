@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.41.0
+  version: 2.42.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -8107,23 +8107,40 @@ components:
       - reason
       - created_by
       - created_at
+      - profile_scoped
+      - detection_engine_ids
+      - match_case
       properties:
         created_at:
           type: string
         created_by:
           type: string
+        detection_engine_ids:
+          type: array
+          items:
+            type: string
         detection_types:
           type: array
           items:
             type: string
         id:
           type: string
+        match_case:
+          type: boolean
         org_id:
           type: string
         pattern:
           type: string
         pattern_type:
           type: string
+        profile_scoped:
+          type: boolean
+          description: 'True when the entry applies only in the Protection Profiles
+            listed in
+
+            `detection_engine_ids`. Deleting a profile removes it from the list,
+
+            and deletes the entry once no profile is left.'
         reason:
           type: string
     ApiKey:
@@ -9934,12 +9951,30 @@ components:
       - pattern
       - pattern_type
       properties:
+        detection_engine_ids:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+          description: 'Protection Profiles (detection engine ids) to limit the entry
+            to.
+
+            Omitted or null: every profile. An empty list is rejected.'
         detection_types:
           type:
           - array
           - 'null'
           items:
             type: string
+        match_case:
+          type:
+          - boolean
+          - 'null'
+          description: 'Literal entries only. Omitted: exact, case-sensitive (the
+            original
+
+            behaviour). `false`: whole-value match ignoring case.'
         pattern:
           type: string
         pattern_type:
@@ -14504,23 +14539,40 @@ components:
             - reason
             - created_by
             - created_at
+            - profile_scoped
+            - detection_engine_ids
+            - match_case
             properties:
               created_at:
                 type: string
               created_by:
                 type: string
+              detection_engine_ids:
+                type: array
+                items:
+                  type: string
               detection_types:
                 type: array
                 items:
                   type: string
               id:
                 type: string
+              match_case:
+                type: boolean
               org_id:
                 type: string
               pattern:
                 type: string
               pattern_type:
                 type: string
+              profile_scoped:
+                type: boolean
+                description: 'True when the entry applies only in the Protection Profiles
+                  listed in
+
+                  `detection_engine_ids`. Deleting a profile removes it from the list,
+
+                  and deletes the entry once no profile is left.'
               reason:
                 type: string
         next_page_token:
