@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.39.0
+  version: 2.40.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4597,9 +4597,11 @@ paths:
       tags:
       - dlp
       summary: Delete an MCP policy; its servers fall back to the Baseline policy
-      description: Deletes the policy; every server it covered is immediately governed
-        by the Baseline policy instead. The Baseline policy itself can't be deleted
-        through this route.
+      description: 'Archives the policy: it disappears from the API (later reads,
+        updates and deletes of its id return 404 and it is left out of the list),
+        its name can be reused, and every server it covered is immediately governed
+        by the Baseline policy instead. The Baseline policy itself can''t be deleted
+        through this route.'
       operationId: delete_mcp_policy
       parameters:
       - name: id
@@ -4610,7 +4612,7 @@ paths:
           type: string
       responses:
         '204':
-          description: Deleted
+          description: Archived
         '401':
           description: Missing or invalid bearer token
           content:
@@ -11564,6 +11566,13 @@ components:
           - string
           - 'null'
           description: Set by handler-level validation and store failures.
+    DlpPolicyStatus:
+      type: string
+      enum:
+      - DRAFT
+      - ACTIVE
+      - INACTIVE
+      - ARCHIVED
     EffectivePricing:
       type: object
       description: "The rate a request against a given mapping would be billed at,\
@@ -13541,6 +13550,7 @@ components:
       - id
       - name
       - is_baseline
+      - status
       - mcp_server_ids
       - rules
       - created_by
@@ -13560,12 +13570,19 @@ components:
           type: array
           items:
             type: string
+          description: For an `ACTIVE` policy, the servers it governs. For any other
+            status, the servers the policy will cover when activated; until then they
+            follow another policy or the Baseline policy.
         name:
           type: string
         rules:
           type: array
           items:
             $ref: '#/components/schemas/McpPolicyRuleResponse'
+        status:
+          $ref: '#/components/schemas/DlpPolicyStatus'
+          description: 'Lifecycle status: `DRAFT`, `ACTIVE`, `INACTIVE` or `ARCHIVED`.
+            Only an `ACTIVE` policy governs traffic.'
         updated_at:
           type: string
         updated_by:

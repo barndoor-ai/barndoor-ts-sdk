@@ -111,6 +111,7 @@ export * from './DetectionTypesResponse.js';
 export * from './DirectoryCredentialModes.js';
 export * from './DlpAwsTrustInfoResponse.js';
 export * from './DlpErrorResponse.js';
+export * from './DlpPolicyStatus.js';
 export * from './EffectivePricing.js';
 export * from './EmbeddedRuntime.js';
 export * from './EnforcementPoliciesResponse.js';
