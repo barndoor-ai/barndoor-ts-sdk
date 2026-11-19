@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.40.0
+  version: 2.41.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -13587,6 +13587,13 @@ components:
           type: string
         updated_by:
           type: string
+        version:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Revision number of the policy's current state; null for a policy
+            with no recorded history yet.
     McpPolicyRuleRequest:
       type: object
       required:
