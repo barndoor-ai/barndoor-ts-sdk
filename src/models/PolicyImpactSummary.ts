@@ -41,7 +41,7 @@ export interface PolicyImpactSummary {
      */
     changeKind: string;
     /**
-     * 
+     * The affected tool. For a batch row (``change_kind`` ``added``, ``severity`` ``info``) this is the placeholder ``"<added tools>"``: the policy's informational set of added tools exceeded the per-tool cap, so one row stands for all of them; see ``detail.added_batch``.
      */
     toolName: string;
     /**
@@ -69,7 +69,7 @@ export interface PolicyImpactSummary {
      */
     policyStatusAtEval: string;
     /**
-     * 
+     * Provenance and context for the impact. ``origin`` is how the row was derived: ``diff`` (change summary), ``manifest_diff``, ``reconciliation`` / ``reconciliation_truncated``, or ``initial_capture`` (minted from a catalog's first snapshot: the tools existed from the start, ``from_version`` is null, and they are default-off until a policy allows them). Batch rows (``tool_name`` ``"<added tools>"``) also carry ``added_batch``: ``{"count": <exact number of tools>, "names": <sorted tool names, at most 200>, "names_truncated": <bool>}``. Batch ``count`` is exact; ``names`` may be shorter than ``count`` when ``names_truncated`` is true.
      */
     detail?: { [key: string]: any; };
     /**

@@ -36,8 +36,9 @@ export interface UpdateMcpPolicyRequest {
      */
     name?: string | null;
     /**
-     * Replaces the rule list. Rules with an `id` are kept, the rest created,
-     * and stored rules left out are deleted. Omitted = unchanged.
+     * Replaces the rule list. Rules with an `id` are kept; a rule without one
+     * keeps the id of an identical stored rule, else is created; stored rules
+     * left out are deleted. Omitted = unchanged.
      */
     rules?: Array<McpPolicyRuleRequest> | null;
 }

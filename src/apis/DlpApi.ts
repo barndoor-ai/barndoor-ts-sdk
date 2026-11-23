@@ -2716,7 +2716,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
-     * Replaces the Baseline policy\'s whole rule set (keep an existing rule by passing its `id` back); there is no partial update. The Baseline policy has no server list of its own -- it covers whatever servers no other policy claims.
+     * Replaces the Baseline policy\'s whole rule set (keep an existing rule by passing its `id` back, or by sending it unchanged: a rule without an `id` keeps the id of an identical stored rule); there is no partial update. The Baseline policy has no server list of its own -- it covers whatever servers no other policy claims.
      * Replace the Baseline policy\'s rules, creating it on first save
      */
     async putMcpBaselinePolicyRaw(requestParameters: PutMcpBaselinePolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<McpPolicyResponse>> {
@@ -2727,7 +2727,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
-     * Replaces the Baseline policy\'s whole rule set (keep an existing rule by passing its `id` back); there is no partial update. The Baseline policy has no server list of its own -- it covers whatever servers no other policy claims.
+     * Replaces the Baseline policy\'s whole rule set (keep an existing rule by passing its `id` back, or by sending it unchanged: a rule without an `id` keeps the id of an identical stored rule); there is no partial update. The Baseline policy has no server list of its own -- it covers whatever servers no other policy claims.
      * Replace the Baseline policy\'s rules, creating it on first save
      */
     async putMcpBaselinePolicy(requestParameters: PutMcpBaselinePolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<McpPolicyResponse> {
@@ -3338,7 +3338,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
-     * Partial update: omitted fields are left unchanged, and a `rules` list replaces the whole set (keep an existing rule by passing its `id` back). The Baseline policy can\'t be edited here -- use `/mcp-baseline-policy`.
+     * Partial update: omitted fields are left unchanged, and a `rules` list replaces the whole set (keep an existing rule by passing its `id` back, or by sending it unchanged: a rule without an `id` keeps the id of an identical stored rule). The Baseline policy can\'t be edited here -- use `/mcp-baseline-policy`.
      * Update an MCP policy\'s name, servers or rules
      */
     async updateMcpPolicyRaw(requestParameters: UpdateMcpPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<McpPolicyResponse>> {
@@ -3349,7 +3349,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
-     * Partial update: omitted fields are left unchanged, and a `rules` list replaces the whole set (keep an existing rule by passing its `id` back). The Baseline policy can\'t be edited here -- use `/mcp-baseline-policy`.
+     * Partial update: omitted fields are left unchanged, and a `rules` list replaces the whole set (keep an existing rule by passing its `id` back, or by sending it unchanged: a rule without an `id` keeps the id of an identical stored rule). The Baseline policy can\'t be edited here -- use `/mcp-baseline-policy`.
      * Update an MCP policy\'s name, servers or rules
      */
     async updateMcpPolicy(requestParameters: UpdateMcpPolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<McpPolicyResponse> {

@@ -1974,7 +1974,21 @@ paths:
 
         org-wide list). Archived policies are excluded by
 
-        :class:`PolicyImpactService`''s join on ``policy.status``.'
+        :class:`PolicyImpactService`''s join on ``policy.status``.
+
+
+        An informational ``added`` row whose ``tool_name`` is the placeholder
+
+        ``"<added tools>"`` is a batch row: the policy has more added tools than the
+        per-tool
+
+        cap, and ``detail.added_batch`` carries the exact ``count``, up to 200 sorted
+        ``names``
+
+        and ``names_truncated``. Rows with ``detail.origin`` ``initial_capture`` come
+        from a
+
+        catalog''s first snapshot (the tools are default-off; nothing is granted automatically).'
       operationId: list_all_policy_impacts
       parameters:
       - name: status
@@ -2073,7 +2087,12 @@ paths:
       - policy
       summary: Get Policy Impacts Summary
       description: 'Badge counts: ``{policy_id: {breaking, review, info}}``, archived
-        excluded.'
+        excluded.
+
+
+        Counts impact ROWS, not tools: a batch row counts once (see ``detail.added_batch.count``
+
+        for the number of tools it stands for).'
       operationId: get_policy_impacts_summary
       responses:
         '200':
@@ -2091,13 +2110,15 @@ paths:
       - policy
       summary: Get Policy Impacts Summary By Kind
       description: "Rollup line counts: ``{policy_id: {change_kind: live_count}}``,\
-        \ archived excluded.\n\nSibling of ``/policy-impacts/summary`` grouped by\
-        \ ``change_kind`` instead of\nseverity \u2014 kept as a separate route rather\
-        \ than a widened ``/summary``\nresponse because ``PolicyImpactSeverityCounts``\
-        \ uses ``extra=\"allow\"`` to\nsurface unrecognised severities, and a structural\
-        \ ``kinds`` key there would\nbe indistinguishable from one. ``change_kind``\
-        \ is tool-router's open\nvocabulary, so kinds are not zero-filled: only kinds\
-        \ with live rows appear."
+        \ archived excluded.\n\nCounts impact ROWS, not tools: a batch row counts\
+        \ once (see ``detail.added_batch.count``\nfor the number of tools it stands\
+        \ for).\n\nSibling of ``/policy-impacts/summary`` grouped by ``change_kind``\
+        \ instead of\nseverity \u2014 kept as a separate route rather than a widened\
+        \ ``/summary``\nresponse because ``PolicyImpactSeverityCounts`` uses ``extra=\"\
+        allow\"`` to\nsurface unrecognised severities, and a structural ``kinds``\
+        \ key there would\nbe indistinguishable from one. ``change_kind`` is tool-router's\
+        \ open\nvocabulary, so kinds are not zero-filled: only kinds with live rows\
+        \ appear."
       operationId: get_policy_impacts_summary_by_kind
       responses:
         '200':
@@ -4339,10 +4360,11 @@ paths:
       tags:
       - dlp
       summary: Replace the Baseline policy's rules, creating it on first save
-      description: Replaces the Baseline policy's whole rule set (keep an existing
-        rule by passing its `id` back); there is no partial update. The Baseline policy
-        has no server list of its own -- it covers whatever servers no other policy
-        claims.
+      description: 'Replaces the Baseline policy''s whole rule set (keep an existing
+        rule by passing its `id` back, or by sending it unchanged: a rule without
+        an `id` keeps the id of an identical stored rule); there is no partial update.
+        The Baseline policy has no server list of its own -- it covers whatever servers
+        no other policy claims.'
       operationId: put_mcp_baseline_policy
       requestBody:
         content:
@@ -4532,8 +4554,9 @@ paths:
       - dlp
       summary: Update an MCP policy's name, servers or rules
       description: 'Partial update: omitted fields are left unchanged, and a `rules`
-        list replaces the whole set (keep an existing rule by passing its `id` back).
-        The Baseline policy can''t be edited here -- use `/mcp-baseline-policy`.'
+        list replaces the whole set (keep an existing rule by passing its `id` back,
+        or by sending it unchanged: a rule without an `id` keeps the id of an identical
+        stored rule). The Baseline policy can''t be edited here -- use `/mcp-baseline-policy`.'
       operationId: update_mcp_policy
       parameters:
       - name: id
@@ -13655,7 +13678,18 @@ components:
           - string
           - 'null'
           format: uuid
-          description: An existing rule of this policy to keep. Omit to create a rule.
+          description: 'An existing rule of this policy to keep. Omit it and the rule
+            keeps the
+
+            id of an identical stored rule, else it is created with a new id.
+
+            Identical means the same label, runtime boundary, action, mask format,
+
+            dry run, agent scope and agents, principal scope and principals, and
+
+            protection profiles in the same order. The rule''s position in the list
+
+            does not matter; the order of its protection profiles does.'
         label:
           type:
           - string
@@ -14880,6 +14914,10 @@ components:
         tool_name:
           type: string
           title: Tool Name
+          description: 'The affected tool. For a batch row (``change_kind`` ``added``,
+            ``severity`` ``info``) this is the placeholder ``"<added tools>"``: the
+            policy''s informational set of added tools exceeded the per-tool cap,
+            so one row stands for all of them; see ``detail.added_batch``.'
         severity:
           type: string
           title: Severity
@@ -14905,6 +14943,15 @@ components:
           additionalProperties: true
           type: object
           title: Detail
+          description: 'Provenance and context for the impact. ``origin`` is how the
+            row was derived: ``diff`` (change summary), ``manifest_diff``, ``reconciliation``
+            / ``reconciliation_truncated``, or ``initial_capture`` (minted from a
+            catalog''s first snapshot: the tools existed from the start, ``from_version``
+            is null, and they are default-off until a policy allows them). Batch rows
+            (``tool_name`` ``"<added tools>"``) also carry ``added_batch``: ``{"count":
+            <exact number of tools>, "names": <sorted tool names, at most 200>, "names_truncated":
+            <bool>}``. Batch ``count`` is exact; ``names`` may be shorter than ``count``
+            when ``names_truncated`` is true.'
         acknowledged_at:
           anyOf:
           - type: string
@@ -17740,10 +17787,12 @@ components:
           - 'null'
           items:
             $ref: '#/components/schemas/McpPolicyRuleRequest'
-          description: 'Replaces the rule list. Rules with an `id` are kept, the rest
-            created,
+          description: 'Replaces the rule list. Rules with an `id` are kept; a rule
+            without one
 
-            and stored rules left out are deleted. Omitted = unchanged.'
+            keeps the id of an identical stored rule, else is created; stored rules
+
+            left out are deleted. Omitted = unchanged.'
       additionalProperties: false
     UpdateModelAccessRequest:
       type: object
