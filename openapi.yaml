@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.42.0
+  version: 2.43.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -4426,6 +4426,22 @@ paths:
         every organization manages MCP traffic as one policy per MCP server with a
         Baseline fallback).
       operationId: list_mcp_policies
+      parameters:
+      - name: include_archived
+        in: query
+        description: '`true` also lists `ARCHIVED` policies; the default is `false`.
+          While
+
+          policy drafts and lifecycle are not enabled for the organization the
+
+          value is ignored, whatever it is; with them enabled, a value that is not
+
+          `true` or `false` is refused with 422 `invalid_query`. Sending the
+
+          parameter more than once is refused with 422 `invalid_query` either way.'
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: MCP policies
@@ -4445,6 +4461,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: '`include_archived` is repeated (`invalid_query`, always),
+            or is not `true` or `false` (`invalid_query`, only checked when policy
+            drafts and lifecycle are enabled for the organization)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
     post:
       tags:
       - dlp
@@ -4454,7 +4478,9 @@ paths:
         out). Each rule names a `runtime_boundary` (`TOOL_INPUT`, `TOOL_OUTPUT` or
         `BOTH`), an `action`, the detection engines that trigger it, and optional
         `agent_scope` / `principal_scope` restrictions (`mode: ALL` by default; `ONLY`
-        or `EXCEPT` with explicit agent or group/role ids otherwise).'
+        or `EXCEPT` with explicit agent or group/role ids otherwise). The policy is
+        created `ACTIVE` unless `status: DRAFT` is sent; a draft is saved without
+        being enforced, may have no servers, and may overlap other policies'' servers.'
       operationId: create_mcp_policy
       requestBody:
         content:
@@ -4488,21 +4514,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: A server already belongs to another policy, or the name is
-            taken
+          description: An `ACTIVE` policy's server already belongs to another policy
+            (`mcp_server_already_assigned`), the name is taken, or `status` was sent
+            while policy drafts and lifecycle are not enabled for the organization
+            (`policies_v2_not_enabled`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid servers, rules, scopes or actions
+          description: Invalid servers (an `ACTIVE` policy needs at least one), rules,
+            scopes or actions; these are checked first and carry no `code`. A `status`
+            of `INACTIVE` or `ARCHIVED` is refused with `invalid_initial_status` once
+            those checks pass, so a request that also has no servers or an invalid
+            rule gets that other 422 instead
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '503':
-          description: Selected agents could not be checked against the agent directory;
-            retry
+          description: Selected agents could not be checked against the agent directory
+            (no `code`); retry
           content:
             application/json:
               schema:
@@ -4552,11 +4584,15 @@ paths:
     put:
       tags:
       - dlp
-      summary: Update an MCP policy's name, servers or rules
+      summary: Update an MCP policy's name, servers or rules, or change its status
       description: 'Partial update: omitted fields are left unchanged, and a `rules`
         list replaces the whole set (keep an existing rule by passing its `id` back,
         or by sending it unchanged: a rule without an `id` keeps the id of an identical
-        stored rule). The Baseline policy can''t be edited here -- use `/mcp-baseline-policy`.'
+        stored rule). The Baseline policy can''t be edited here -- use `/mcp-baseline-policy`.
+        Restoring an `ARCHIVED` policy (`status: DRAFT`) keeps its name unless another
+        non-archived policy took it in the meantime, in which case it is renamed `<name>
+        (Restored n)` with the first free `n` starting at 1 (for example `Payments
+        (Restored 1)`).'
       operationId: update_mcp_policy
       parameters:
       - name: id
@@ -4597,20 +4633,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
-          description: A server already belongs to another policy, or the name is
-            taken
+          description: 'An `ACTIVE` policy''s server already belongs to another policy
+            (`mcp_server_already_assigned`), or the name is taken; or, with `status`:
+            `policies_v2_not_enabled` (policy drafts and lifecycle are not enabled
+            for the organization), `invalid_status_transition`, `restore_servers_unavailable`,
+            `invalid_policy_rules`; or, editing content, `policy_archived`'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '422':
-          description: Invalid servers, rules, scopes or actions
+          description: Invalid servers, rules, scopes or actions, or `status` combined
+            with other fields (`status_change_with_edits`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '503':
-          description: Selected agents could not be checked against the agent directory;
+          description: Selected agents could not be checked against the agent directory
+            (no `code`), or, when activating, the registry could not be read (`dependency_unavailable`);
             retry
           content:
             application/json:
@@ -4620,10 +4661,14 @@ paths:
       tags:
       - dlp
       summary: Delete an MCP policy; its servers fall back to the Baseline policy
-      description: 'Archives the policy: it disappears from the API (later reads,
-        updates and deletes of its id return 404 and it is left out of the list),
-        its name can be reused, and every server it covered is immediately governed
-        by the Baseline policy instead. The Baseline policy itself can''t be deleted
+      description: 'Archives the policy (status `ARCHIVED`): it is no longer enforced,
+        every server it covered is immediately governed by the Baseline policy instead,
+        and its name can be reused. While policy drafts and lifecycle are not enabled
+        for the organization, later reads, updates and deletes of its id return 404
+        and it is left out of the list. With them enabled, `GET` still returns it
+        with `status: ARCHIVED`, the list includes it only with `include_archived=true`,
+        a content `PUT` is 409 `policy_archived`, a further `DELETE` is 404, and `PUT`
+        with `status: DRAFT` restores it. The Baseline policy itself can''t be deleted
         through this route.'
       operationId: delete_mcp_policy
       parameters:
@@ -4656,6 +4701,240 @@ paths:
                 $ref: '#/components/schemas/DlpErrorResponse'
         '409':
           description: The Baseline policy can't be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-policies/{id}/revisions:
+    get:
+      tags:
+      - dlp
+      summary: List an MCP policy's revisions, newest first
+      description: Returns the policy's revision history, newest first, a page at
+        a time. A revision is one saved state of the policy; `version` counts up with
+        each change that alters it, and `changes` is the difference from the previous
+        version. Page with `limit` (default 20, at most 100) and `cursor` (pass the
+        previous page's `next_cursor`; it is `null` on the last page); `categories`
+        is a comma-separated filter. The Baseline policy's history is read through
+        the same route with the Baseline policy's id. Archived policies keep their
+        history. Answers 409 `policies_v2_not_enabled` while the feature is not enabled
+        for the organization.
+      operationId: list_mcp_policy_revisions
+      parameters:
+      - name: id
+        in: path
+        description: Policy id, a UUID
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: 'Page size: 20 by default, at most 100 (a larger value is capped).
+          Not
+
+          a number, or below 1, is a 422.'
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: cursor
+        in: query
+        description: 'A revision version: return only versions below it. Pass the
+          previous
+
+          page''s `next_cursor`.'
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: categories
+        in: query
+        description: 'Comma-separated: only revisions that changed one of these categories,
+
+          each `NAME`, `STATUS`, `SERVERS`, `RULES`, `ACTIONS`, `SCOPE`, `PROFILES`
+          or `DRY_RUN`.'
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A page of revisions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpMcpPolicyRevisionList'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such MCP policy in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: '`policies_v2_not_enabled`: policy drafts, status changes and
+            revision history are not enabled for the organization yet'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid id, a `limit` below 1 or a `cursor` below 1 (no `code`),
+            or a `limit` or `cursor` that is not a number (`invalid_query`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-policies/{id}/revisions/compare:
+    get:
+      tags:
+      - dlp
+      summary: The difference between two versions of an MCP policy
+      description: 'Compares two versions of the policy: `from` is the older version
+        and `to` the newer, and both are required. Returns the combined `changes`
+        and every category changed by a revision after `from` up to `to`. Answers
+        409 `policies_v2_not_enabled` while the feature is not enabled for the organization.'
+      operationId: compare_mcp_policy_revisions
+      parameters:
+      - name: id
+        in: path
+        description: Policy id, a UUID
+        required: true
+        schema:
+          type: string
+      - name: from
+        in: query
+        description: 'The older version. Required: a missing value is a 422 without
+          a `code`,
+
+          a value that is not a number is a 422 `invalid_query`.'
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: to
+        in: query
+        description: The newer version; greater than `from`. Required, like `from`.
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        '200':
+          description: The diff and the categories changed in between
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpMcpPolicyRevisionComparison'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such policy or version in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: '`policies_v2_not_enabled`: policy drafts, status changes and
+            revision history are not enabled for the organization yet'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid id; `from` or `to` is missing (422 without a `code`)
+            or is not a number (`invalid_query`); or `from` is not below `to`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+  /api/dlp/admin/v1/mcp-policies/{id}/revisions/{revision_id}:
+    get:
+      tags:
+      - dlp
+      summary: One revision of an MCP policy, with its diff against the previous version
+      description: Returns one revision with `changes` against the previous version
+        (`previous_version` names it). With `include_snapshots=true` it also returns
+        the full stored `snapshot`, the `previous_snapshot` and the `snapshot_schema`
+        version. Answers 409 `policies_v2_not_enabled` while the feature is not enabled
+        for the organization.
+      operationId: get_mcp_policy_revision
+      parameters:
+      - name: id
+        in: path
+        description: Policy id, a UUID
+        required: true
+        schema:
+          type: string
+      - name: revision_id
+        in: path
+        description: Revision id, a UUID
+        required: true
+        schema:
+          type: string
+      - name: include_snapshots
+        in: query
+        description: 'Add the revision''s snapshot and the previous one, as stored.
+          `true` or
+
+          `false`; the default is `false`.'
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: The revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpMcpPolicyRevisionDetail'
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '403':
+          description: Caller lacks a tenant-admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '404':
+          description: No such policy or revision in this organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '409':
+          description: '`policies_v2_not_enabled`: policy drafts, status changes and
+            revision history are not enabled for the organization yet'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DlpErrorResponse'
+        '422':
+          description: Invalid id, or `include_snapshots` is not a boolean (`invalid_query`)
           content:
             application/json:
               schema:
@@ -10345,13 +10624,34 @@ components:
           type: array
           items:
             type: string
-          description: At least one. A server can belong to only one policy.
+          description: 'At least one for an `ACTIVE` policy, and an `ACTIVE` policy''s
+            servers
+
+            can belong to no other `ACTIVE` policy. A `DRAFT` may send an empty list
+
+            and may name servers that other policies already cover.'
         name:
           type: string
         rules:
           type: array
           items:
             $ref: '#/components/schemas/McpPolicyRuleRequest'
+        status:
+          oneOf:
+          - $ref: '#/components/schemas/DlpPolicyStatus'
+            description: 'The status to create the policy in: `DRAFT` or `ACTIVE`
+              (the default).
+
+              Any other value is refused with 422 `invalid_initial_status`. Only an
+
+              `ACTIVE` policy is enforced; a `DRAFT` is saved without being enforced.
+
+              Sending `status` at all, `ACTIVE` included, is refused with 409
+
+              `policies_v2_not_enabled` while policy drafts and lifecycle are not
+
+              enabled for the organization; omit it there.'
+          - type: 'null'
       additionalProperties: false
     CreateModelAccessRequest:
       type: object
@@ -11624,6 +11924,195 @@ components:
           - string
           - 'null'
           description: Set by handler-level validation and store failures.
+    DlpMcpPolicyRevision:
+      type: object
+      required:
+      - id
+      - version
+      - change_kind
+      - status
+      - categories
+      - snapshot_unreadable
+      - revised_at
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
+          description: 'The parts of the policy this revision changed, each `NAME`,
+            `STATUS`, `SERVERS`, `RULES`, `ACTIONS`, `SCOPE`, `PROFILES` or `DRY_RUN`.
+
+            `NAME`, `STATUS` and `SERVERS` are the policy''s name, status and server
+
+            list; `RULES` is an added or removed rule or a changed rule label or
+
+            position; for an edited rule, `ACTIONS` is its action or mask format,
+
+            `SCOPE` its runtime boundary, agent scope or principal scope, `PROFILES`
+
+            its detection engines and `DRY_RUN` its dry-run flag.'
+        change_kind:
+          type: string
+          description: 'What produced the revision: `RECORDED` (the stored state before
+            a
+
+            write, when history had no record of it: a policy that predates
+
+            history, a change by a release that did not record revisions, or a latest
+
+            revision this release cannot read), `CREATED`,
+
+            `UPDATED`, `STATUS_CHANGED`, `SERVER_REMOVED` (the registry deleted a
+
+            server the policy listed) or `PROFILE_REMOVED` (a Protection Profile its
+
+            rules used was deleted).'
+        changes:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+          description: 'What this revision changed from the previous version; `null`
+            for the
+
+            first version, and when a snapshot could not be read.'
+        id:
+          type: string
+          description: Revision id, a UUID.
+        revised_at:
+          type: string
+          description: When the revision was saved, an RFC 3339 timestamp.
+        revised_by:
+          type:
+          - string
+          - 'null'
+          description: Who saved the revision; `null` when no person made the change
+            (for example a `RECORDED` revision).
+        revised_by_name:
+          type:
+          - string
+          - 'null'
+          description: Display name of `revised_by`, when known.
+        snapshot_unreadable:
+          type: boolean
+          description: 'This release could not read a snapshot (written by a newer
+            release):
+
+            `changes` is `null` for that reason.'
+        status:
+          type: string
+          description: 'The policy''s status (`DRAFT`, `ACTIVE`, `INACTIVE` or `ARCHIVED`)
+            at this
+
+            revision.'
+        triggered_by:
+          type:
+          - string
+          - 'null'
+          description: 'What caused the revision: `ADMIN` (an administrator''s save
+            through the
+
+            API), `REGISTRY_SERVER_DELETED`, `PROFILE_DELETED` or `SYSTEM`.'
+        version:
+          type: integer
+          format: int32
+          description: 'The revision number, counting up from 1 with each change that
+            alters the
+
+            policy.'
+    DlpMcpPolicyRevisionComparison:
+      type: object
+      required:
+      - from_version
+      - to_version
+      - from_revision_id
+      - to_revision_id
+      - categories
+      - snapshot_unreadable
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
+          description: 'Every category changed by a revision after `from_version`
+            up to
+
+            `to_version`, each `NAME`, `STATUS`, `SERVERS`, `RULES`, `ACTIONS`, `SCOPE`,
+            `PROFILES` or `DRY_RUN` (see the revision''s `categories`).'
+        changes:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+          description: 'The difference between the two versions; `null` when a snapshot
+            could
+
+            not be read.'
+        from_revision_id:
+          type: string
+          description: Id of the revision at `from_version`.
+        from_version:
+          type: integer
+          format: int32
+          description: The older version compared.
+        snapshot_unreadable:
+          type: boolean
+          description: 'This release could not read a snapshot (written by a newer
+            release):
+
+            `changes` is `null` for that reason.'
+        to_revision_id:
+          type: string
+          description: Id of the revision at `to_version`.
+        to_version:
+          type: integer
+          format: int32
+          description: The newer version compared.
+    DlpMcpPolicyRevisionDetail:
+      allOf:
+      - $ref: '#/components/schemas/DlpMcpPolicyRevision'
+      - type: object
+        properties:
+          previous_snapshot:
+            type:
+            - object
+            - 'null'
+          previous_version:
+            type:
+            - integer
+            - 'null'
+            format: int32
+            description: The version `changes` is against; `null` for the first version.
+          snapshot:
+            type:
+            - object
+            - 'null'
+            description: Only with `include_snapshots=true`.
+          snapshot_schema:
+            type:
+            - integer
+            - 'null'
+            format: int32
+            description: 'Only with `include_snapshots=true`: the schema version of
+              `snapshot`.'
+    DlpMcpPolicyRevisionList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpMcpPolicyRevision'
+          description: Revisions, newest first.
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: Pass as `cursor` for the next page; `null` on the last page.
     DlpPolicyStatus:
       type: string
       enum:
@@ -17793,6 +18282,41 @@ components:
             keeps the id of an identical stored rule, else is created; stored rules
 
             left out are deleted. Omitted = unchanged.'
+        status:
+          oneOf:
+          - $ref: '#/components/schemas/DlpPolicyStatus'
+            description: 'Moves the policy to this status. A status change must be
+              sent alone:
+
+              combined with `name`, `mcp_server_ids` or `rules` it is refused with
+              422
+
+              `status_change_with_edits`. Allowed changes: `DRAFT` to `ACTIVE` or
+
+              `ARCHIVED`; `ACTIVE` to `INACTIVE` or `ARCHIVED`; `INACTIVE` to `ACTIVE`
+
+              or `ARCHIVED`; `ARCHIVED` to `DRAFT`. Any other change is refused with
+
+              409 `invalid_status_transition`, and so is any change to the Baseline
+
+              policy; sending the policy''s current status changes nothing. Only an
+
+              `ACTIVE` policy is enforced. Activating checks the policy''s servers
+
+              against the other `ACTIVE` policies (409 `mcp_server_already_assigned`),
+
+              and refuses a policy with no servers left in the registry (409
+
+              `restore_servers_unavailable`) or whose stored rules no longer validate
+
+              (409 `invalid_policy_rules`). The content of an `ARCHIVED` policy can''t
+
+              be edited (409 `policy_archived`); restore it to `DRAFT` first. Sending
+
+              `status` is refused with 409 `policies_v2_not_enabled` while policy
+
+              drafts and lifecycle are not enabled for the organization.'
+          - type: 'null'
       additionalProperties: false
     UpdateModelAccessRequest:
       type: object
