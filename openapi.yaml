@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.44.0
+  version: 2.45.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -12471,6 +12471,17 @@ components:
         iam_role_arn:
           type: string
         path_prefix:
+          type: string
+        pending_external_id:
+          description: Replacement external ID staged by an external ID rotation,
+            which is started and confirmed outside this API. While set, add it to
+            the role's trust policy sts:ExternalId condition alongside external_id.
+            Populated only on destination responses; always empty in export list and
+            export responses.
+          type: string
+        pending_external_id_issued_at:
+          description: When the pending external ID was issued (RFC 3339). Set alongside
+            pending_external_id and empty whenever it is.
           type: string
         provider:
           type: string
