@@ -20,7 +20,10 @@ import { mapValues } from '../runtime.js';
  */
 export interface DlpAwsTrustInfoResponse {
     /**
-     * The per-connection external id, to require in the trust condition.
+     * The external id this connection assumes its role with, to require in
+     * the trust condition. Barndoor-issued for connections saved since
+     * 2.44.0; a connection saved earlier keeps the value stored with it for
+     * as long as it assumes the same role.
      */
     externalId: string;
     /**

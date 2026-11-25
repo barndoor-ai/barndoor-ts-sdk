@@ -3904,6 +3904,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
+     * Assumes the role with this organization\'s Barndoor-issued external id (see `aws-role-config`). The request cannot supply an external id: a body containing `external_id` is rejected with 400.
      * Probe an AWS role Barndoor is meant to assume
      */
     async validateAwsRoleRaw(requestParameters: ValidateAwsRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AwsRoleValidationResponse>> {
@@ -3914,6 +3915,7 @@ export class DlpApi extends runtime.BaseAPI {
     }
 
     /**
+     * Assumes the role with this organization\'s Barndoor-issued external id (see `aws-role-config`). The request cannot supply an external id: a body containing `external_id` is rejected with 400.
      * Probe an AWS role Barndoor is meant to assume
      */
     async validateAwsRole(requestParameters: ValidateAwsRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AwsRoleValidationResponse> {

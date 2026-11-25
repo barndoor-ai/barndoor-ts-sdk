@@ -5038,7 +5038,8 @@ paths:
       operationId: provider_connection_aws_role_config
       responses:
         '200':
-          description: Whether a principal is configured, and which
+          description: Whether a principal is configured, and which, plus this organization's
+            external id
           content:
             application/json:
               schema:
@@ -5060,6 +5061,9 @@ paths:
       tags:
       - dlp
       summary: Probe an AWS role Barndoor is meant to assume
+      description: 'Assumes the role with this organization''s Barndoor-issued external
+        id (see `aws-role-config`). The request cannot supply an external id: a body
+        containing `external_id` is rejected with 400.'
       operationId: validate_aws_role
       requestBody:
         content:
@@ -5075,7 +5079,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/AwsRoleValidationResponse'
         '400':
-          description: The role could not be assumed with the supplied trust details
+          description: The body named `external_id`, or the role could not be assumed
+            with this organization's external id
           content:
             application/json:
               schema:
@@ -9225,11 +9230,20 @@ components:
         trust.
       required:
       - configured
+      - external_id
       properties:
         configured:
           type: boolean
           description: True when Barndoor has a principal ARN to put in a customer
             trust policy.
+        external_id:
+          type: string
+          description: 'This organization''s `sts:ExternalId`, to require in the trust
+            policy''s
+
+            condition. Issued by Barndoor on first read and stable after that; it
+
+            cannot be chosen or changed through the API.'
         principal_arn:
           type:
           - string
@@ -11899,7 +11913,14 @@ components:
       properties:
         external_id:
           type: string
-          description: The per-connection external id, to require in the trust condition.
+          description: 'The external id this connection assumes its role with, to
+            require in
+
+            the trust condition. Barndoor-issued for connections saved since
+
+            2.44.0; a connection saved earlier keeps the value stored with it for
+
+            as long as it assumes the same role.'
         principal_arn:
           type: string
           description: Barndoor's principal ARN, to trust in the customer's role.
@@ -19256,13 +19277,20 @@ components:
           type: string
     ValidateAwsRoleRequest:
       type: object
+      description: 'Probe a role with the calling org''s server-issued external ID.
+
+
+        There is no `external_id` field: Barndoor always uses the org''s own value
+
+        (from `aws-role-config`). A body that still sends `external_id` is refused
+
+        with 400 rather than silently ignored, so a stale client cannot believe its
+
+        value was the one tested.'
       required:
       - region
       - iam_role_arn
-      - external_id
       properties:
-        external_id:
-          type: string
         iam_role_arn:
           type: string
         region:

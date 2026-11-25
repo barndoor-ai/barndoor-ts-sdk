@@ -14,15 +14,16 @@
 
 import { mapValues } from '../runtime.js';
 /**
+ * Probe a role with the calling org's server-issued external ID.
  * 
+ * There is no `external_id` field: Barndoor always uses the org's own value
+ * (from `aws-role-config`). A body that still sends `external_id` is refused
+ * with 400 rather than silently ignored, so a stale client cannot believe its
+ * value was the one tested.
  * @export
  * @interface ValidateAwsRoleRequest
  */
 export interface ValidateAwsRoleRequest {
-    /**
-     * 
-     */
-    externalId: string;
     /**
      * 
      */
@@ -37,7 +38,6 @@ export interface ValidateAwsRoleRequest {
  * Check if a given object implements the ValidateAwsRoleRequest interface.
  */
 export function instanceOfValidateAwsRoleRequest(value: object): value is ValidateAwsRoleRequest {
-    if ((!('externalId' in (value as Record<string, any>)) && !('external_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['externalId'] === undefined && (value as Record<string, any>)['external_id'] === undefined)) return false;
     if ((!('iamRoleArn' in (value as Record<string, any>)) && !('iam_role_arn' in (value as Record<string, any>))) || ((value as Record<string, any>)['iamRoleArn'] === undefined && (value as Record<string, any>)['iam_role_arn'] === undefined)) return false;
     if (!('region' in value) || value['region'] === undefined) return false;
     return true;
@@ -53,7 +53,6 @@ export function ValidateAwsRoleRequestFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
         
-        'externalId': json['external_id'],
         'iamRoleArn': json['iam_role_arn'],
         'region': json['region'],
     };
@@ -70,7 +69,6 @@ export function ValidateAwsRoleRequestToJSONTyped(value?: ValidateAwsRoleRequest
 
     return {
         
-        'external_id': value['externalId'],
         'iam_role_arn': value['iamRoleArn'],
         'region': value['region'],
     };

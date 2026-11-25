@@ -24,6 +24,12 @@ export interface AwsRoleConfigResponse {
      */
     configured: boolean;
     /**
+     * This organization's `sts:ExternalId`, to require in the trust policy's
+     * condition. Issued by Barndoor on first read and stable after that; it
+     * cannot be chosen or changed through the API.
+     */
+    externalId: string;
+    /**
      * The ARN customers name as the trusted principal; null when unconfigured.
      */
     principalArn?: string | null;
@@ -34,6 +40,7 @@ export interface AwsRoleConfigResponse {
  */
 export function instanceOfAwsRoleConfigResponse(value: object): value is AwsRoleConfigResponse {
     if (!('configured' in value) || value['configured'] === undefined) return false;
+    if ((!('externalId' in (value as Record<string, any>)) && !('external_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['externalId'] === undefined && (value as Record<string, any>)['external_id'] === undefined)) return false;
     return true;
 }
 
@@ -48,6 +55,7 @@ export function AwsRoleConfigResponseFromJSONTyped(json: any, ignoreDiscriminato
     return {
         
         'configured': json['configured'],
+        'externalId': json['external_id'],
         'principalArn': json['principal_arn'] === undefined ? undefined : json['principal_arn'] === null ? null : json['principal_arn'],
     };
 }
@@ -64,6 +72,7 @@ export function AwsRoleConfigResponseToJSONTyped(value?: AwsRoleConfigResponse |
     return {
         
         'configured': value['configured'],
+        'external_id': value['externalId'],
         'principal_arn': value['principalArn'],
     };
 }
