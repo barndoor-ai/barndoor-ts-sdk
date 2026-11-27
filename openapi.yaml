@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Barndoor.ai Public API
   description: Unified public API specification for Barndoor.ai platform
-  version: 2.45.0
+  version: 2.46.0
 paths:
   /api/registry/v1/servers:
     get:
@@ -10209,6 +10209,23 @@ components:
         from the user''s perspective, taking into account server configuration,
 
         Bao registration, and user connections.'
+    ContextWindowSource:
+      type: string
+      description: 'Where a model''s resolved `context_window_tokens` came from, in
+        precedence
+
+        order: an admin override on the model''s enablement, the provider catalog,
+
+        then the provider''s public live list.
+
+
+        Clients should treat a value they do not recognise as "known, from
+
+        somewhere": more sources may be added.'
+      enum:
+      - override
+      - catalog
+      - provider_list
     CooldownPolicy:
       type: object
       description: 'A route''s cooldown policy, one field per column.
@@ -10761,6 +10778,23 @@ components:
           description: 'Optional free-text note explaining why this route was added
 
             (BCP-3998). Surfaced on the row and mirrored into the audit event.'
+        context_window_override_tokens:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'The model''s context window in tokens, declared by an admin;
+            wins over
+
+            the provider catalog, so it is how a custom model (a self-hosted or
+
+            customer-named deployment) gets a window. Range 1-10,000,000. Omitted
+
+            (or `null`) leaves it as it is: none on a new model, the stored value
+
+            when the create folds into an existing enablement. Clear it with
+
+            `PUT /admin/model-mappings/{id}`. Accepted only with `kind: model`.'
         cooldown_429_default_secs:
           type:
           - integer
@@ -14450,6 +14484,22 @@ components:
               `true`; enablements (`kind = model`) are always `false` and are
 
               addressable solely via the explicit `<provider>/<upstream>` form.'
+          context_window_override_tokens:
+            type:
+            - integer
+            - 'null'
+            format: int32
+            description: 'The model''s context window in tokens as declared by an
+              admin, winning
+
+              over the provider catalog. `null` when none is declared. Set only on
+              a
+
+              model''s own mapping (`kind: model`); every route to the model inherits
+
+              it, and route mappings are always `null`. The resolved window, from
+
+              whichever source wins, is `context_window_tokens` on the admin list.'
           enabled:
             type: boolean
           id:
@@ -14628,6 +14678,45 @@ components:
             - type: 'null'
           bare_alias:
             type: boolean
+          context_window_override_tokens:
+            type:
+            - integer
+            - 'null'
+            format: int32
+            description: 'The context window an admin declared on this model, winning
+              over the
+
+              provider catalog; `null` when none. Always `null` on a route row, which
+
+              still reports its model''s override in `context_window_tokens`.'
+          context_window_source:
+            oneOf:
+            - $ref: '#/components/schemas/ContextWindowSource'
+              description: 'Where `context_window_tokens` came from; `null` exactly
+                when it
+
+                is `null`. Expect new values (an admin override is planned).'
+            - type: 'null'
+          context_window_tokens:
+            type:
+            - integer
+            - 'null'
+            format: int32
+            description: 'The upstream model''s context window in tokens, from the
+              provider
+
+              catalog''s `model_capabilities` rows (the most specific `model_pattern`
+
+              wins, as for pricing), or else from the provider''s public live model
+
+              list (OpenRouter''s `context_length`); `context_window_source`
+
+              says which. `null` when it is unknown: a custom provider, a model
+
+              neither source knows, or a read that does not resolve it (only the
+
+              admin list does). Never a guessed default such as 200k.'
+            minimum: 0
           created_at:
             type: string
             format: date-time
@@ -18455,6 +18544,21 @@ components:
             change and an unrelated later edit must not inherit an explanation
 
             written for a different one.'
+        context_window_override_tokens:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 'The model''s context window in tokens, declared by an admin;
+            wins over
+
+            the provider catalog. Omitted leaves it unchanged; `null` clears it, so
+
+            the window resolves from the catalog again (or is unknown). Range
+
+            1-10,000,000. Accepted only on a model''s own mapping (`kind: model`);
+
+            every route to the model inherits it.'
         cooldown_429_default_secs:
           type:
           - integer
